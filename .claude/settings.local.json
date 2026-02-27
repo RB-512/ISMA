@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx @fission-ai/openspec init:*)",
+      "Bash(openspec new change:*)",
+      "Bash(openspec status:*)",
+      "Bash(openspec instructions proposal:*)",
+      "Bash(openspec instructions design:*)",
+      "Bash(openspec instructions specs:*)",
+      "Bash(git -C /c/Users/Rédouane/Desktop/Lab_python/00_CLAUDE_CODE/ISMA/ status)",
+      "mcp__plugin_github_github__get_me",
+      "mcp__plugin_github_github__create_repository",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(openspec instructions tasks:*)"
+    ]
+  }
+}
