@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}BDC {{ bdc.numero_bdc }} — BDC Peinture{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto mt-8 mb-12">
+
+  {# En-tête #}
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">BDC n°{{ bdc.numero_bdc }}</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        {{ bdc.bailleur }} &mdash;
+        <span class="font-medium">{{ bdc.get_statut_display }}</span>
+        &mdash; créé le {{ bdc.created_at|date:"d/m/Y" }} par {{ bdc.cree_par }}
+      </p>
+    </div>
+    {% if bdc.pdf_original %}
+    <a
+      href="{{ bdc.pdf_original.url }}"
+      target="_blank"
+      class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
+    >
+      Voir le PDF
+    </a>
+    {% endif %}
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="mb-4 p-4 rounded-lg bg-green-50 text-green-800 border border-green-200">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    {# Localisation #}
+    <section class="bg-white shadow-sm rounded-xl border border-gray-200 p-5">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Localisation</h2>
+      <dl class="space-y-1 text-sm">
+        {% if bdc.programme_residence %}
+        <div><dt class="inline text-gray-500">Résidence :</dt> <dd class="inline text-gray-800">{{ bdc.programme_residence }}</dd></div>
+        {% endif %}
+        <div><dt class="inline text-gray-500">Adresse :</dt> <dd class="inline text-gray-800">{{ bdc.adresse_complete }}</dd></div>
+        {% if bdc.logement_numero %}
+        <div>
+          <dt class="inline text-gray-500">Logement :</dt>
+          <dd class="inline text-gray-800">
+            {{ bdc.logement_type }} n°{{ bdc.logement_numero }}
+            {% if bdc.logement_etage %} — Étage {{ bdc.logement_etage }}{% endif %}
+            {% if bdc.logement_porte %} / Porte {{ bdc.logement_porte }}{% endif %}
+          </dd>
+        </div>
+        {% endif %}
+        <div><dt class="inline text-gray-500">Occupation :</dt>
+          <dd class="inline text-gray-800">
+            {% if bdc.occupation %}{{ bdc.get_occupation_display }}{% else %}<span class="text-amber-600">Non renseigné</span>{% endif %}
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    {# Travaux #}
+    <section class="bg-white shadow-sm rounded-xl border border-gray-200 p-5">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Travaux</h2>
+      <dl class="space-y-1 text-sm">
+        <div><dt class="inline text-gray-500">Objet :</dt> <dd class="inline text-gray-800">{{ bdc.objet_travaux|default:"—" }}</dd></div>
+        {% if bdc.delai_execution %}
+        <div><dt class="inline text-gray-500">Délai :</dt> <dd class="inline text-gray-800">{{ bdc.delai_execution|date:"d/m/Y" }}</dd></div>
+        {% endif %}
+        {% if bdc.modalite_acces %}
+        <div><dt class="inline text-gray-500">Accès :</dt> <dd class="inline text-gray-800">{{ bdc.modalite_acces }}</dd></div>
+        {% endif %}
+        {% if bdc.rdv_pris %}
+        <div><dt class="inline text-gray-500">RDV :</dt> <dd class="inline text-gray-800">{{ bdc.rdv_date|date:"d/m/Y H:i"|default:"Pris" }}</dd></div>
+        {% endif %}
+      </dl>
+    </section>
+
+  </div>
+
+  {# Lignes de prestation #}
+  {% if lignes %}
+  <section class="bg-white shadow-sm rounded-xl border border-gray-200 p-5 mt-6">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Prestations</h2>
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="text-left px-3 py-2 text-gray-600">Désignation</th>
+          <th class="text-right px-3 py-2 text-gray-600">Qté</th>
+          <th class="px-3 py-2 text-gray-600">Unité</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for ligne in lignes %}
+        <tr>
+          <td class="px-3 py-2">{{ ligne.designation }}</td>
+          <td class="px-3 py-2 text-right">{{ ligne.quantite }}</td>
+          <td class="px-3 py-2">{{ ligne.unite }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {# Historique #}
+  {% if historique %}
+  <section class="bg-white shadow-sm rounded-xl border border-gray-200 p-5 mt-6">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Historique</h2>
+    <ul class="space-y-1 text-sm text-gray-700">
+      {% for action in historique %}
+      <li class="flex gap-2">
+        <span class="text-gray-400">{{ action.created_at|date:"d/m H:i" }}</span>
+        <span>{{ action.get_action_display }} par {{ action.utilisateur }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

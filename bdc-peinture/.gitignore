@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# uv
+.python-version
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environnement
+.env
+.env.local
+.env.*.local
+
+# Tests
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+*.cover
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Tailwind
+node_modules/

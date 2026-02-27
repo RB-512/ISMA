@@ -1,0 +1,68 @@
+[project]
+name = "bdc-peinture"
+version = "0.1.0"
+description = "Application web de gestion des bons de commande pour entreprise de peinture"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.1",
+    "django-allauth>=65.0",
+    "django-filter>=24.0",
+    "pdfplumber>=0.11",
+    "pymupdf>=1.24",
+    "psycopg[binary]>=3.2",
+    "gunicorn>=23.0",
+    "python-decouple>=3.8",
+    "weasyprint>=63.0",
+    "pillow>=11.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.9",
+    "ruff>=0.9",
+    "factory-boy>=3.3",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0",
+    "pytest-django>=4.9",
+    "ruff>=0.9",
+    "factory-boy>=3.3",
+]
+
+[tool.ruff]
+line-length = 119
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "DJ",  # flake8-django
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["tests.py", "test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = ["."]
+addopts = "-v --tb=short"

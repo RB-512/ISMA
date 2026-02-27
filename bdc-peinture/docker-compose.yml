@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bdc_peinture
+      POSTGRES_USER: bdc_user
+      POSTGRES_PASSWORD: bdc_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bdc_user -d bdc_peinture"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - media_data:/data/media
+      - static_data:/data/static
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:

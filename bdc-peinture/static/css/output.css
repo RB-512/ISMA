@@ -1,0 +1,9 @@
+/* Ce fichier est généré par le CLI Tailwind CSS standalone.
+   Commande : tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch
+   En dev, on peut utiliser le CDN Tailwind en attendant la génération.
+*/
+
+/* Reset basique */
+*, ::before, ::after { box-sizing: border-box; border-width: 0; border-style: solid; border-color: #e5e7eb; }
+html { line-height: 1.5; -webkit-text-size-adjust: 100%; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+body { margin: 0; line-height: inherit; }
