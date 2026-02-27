@@ -5,8 +5,6 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from apps.pdf_extraction.gdh_parser import GDHParser
 
 PDF_FICTIF = Path("/tmp/gdh_test.pdf")

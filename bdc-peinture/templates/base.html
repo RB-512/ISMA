@@ -32,8 +32,11 @@
 
                     {# Liens principaux #}
                     <div class="hidden md:flex ml-8 space-x-4">
-                        <a href="/" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <a href="{% url 'bdc:index' %}" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             Tableau de bord
+                        </a>
+                        <a href="{% url 'bdc:upload' %}" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                            Upload PDF
                         </a>
                     </div>
                 </div>

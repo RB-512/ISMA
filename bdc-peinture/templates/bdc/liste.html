@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord — BDC Peinture{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    {# ── Compteurs par statut ──────────────────────────────────────────────── #}
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900">{{ total }}</div>
+            <div class="text-xs text-gray-500 mt-1">Total</div>
+        </div>
+        {% for choix in statut_choices.choices %}
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold
+                {% if choix.0 == 'A_TRAITER' %}text-yellow-600
+                {% elif choix.0 == 'A_FAIRE' %}text-blue-600
+                {% elif choix.0 == 'EN_COURS' %}text-indigo-600
+                {% elif choix.0 == 'A_FACTURER' %}text-orange-600
+                {% elif choix.0 == 'FACTURE' %}text-green-600
+                {% else %}text-gray-900{% endif %}">
+                {{ compteurs|default_if_none:0 }}{% for k, v in compteurs.items %}{% if k == choix.0 %}{{ v }}{% endif %}{% endfor %}{% if choix.0 not in compteurs %}0{% endif %}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">{{ choix.1 }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {# ── Filtres + Recherche ───────────────────────────────────────────────── #}
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <form method="get" action="{% url 'bdc:index' %}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+
+            {# Recherche #}
+            <div class="lg:col-span-2">
+                <label for="id_q" class="block text-sm font-medium text-gray-700 mb-1">Recherche</label>
+                <input type="text" name="q" id="id_q" value="{{ recherche }}"
+                       placeholder="N° BDC, adresse, occupant..."
+                       class="w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+
+            {# Statut #}
+            <div>
+                <label for="id_statut" class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                <select name="statut" id="id_statut"
+                        class="w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="">Tous les statuts</option>
+                    {% for choix in statut_choices.choices %}
+                    <option value="{{ choix.0 }}" {% if filtre.form.statut.value == choix.0 %}selected{% endif %}>{{ choix.1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {# Bailleur #}
+            <div>
+                <label for="id_bailleur" class="block text-sm font-medium text-gray-700 mb-1">Bailleur</label>
+                {{ filtre.form.bailleur }}
+            </div>
+
+            {# Ville #}
+            <div>
+                <label for="id_ville" class="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                <input type="text" name="ville" id="id_ville" value="{{ filtre.form.ville.value|default:'' }}"
+                       placeholder="Ville..."
+                       class="w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+
+            {# Bouton #}
+            <div>
+                <button type="submit"
+                        class="w-full bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+                    Filtrer
+                </button>
+            </div>
+
+            {# Dates (ligne 2) #}
+            <div>
+                <label for="id_date_du" class="block text-sm font-medium text-gray-700 mb-1">Du</label>
+                <input type="date" name="date_du" id="id_date_du" value="{{ filtre.form.date_du.value|default:'' }}"
+                       class="w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="id_date_au" class="block text-sm font-medium text-gray-700 mb-1">Au</label>
+                <input type="date" name="date_au" id="id_date_au" value="{{ filtre.form.date_au.value|default:'' }}"
+                       class="w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div class="lg:col-span-4">
+                <a href="{% url 'bdc:index' %}" class="text-sm text-gray-500 hover:text-gray-700">Réinitialiser les filtres</a>
+            </div>
+        </form>
+    </div>
+
+    {# ── Tableau des BDC ───────────────────────────────────────────────────── #}
+    {% if page_obj %}
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° BDC</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bailleur</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adresse</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ville</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for bdc in page_obj %}
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'bdc:detail' pk=bdc.pk %}'">
+                    <td class="px-4 py-3 text-sm font-medium text-blue-600">{{ bdc.numero_bdc }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ bdc.bailleur.code }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ bdc.adresse|truncatechars:40 }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ bdc.ville }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            {% if bdc.statut == 'A_TRAITER' %}bg-yellow-100 text-yellow-800
+                            {% elif bdc.statut == 'A_FAIRE' %}bg-blue-100 text-blue-800
+                            {% elif bdc.statut == 'EN_COURS' %}bg-indigo-100 text-indigo-800
+                            {% elif bdc.statut == 'A_FACTURER' %}bg-orange-100 text-orange-800
+                            {% elif bdc.statut == 'FACTURE' %}bg-green-100 text-green-800
+                            {% endif %}">
+                            {{ bdc.get_statut_display }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ bdc.created_at|date:"d/m/Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {# ── Pagination ────────────────────────────────────────────────────── #}
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-500">
+                {{ page_obj.paginator.count }} résultat{{ page_obj.paginator.count|pluralize }}
+                — page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+            </div>
+            <div class="flex space-x-1">
+                {% if page_obj.has_previous %}
+                <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                   class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">Précédent</a>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <span class="px-3 py-1 bg-blue-600 text-white rounded text-sm">{{ num }}</span>
+                    {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                    <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ num }}"
+                       class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                   class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">Suivant</a>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
+    </div>
+
+    {% else %}
+    {# ── Liste vide ────────────────────────────────────────────────────────── #}
+    <div class="bg-white rounded-lg border border-gray-200 p-12 text-center">
+        <p class="text-gray-500 text-lg mb-4">Aucun bon de commande trouvé</p>
+        <a href="{% url 'bdc:upload' %}"
+           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+            Uploader un PDF
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

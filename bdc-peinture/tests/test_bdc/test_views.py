@@ -6,12 +6,10 @@ import io
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
-import pytest
 from django.contrib.messages import get_messages
 from django.urls import reverse
 
 from apps.bdc.models import ActionChoices, BonDeCommande, HistoriqueAction, LignePrestation, StatutChoices
-
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
