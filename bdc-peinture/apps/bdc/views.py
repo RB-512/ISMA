@@ -243,6 +243,43 @@ def creer_bdc(request):
 # ─── Détail BDC ───────────────────────────────────────────────────────────────
 
 @login_required
+def detail_sidebar(request, pk: int):
+    """Partial HTML for the HTMX sidebar — no base layout."""
+    from .services import TRANSITIONS
+
+    bdc = get_object_or_404(
+        BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk
+    )
+    lignes = bdc.lignes_prestation.all()
+    historique = bdc.historique.all()[:10]
+
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
+    is_cdt = request.user.groups.filter(name="CDT").exists()
+
+    transitions = []
+    if is_secretaire:
+        transitions_possibles = TRANSITIONS.get(bdc.statut, [])
+        if bdc.statut == StatutChoices.A_FAIRE:
+            transitions_possibles = [s for s in transitions_possibles if s != StatutChoices.EN_COURS]
+        transitions = [
+            (statut, StatutChoices(statut).label)
+            for statut in transitions_possibles
+        ]
+
+    form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
+
+    return render(request, "bdc/_detail_sidebar.html", {
+        "bdc": bdc,
+        "lignes": lignes,
+        "historique": historique,
+        "transitions": transitions,
+        "form_edition": form_edition,
+        "is_secretaire": is_secretaire,
+        "is_cdt": is_cdt,
+    })
+
+
+@login_required
 def detail_bdc(request, pk: int):
     """Fiche de détail d'un BDC — accessible à tous les utilisateurs authentifiés."""
     from .services import TRANSITIONS

@@ -200,3 +200,22 @@ class TestListeBDCQueryset:
         # montant_ht_total annotation should be present
         assert hasattr(bdc, "montant_ht_total")
         assert bdc.montant_ht_total == Decimal("125.00")
+
+
+# ─── Tests sidebar detail ──────────────────────────────────────────────────
+
+class TestDetailSidebar:
+
+    def test_detail_sidebar_returns_partial(self, client, bdc_a_traiter, utilisateur_secretaire):
+        """Sidebar endpoint returns partial HTML without base layout."""
+        client.force_login(utilisateur_secretaire)
+        resp = client.get(reverse("bdc:detail_sidebar", args=[bdc_a_traiter.pk]))
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert bdc_a_traiter.numero_bdc in content
+        # Should not contain full base template markers
+        assert "<html" not in content.lower()
+
+    def test_detail_sidebar_requires_login(self, client, bdc_a_traiter):
+        resp = client.get(reverse("bdc:detail_sidebar", args=[bdc_a_traiter.pk]))
+        assert resp.status_code == 302
