@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: GDHParser extrait les données structurées d'un PDF GDH
 `GDHParser.extraire()` SHALL retourner un dict normalisé avec les champs du modèle `BonDeCommande`. Les champs non trouvés SHALL être `None` ou `""` (jamais une exception). Le parser SHALL utiliser pdfplumber comme extracteur principal. Les patterns regex SHALL être calibrés sur le format réel du texte pdfplumber (en-tête multi-lignes, pas de préfixes "Adresse :" ou "Objet :").
@@ -59,16 +59,7 @@
 - **WHEN** le PDF GDH ne contient qu'une seule page au lieu de 2
 - **THEN** l'extraction réussit avec les données de la page 1, et les champs spécifiques à la page 2 sont `""`
 
-### Requirement: GDHParser détecte le marqueur d'identité GDH
-Le parser SHALL être sélectionné par `detecter_parser()` uniquement si le texte de la première page contient un marqueur propre au format GDH (ex : mention du nom de l'organisation GDH).
-
-#### Scenario: Détection positive GDH
-- **WHEN** `detecter_parser()` analyse un PDF dont la page 1 contient le marqueur GDH
-- **THEN** une instance `GDHParser` est retournée
-
-#### Scenario: Détection négative (PDF non-GDH)
-- **WHEN** `detecter_parser()` analyse un PDF sans marqueur GDH
-- **THEN** `GDHParser` n'est pas retourné
+## ADDED Requirements
 
 ### Requirement: Test d'intégration GDH avec PDF modèle réel
 Le système SHALL inclure un test d'intégration qui exécute `GDHParser.extraire()` sur le fichier `docs/Modèle_bdc_GDH.pdf` et vérifie les valeurs exactes de chaque champ.

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: ERILIAParser extrait les données structurées d'un PDF ERILIA
 `ERILIAParser.extraire()` SHALL retourner le même dict normalisé que `GDHParser`. Les champs non trouvés SHALL être `None` ou `""`. Le format ERILIA est un PDF 2 pages contenant l'ensemble des données y compris les prix. Les patterns regex SHALL être calibrés sur le format réel du texte pdfplumber (labels en majuscules, date sur page 2).
@@ -51,23 +51,7 @@
 - **WHEN** un champ attendu est absent du PDF ERILIA
 - **THEN** le dict retourne `""` pour ce champ (pas d'exception levée)
 
-### Requirement: ERILIAParser détecte le marqueur d'identité ERILIA
-Le parser SHALL être sélectionné par `detecter_parser()` uniquement si le texte de la première page contient un marqueur propre au format ERILIA.
-
-#### Scenario: Détection positive ERILIA
-- **WHEN** `detecter_parser()` analyse un PDF dont la page 1 contient le marqueur ERILIA
-- **THEN** une instance `ERILIAParser` est retournée
-
-#### Scenario: Détection négative (PDF non-ERILIA)
-- **WHEN** `detecter_parser()` analyse un PDF sans marqueur ERILIA
-- **THEN** `ERILIAParser` n'est pas retourné
-
-### Requirement: detecter_parser lève PDFTypeInconnu si aucun format reconnu
-Si le PDF ne correspond ni à GDH ni à ERILIA, `detecter_parser()` SHALL lever `PDFTypeInconnu`.
-
-#### Scenario: PDF sans marqueur reconnu
-- **WHEN** `detecter_parser()` analyse un PDF qui n'est ni GDH ni ERILIA
-- **THEN** `PDFTypeInconnu` est levée avec un message descriptif
+## ADDED Requirements
 
 ### Requirement: Test d'intégration ERILIA avec PDF modèle réel
 Le système SHALL inclure un test d'intégration qui exécute `ERILIAParser.extraire()` sur le fichier `docs/Modèle_bdc_ERILIA.pdf` et vérifie les valeurs exactes de chaque champ.
