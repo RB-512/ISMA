@@ -1,0 +1,126 @@
+{# Sidebar detail partial — loaded via HTMX into the sidebar panel #}
+<div class="h-full flex flex-col">
+    {# Header #}
+    <div class="p-5 border-b border-[var(--color-border)]">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-bold font-mono text-[var(--color-text)]">{{ bdc.numero_bdc }}</h2>
+            <button @click="sidebarOpen = false; selectedBdc = null"
+                    class="p-1 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]/50 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+            {{ bdc.bailleur.nom }}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+                {% if bdc.statut == 'A_TRAITER' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300
+                {% elif bdc.statut == 'A_FAIRE' %}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300
+                {% elif bdc.statut == 'EN_COURS' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300
+                {% elif bdc.statut == 'A_FACTURER' %}bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300
+                {% elif bdc.statut == 'FACTURE' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300
+                {% endif %}">
+                {{ bdc.get_statut_display }}
+            </span>
+        </div>
+
+        {# Action buttons #}
+        {% if transitions %}
+        <div class="flex gap-2 mt-3">
+            {% for val, label in transitions %}
+            <form method="post" action="{% url 'bdc:changer_statut' pk=bdc.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="nouveau_statut" value="{{ val }}">
+                <button type="submit" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent hover:bg-accent-dark text-white transition-colors">{{ label }}</button>
+            </form>
+            {% endfor %}
+            {% if is_cdt and bdc.statut == 'A_FAIRE' and not bdc.sous_traitant %}
+            <a href="{% url 'bdc:attribuer' pk=bdc.pk %}" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">Attribuer</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# Scrollable content #}
+    <div class="flex-1 overflow-y-auto p-5 space-y-5">
+        {# Localisation #}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Localisation</h3>
+            <p class="text-sm text-[var(--color-text)]">{{ bdc.adresse }}, {{ bdc.code_postal }} {{ bdc.ville }}</p>
+            {% if bdc.occupation %}<p class="text-sm text-[var(--color-text-muted)]">{{ bdc.get_occupation_display }}</p>{% endif %}
+        </div>
+
+        {# Sous-traitant #}
+        {% if bdc.sous_traitant %}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Sous-traitant</h3>
+            <p class="text-sm text-[var(--color-text)]">{{ bdc.sous_traitant.nom }}</p>
+            {% if bdc.sous_traitant.telephone %}<p class="text-sm font-mono text-[var(--color-text-muted)]">{{ bdc.sous_traitant.telephone }}</p>{% endif %}
+        </div>
+        {% endif %}
+
+        {# Travaux #}
+        {% if bdc.objet_travaux %}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Travaux</h3>
+            <p class="text-sm text-[var(--color-text)]">{{ bdc.objet_travaux }}</p>
+        </div>
+        {% endif %}
+
+        {# Prestations #}
+        {% if lignes %}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Prestations</h3>
+            <div class="space-y-1">
+                {% for ligne in lignes %}
+                <div class="flex justify-between text-sm">
+                    <span class="text-[var(--color-text)] truncate mr-2">{{ ligne.designation|truncatechars:35 }}</span>
+                    <span class="font-mono text-[var(--color-text-muted)] flex-shrink-0">{{ ligne.montant|floatformat:2 }} &euro;</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% if bdc.montant_ht %}
+            <div class="flex justify-between text-sm font-semibold mt-2 pt-2 border-t border-[var(--color-border)]">
+                <span class="text-[var(--color-text)]">Total HT</span>
+                <span class="font-mono text-[var(--color-text)]">{{ bdc.montant_ht|floatformat:2 }} &euro;</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# Edition form (secretaire only) #}
+        {% if form_edition %}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Compl&eacute;ter</h3>
+            <form method="post" action="{% url 'bdc:modifier' pk=bdc.pk %}" class="space-y-3">
+                {% csrf_token %}
+                {% for field in form_edition %}
+                <div>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ field.label }}</label>
+                    {{ field }}
+                </div>
+                {% endfor %}
+                <button type="submit" class="w-full px-3 py-1.5 text-xs font-medium rounded-lg bg-accent hover:bg-accent-dark text-white transition-colors">Enregistrer</button>
+            </form>
+        </div>
+        {% endif %}
+
+        {# Historique #}
+        {% if historique %}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Historique</h3>
+            <div class="space-y-2">
+                {% for h in historique %}
+                <div class="text-xs">
+                    <span class="font-mono text-accent">{{ h.date|date:"d/m H:i" }}</span>
+                    <span class="text-[var(--color-text-muted)]">{{ h.description }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# Link to full page #}
+        <div class="pt-2">
+            <a href="{% url 'bdc:detail' pk=bdc.pk %}" class="text-sm text-accent hover:underline">Voir la fiche compl&egrave;te &rarr;</a>
+        </div>
+    </div>
+</div>
