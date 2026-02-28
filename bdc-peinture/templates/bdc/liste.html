@@ -27,6 +27,38 @@
         {% endfor %}
     </div>
 
+    {# ── Alertes délais (CDT) ────────────────────────────────────────────── #}
+    {% if alertes_retard or alertes_proches %}
+    <div class="space-y-3">
+        {% if alertes_retard %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-red-800 mb-2">{{ alertes_retard|length }} BDC en retard</h3>
+            <ul class="text-sm text-red-700 space-y-1">
+                {% for bdc in alertes_retard %}
+                <li>
+                    <a href="{% url 'bdc:detail' bdc.pk %}" class="hover:underline font-medium">{{ bdc.numero_bdc }}</a>
+                    — {{ bdc.adresse }} — Délai : {{ bdc.delai_execution|date:"d/m/Y" }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if alertes_proches %}
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-orange-800 mb-2">{{ alertes_proches|length }} BDC proches du délai</h3>
+            <ul class="text-sm text-orange-700 space-y-1">
+                {% for bdc in alertes_proches %}
+                <li>
+                    <a href="{% url 'bdc:detail' bdc.pk %}" class="hover:underline font-medium">{{ bdc.numero_bdc }}</a>
+                    — {{ bdc.adresse }} — Délai : {{ bdc.delai_execution|date:"d/m/Y" }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {# ── Actions CDT ──────────────────────────────────────────────────────── #}
     {% if is_cdt %}
     <div class="flex justify-end gap-2">

@@ -70,6 +70,15 @@ def liste_bdc(request):
 
     is_cdt = request.user.groups.filter(name="CDT").exists()
 
+    # Alertes délais (CDT uniquement)
+    alertes_retard = []
+    alertes_proches = []
+    if is_cdt:
+        from apps.notifications.alertes import get_bdc_delai_proche, get_bdc_en_retard
+
+        alertes_retard = get_bdc_en_retard()
+        alertes_proches = get_bdc_delai_proche()
+
     return render(request, "bdc/liste.html", {
         "page_obj": page_obj,
         "filtre": filtre,
@@ -78,6 +87,8 @@ def liste_bdc(request):
         "total": total,
         "statut_choices": StatutChoices,
         "is_cdt": is_cdt,
+        "alertes_retard": alertes_retard,
+        "alertes_proches": alertes_proches,
     })
 
 

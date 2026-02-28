@@ -113,3 +113,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Email (notifications)
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@bdc-peinture.fr")
+
+# SMS (notifications)
+SMS_BACKEND = config("SMS_BACKEND", default="apps.notifications.backends.LogSmsBackend")
+OVH_APPLICATION_KEY = config("OVH_APPLICATION_KEY", default="")
+OVH_APPLICATION_SECRET = config("OVH_APPLICATION_SECRET", default="")
+OVH_CONSUMER_KEY = config("OVH_CONSUMER_KEY", default="")
+OVH_SMS_SERVICE_NAME = config("OVH_SMS_SERVICE_NAME", default="")
+OVH_SMS_SENDER = config("OVH_SMS_SENDER", default="")

@@ -214,6 +214,7 @@ def attribuer_st(
     )
 
     _generer_terrain_si_possible(bdc)
+    _notifier_st_si_possible(bdc)
 
     return bdc
 
@@ -235,6 +236,8 @@ def reattribuer_st(
         )
 
     ancien_st = str(bdc.sous_traitant) if bdc.sous_traitant else ""
+    ancien_st_telephone = bdc.sous_traitant.telephone if bdc.sous_traitant else ""
+    ancien_st_email = bdc.sous_traitant.email if bdc.sous_traitant else ""
 
     bdc.sous_traitant = nouveau_st
     bdc.pourcentage_st = pourcentage
@@ -255,6 +258,7 @@ def reattribuer_st(
     )
 
     _generer_terrain_si_possible(bdc)
+    _notifier_reattribution_si_possible(bdc, ancien_st_telephone, ancien_st_email)
 
     return bdc
 
@@ -269,3 +273,39 @@ def _generer_terrain_si_possible(bdc: BonDeCommande) -> None:
         logger.warning(
             "Échec génération PDF terrain pour BDC %s", bdc.numero_bdc, exc_info=True
         )
+
+
+def _notifier_st_si_possible(bdc: BonDeCommande) -> None:
+    """Envoie les notifications SMS et email au ST, non-bloquant."""
+    try:
+        from apps.notifications.sms import envoyer_sms_attribution
+
+        envoyer_sms_attribution(bdc)
+    except Exception:
+        logger.warning("Échec SMS attribution BDC %s", bdc.numero_bdc, exc_info=True)
+
+    try:
+        from apps.notifications.email import envoyer_email_attribution
+
+        envoyer_email_attribution(bdc)
+    except Exception:
+        logger.warning("Échec email attribution BDC %s", bdc.numero_bdc, exc_info=True)
+
+
+def _notifier_reattribution_si_possible(
+    bdc: BonDeCommande, ancien_st_telephone: str, ancien_st_email: str
+) -> None:
+    """Envoie les notifications de réattribution, non-bloquant."""
+    try:
+        from apps.notifications.sms import envoyer_sms_reattribution
+
+        envoyer_sms_reattribution(bdc, ancien_st_telephone)
+    except Exception:
+        logger.warning("Échec SMS réattribution BDC %s", bdc.numero_bdc, exc_info=True)
+
+    try:
+        from apps.notifications.email import envoyer_email_reattribution
+
+        envoyer_email_reattribution(bdc, ancien_st_email)
+    except Exception:
+        logger.warning("Échec email réattribution BDC %s", bdc.numero_bdc, exc_info=True)
