@@ -219,3 +219,17 @@ class TestDetailSidebar:
     def test_detail_sidebar_requires_login(self, client, bdc_a_traiter):
         resp = client.get(reverse("bdc:detail_sidebar", args=[bdc_a_traiter.pk]))
         assert resp.status_code == 302
+
+
+# ─── Tests tab filtering integration ────────────────────────────────────────
+
+
+class TestTabFiltering:
+
+    def test_tab_filtering_by_statut(self, client, bdc_a_traiter, utilisateur_secretaire):
+        """Filtering by statut via query param returns only matching BDCs."""
+        client.force_login(utilisateur_secretaire)
+        resp = client.get(reverse("bdc:index") + "?statut=A_TRAITER")
+        assert resp.status_code == 200
+        for bdc in resp.context["page_obj"]:
+            assert bdc.statut == "A_TRAITER"
