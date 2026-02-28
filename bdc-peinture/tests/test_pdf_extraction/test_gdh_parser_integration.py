@@ -93,5 +93,12 @@ class TestGDHIntegration:
     def test_montant_ttc(self, resultat):
         assert resultat["montant_ttc"] == Decimal("184.64")
 
-    def test_lignes_prestation_vide(self, resultat):
-        assert resultat["lignes_prestation"] == []
+    def test_lignes_prestation(self, resultat):
+        lignes = resultat["lignes_prestation"]
+        assert len(lignes) == 1
+        ligne = lignes[0]
+        assert ligne["prix_unitaire"] == Decimal("11.19")
+        assert ligne["quantite"] == Decimal("15.00")
+        assert ligne["montant_ht"] == Decimal("167.85")
+        assert "m²" in ligne["unite"] or "m2" in ligne["unite"].lower()
+        assert ligne["ordre"] == 0

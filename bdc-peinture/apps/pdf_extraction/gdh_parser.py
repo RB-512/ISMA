@@ -79,7 +79,7 @@ class GDHParser(PDFParser):
             "montant_ttc": self._extraire_montant(
                 texte_p1, r"Total\s+TTC\s+([\d.,]+)\s*[€]?"
             ),
-            "lignes_prestation": [],
+            "lignes_prestation": self._extraire_lignes_prestation(tables_p1),
         }
 
     # ── Extraction depuis la table ────────────────────────────────────────────
@@ -93,6 +93,70 @@ class GDHParser(PDFParser):
                     if "Habitation" in cell0:
                         return cell0, str(row[1] or "")
         return "", ""
+
+    # ── Extraction lignes de prestation ────────────────────────────────────────
+
+    def _extraire_lignes_prestation(self, tables: list) -> list[dict]:
+        """Extrait les lignes de prestation depuis la table page 1.
+
+        Format réel pdfplumber (cellule unique contenant toutes les lignes) :
+            Row header: ['P.U.H.T (€) Quantité Montant HT (€) TVA', None]
+            Row data:   ['M-P : préparation et mis (PS1402) 11.19 15.00 (m²) 167.85 10.00%\\n
+                          M-P : préparation et mise en peinture', None]
+        """
+        lignes: list[dict] = []
+        cellule_prestations = self._trouver_cellule_prestations(tables)
+        if not cellule_prestations:
+            return lignes
+
+        # Pattern GDH : désignation  prix_unitaire  quantité  (unité)  montant_ht  tva%
+        pattern = re.compile(
+            r"^(.+?)\s+(\d+[\d.]*)\s+(\d+[\d.]*)\s+\(([^)]+)\)\s+(\d+[\d.]*)\s+[\d.]+%$"
+        )
+
+        ligne_courante: dict | None = None
+        for raw_line in cellule_prestations.split("\n"):
+            line = raw_line.strip()
+            if not line:
+                continue
+            match = pattern.match(line)
+            if match:
+                if ligne_courante is not None:
+                    lignes.append(ligne_courante)
+                ligne_courante = {
+                    "code": "",
+                    "designation": self._nettoyer_texte(match.group(1)),
+                    "prix_unitaire": Decimal(match.group(2)).quantize(Decimal("0.01")),
+                    "quantite": Decimal(match.group(3)).quantize(Decimal("0.01")),
+                    "unite": match.group(4),
+                    "montant_ht": Decimal(match.group(5)).quantize(Decimal("0.01")),
+                    "ordre": len(lignes),
+                }
+            elif ligne_courante is not None:
+                # Ligne de continuation de désignation
+                ligne_courante["designation"] = self._nettoyer_texte(
+                    ligne_courante["designation"] + " " + line
+                )
+
+        if ligne_courante is not None:
+            lignes.append(ligne_courante)
+
+        return lignes
+
+    def _trouver_cellule_prestations(self, tables: list) -> str:
+        """Trouve la cellule contenant les lignes de prestation dans la table GDH."""
+        for table in tables:
+            found_header = False
+            for row in table:
+                if not row:
+                    continue
+                cell0 = str(row[0] or "")
+                if "P.U.H.T" in cell0:
+                    found_header = True
+                    continue
+                if found_header and cell0:
+                    return cell0
+        return ""
 
     # ── Extraction en-tête ────────────────────────────────────────────────────
 

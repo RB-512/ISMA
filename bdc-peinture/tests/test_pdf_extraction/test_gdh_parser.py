@@ -65,6 +65,14 @@ TABLE_P1 = [
             "Mail : christianemusella@gmail.com"
         ),
     ],
+    ["P.U.H.T (€) Quantité Montant HT (€) TVA", None],
+    [
+        (
+            "M-P : préparation et mis (PS1402) 11.19 15.00 (m²) 167.85 10.00%\n"
+            "M-P : préparation et mise en peinture"
+        ),
+        None,
+    ],
 ]
 
 
@@ -138,10 +146,18 @@ def test_extraire_montants_decimal(mock_open):
 
 
 @patch("apps.pdf_extraction.gdh_parser.pdfplumber.open")
-def test_extraire_lignes_prestation_vide(mock_open):
-    """Les lignes de prestation retournent [] (temporairement désactivé)."""
+def test_extraire_lignes_prestation(mock_open):
+    """Extraction d'une ligne de prestation GDH depuis la table."""
     mock_open.return_value = _mock_pdf(TEXTE_GDH_PAGE1, TEXTE_GDH_PAGE2, TABLE_P1)
-    assert GDHParser(PDF_FICTIF).extraire()["lignes_prestation"] == []
+    lignes = GDHParser(PDF_FICTIF).extraire()["lignes_prestation"]
+    assert len(lignes) == 1
+    ligne = lignes[0]
+    assert ligne["prix_unitaire"] == Decimal("11.19")
+    assert ligne["quantite"] == Decimal("15.00")
+    assert ligne["montant_ht"] == Decimal("167.85")
+    assert ligne["unite"] == "m²"
+    assert "peinture" in ligne["designation"]
+    assert ligne["ordre"] == 0
 
 
 @patch("apps.pdf_extraction.gdh_parser.pdfplumber.open")

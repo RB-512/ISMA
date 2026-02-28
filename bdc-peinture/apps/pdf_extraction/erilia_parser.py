@@ -33,10 +33,13 @@ class ERILIAParser(PDFParser):
     def extraire(self) -> dict[str, Any]:
         """Extrait les données du PDF ERILIA et retourne un dict normalisé."""
         texte_complet = ""
+        tables_p1: list = []
 
         with pdfplumber.open(self.pdf_path) as pdf:
-            for page in pdf.pages:
+            for i, page in enumerate(pdf.pages):
                 texte_complet += (page.extract_text() or "") + "\n"
+                if i == 0:
+                    tables_p1 = page.extract_tables() or []
 
         return {
             "bailleur_code": self.BAILLEUR_CODE,
@@ -69,8 +72,84 @@ class ERILIAParser(PDFParser):
             "montant_ttc": self._extraire_montant(
                 texte_complet, r"TOTAL\s+T\.T\.C\.\s+([\d.,\s]+?)(?:\n|$)"
             ),
-            "lignes_prestation": [],
+            "lignes_prestation": self._extraire_lignes_prestation(tables_p1),
         }
+
+    # ── Extraction lignes de prestation ────────────────────────────────────────
+
+    def _extraire_lignes_prestation(self, tables: list) -> list[dict]:
+        """Extrait les lignes de prestation depuis la table ERILIA page 1.
+
+        Format réel pdfplumber (cellule unique multi-lignes dans table 1) :
+            Row 0: ['ARTICLE DÉSIGNATION UNITÉ QUANTITÉ PRIX UNITAIRE H.T. TOTAL T.T.C.']
+            Row 1: ['PP4-31 Peinture finition A sur murs, plafond, FOR 1,00 180,27 198,30\\n
+                     boiseries et métalleries - WC\\nEDL : ...\\n
+                     PP4-33 Peinture finition A ...']
+        """
+        lignes: list[dict] = []
+        cellule = self._trouver_cellule_prestations_erilia(tables)
+        if not cellule:
+            return lignes
+
+        # Pattern ERILIA : code  désignation  unité  quantité  prix_ht  montant_ttc
+        pattern = re.compile(
+            r"^(\S+)\s+(.+?)\s+(FOR|M2|ML|U|ENS|H|F)\s+"
+            r"([\d]+(?:[.,]\d+)?)\s+"
+            r"([\d]+(?:[.,]\d+)?)\s+"
+            r"([\d]+(?:[.,]\d+)?)$"
+        )
+
+        ligne_courante: dict | None = None
+        for raw_line in cellule.split("\n"):
+            line = raw_line.strip()
+            if not line:
+                continue
+            # Ignorer les lignes EDL
+            if line.startswith("EDL"):
+                continue
+            match = pattern.match(line)
+            if match:
+                if ligne_courante is not None:
+                    lignes.append(ligne_courante)
+                prix_unitaire = self._convertir_montant_fr(match.group(5))
+                quantite = self._convertir_montant_fr(match.group(4))
+                montant_ht = (prix_unitaire * quantite).quantize(Decimal("0.01"))
+                ligne_courante = {
+                    "code": match.group(1),
+                    "designation": self._nettoyer_texte(match.group(2)),
+                    "unite": match.group(3),
+                    "quantite": quantite,
+                    "prix_unitaire": prix_unitaire,
+                    "montant_ht": montant_ht,
+                    "ordre": len(lignes),
+                }
+            elif ligne_courante is not None:
+                # Ligne de continuation de désignation
+                ligne_courante["designation"] = self._nettoyer_texte(
+                    ligne_courante["designation"] + " " + line
+                )
+
+        if ligne_courante is not None:
+            lignes.append(ligne_courante)
+
+        return lignes
+
+    def _trouver_cellule_prestations_erilia(self, tables: list) -> str:
+        """Trouve la cellule contenant les lignes de prestation dans la table ERILIA."""
+        for table in tables:
+            for ri, row in enumerate(table):
+                if not row:
+                    continue
+                cell0 = str(row[0] or "")
+                if "ARTICLE" in cell0 and "SIGNATION" in cell0:
+                    # La cellule suivante contient les prestations
+                    if ri + 1 < len(table) and table[ri + 1]:
+                        return str(table[ri + 1][0] or "")
+        return ""
+
+    def _convertir_montant_fr(self, valeur: str) -> Decimal:
+        """Convertit un montant au format français (virgule) en Decimal."""
+        return Decimal(valeur.replace(",", ".")).quantize(Decimal("0.01"))
 
     # ── Méthodes privées d'extraction ─────────────────────────────────────────
 

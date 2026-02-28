@@ -76,8 +76,25 @@ class TestERILIAIntegration:
     def test_montant_ttc(self, resultat):
         assert resultat["montant_ttc"] == Decimal("1178.54")
 
-    def test_lignes_prestation_vide(self, resultat):
-        assert resultat["lignes_prestation"] == []
+    def test_lignes_prestation(self, resultat):
+        lignes = resultat["lignes_prestation"]
+        assert len(lignes) == 3
+        # Première ligne : PP4-31
+        assert lignes[0]["code"] == "PP4-31"
+        assert lignes[0]["prix_unitaire"] == Decimal("180.27")
+        assert lignes[0]["quantite"] == Decimal("1.00")
+        assert lignes[0]["montant_ht"] == Decimal("180.27")
+        assert lignes[0]["unite"] == "FOR"
+        assert lignes[0]["ordre"] == 0
+        # Deuxième ligne : PP4-33
+        assert lignes[1]["code"] == "PP4-33"
+        assert lignes[1]["prix_unitaire"] == Decimal("313.10")
+        assert lignes[1]["montant_ht"] == Decimal("313.10")
+        # Troisième ligne : PP4-43
+        assert lignes[2]["code"] == "PP4-43"
+        assert lignes[2]["prix_unitaire"] == Decimal("578.03")
+        assert lignes[2]["montant_ht"] == Decimal("578.03")
+        assert lignes[2]["ordre"] == 2
 
     def test_occupant_vide(self, resultat):
         # Le PDF ERILIA modèle ne contient pas d'info occupant

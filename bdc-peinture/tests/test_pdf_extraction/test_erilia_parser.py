@@ -50,13 +50,42 @@ TEXTE_ERILIA_PAGE2 = (
 )
 
 
-def _mock_pdf(texte_pages: list[str]):
+TABLES_ERILIA_P1 = [
+    # Table 0 : en-tête (non utilisée pour les lignes)
+    [
+        ["ERILIA\nPAGE N° 1", None],
+    ],
+    # Table 1 : prestations
+    [
+        ["ARTICLE DÉSIGNATION UNITÉ QUANTITÉ PRIX UNITAIRE H.T. TOTAL T.T.C."],
+        [
+            "PP4-31 Peinture finition A sur murs, plafond, FOR 1,00 180,27 198,30\n"
+            "boiseries et métalleries - WC\n"
+            "EDL : Peinture plafond logement - Peinture\n"
+            "cuisine - peinture WC\n"
+            "PP4-33 Peinture finition A sur murs, plafond, FOR 1,00 313,10 344,41\n"
+            "boiseries et métalleries - cuisine\n"
+            "EDL : Peinture plafond logement - Peinture\n"
+            "cuisine - peinture WC\n"
+            "PP4-43 Peinture finition A sur plafonds - FOR 1,00 578,03 635,83\n"
+            "logement complet T3\n"
+            "EDL : Peinture plafond logement - Peinture\n"
+            "cuisine - peinture WC"
+        ],
+        ["TOTAL H.T. 1.071,40"],
+        ["T.V.A. 10,00 % 107,14"],
+        ["TOTAL T.T.C. 1.178,54"],
+    ],
+]
+
+
+def _mock_pdf(texte_pages: list[str], tables_p1: list | None = None):
     """Crée un mock pdfplumber avec N pages."""
     pages = []
-    for texte in texte_pages:
+    for i, texte in enumerate(texte_pages):
         mock_page = MagicMock()
         mock_page.extract_text.return_value = texte
-        mock_page.extract_tables.return_value = []
+        mock_page.extract_tables.return_value = tables_p1 if (i == 0 and tables_p1) else []
         pages.append(mock_page)
 
     mock_pdf = MagicMock()
@@ -72,7 +101,7 @@ def _mock_pdf(texte_pages: list[str]):
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_retourne_dict_complet(mock_open):
     """extraire() retourne un dict avec toutes les clés attendues."""
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     result = ERILIAParser(PDF_FICTIF).extraire()
 
     cles_attendues = [
@@ -91,25 +120,25 @@ def test_extraire_retourne_dict_complet(mock_open):
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_bailleur_code(mock_open):
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     assert ERILIAParser(PDF_FICTIF).extraire()["bailleur_code"] == "ERILIA"
 
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_numero_bdc(mock_open):
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     assert ERILIAParser(PDF_FICTIF).extraire()["numero_bdc"] == "2026 20205"
 
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_date_emission(mock_open):
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     assert ERILIAParser(PDF_FICTIF).extraire()["date_emission"] == date(2026, 2, 6)
 
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_montants_decimal(mock_open):
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     result = ERILIAParser(PDF_FICTIF).extraire()
     assert result["montant_ht"] == Decimal("1071.40")
     assert result["montant_tva"] == Decimal("107.14")
@@ -118,17 +147,31 @@ def test_extraire_montants_decimal(mock_open):
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_emetteur(mock_open):
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     result = ERILIAParser(PDF_FICTIF).extraire()
     assert "ARCQ GWENAEL" in result["emetteur_nom"]
     assert result["emetteur_telephone"] == "0432743295"
 
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
-def test_extraire_lignes_prestation_vide(mock_open):
-    """Les lignes de prestation retournent [] (temporairement désactivé)."""
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
-    assert ERILIAParser(PDF_FICTIF).extraire()["lignes_prestation"] == []
+def test_extraire_lignes_prestation(mock_open):
+    """Extraction de 3 lignes de prestation ERILIA depuis la table."""
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
+    lignes = ERILIAParser(PDF_FICTIF).extraire()["lignes_prestation"]
+    assert len(lignes) == 3
+    # Première ligne
+    assert lignes[0]["code"] == "PP4-31"
+    assert lignes[0]["prix_unitaire"] == Decimal("180.27")
+    assert lignes[0]["quantite"] == Decimal("1.00")
+    assert lignes[0]["montant_ht"] == Decimal("180.27")
+    assert lignes[0]["unite"] == "FOR"
+    assert "WC" in lignes[0]["designation"]
+    assert lignes[0]["ordre"] == 0
+    # Troisième ligne
+    assert lignes[2]["code"] == "PP4-43"
+    assert lignes[2]["prix_unitaire"] == Decimal("578.03")
+    assert lignes[2]["montant_ht"] == Decimal("578.03")
+    assert lignes[2]["ordre"] == 2
 
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
@@ -144,14 +187,14 @@ def test_extraire_champ_absent_retourne_vide(mock_open):
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_programme(mock_open):
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     result = ERILIAParser(PDF_FICTIF).extraire()
     assert "TERRASSES DE MERCURE" in result["programme_residence"]
 
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_adresse(mock_open):
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     result = ERILIAParser(PDF_FICTIF).extraire()
     assert "PETITE VITESSE" in result["adresse"]
     assert result["code_postal"] == "84000"
@@ -160,7 +203,7 @@ def test_extraire_adresse(mock_open):
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_logement(mock_open):
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
     result = ERILIAParser(PDF_FICTIF).extraire()
     assert result["logement_numero"] == "50"
     assert result["logement_etage"] == "01"
