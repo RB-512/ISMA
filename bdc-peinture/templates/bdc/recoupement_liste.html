@@ -7,9 +7,14 @@
 
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold text-gray-800">Recoupement par sous-traitant</h1>
-    <a href="{% url 'bdc:index' %}" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
-      Retour au tableau de bord
-    </a>
+    <div class="flex gap-2">
+      <a href="{% url 'bdc:export_facturation' %}" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition">
+        Exporter
+      </a>
+      <a href="{% url 'bdc:index' %}" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+        Retour au tableau de bord
+      </a>
+    </div>
   </div>
 
   {% if sous_traitants %}

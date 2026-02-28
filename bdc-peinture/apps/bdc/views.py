@@ -68,6 +68,8 @@ def liste_bdc(request):
     compteurs = {row["statut"]: row["count"] for row in compteurs_qs}
     total = sum(compteurs.values())
 
+    is_cdt = request.user.groups.filter(name="CDT").exists()
+
     return render(request, "bdc/liste.html", {
         "page_obj": page_obj,
         "filtre": filtre,
@@ -75,6 +77,7 @@ def liste_bdc(request):
         "compteurs": compteurs,
         "total": total,
         "statut_choices": StatutChoices,
+        "is_cdt": is_cdt,
     })
 
 
@@ -452,6 +455,43 @@ def recoupement_st_detail(request, st_pk: int):
         "bdc_list": queryset,
         "filtre_statut": filtre_statut,
         "statut_choices": StatutChoices,
+    })
+
+
+# ─── Export facturation ──────────────────────────────────────────────────────
+
+@group_required("CDT")
+def export_facturation(request):
+    """GET : formulaire de filtres avec aperçu. POST : téléchargement Excel."""
+    from .exports import generer_export_excel
+    from .forms import ExportFacturationForm
+
+    form = ExportFacturationForm(request.GET or None)
+
+    # Queryset de base : BDC à facturer + facturés
+    queryset = BonDeCommande.objects.filter(
+        statut__in=[StatutChoices.A_FACTURER, StatutChoices.FACTURE]
+    ).select_related("bailleur", "sous_traitant")
+
+    # Appliquer les filtres
+    if form.is_valid():
+        if form.cleaned_data.get("statut"):
+            queryset = queryset.filter(statut=form.cleaned_data["statut"])
+        if form.cleaned_data.get("sous_traitant"):
+            queryset = queryset.filter(sous_traitant=form.cleaned_data["sous_traitant"])
+        if form.cleaned_data.get("date_du"):
+            queryset = queryset.filter(date_realisation__gte=form.cleaned_data["date_du"])
+        if form.cleaned_data.get("date_au"):
+            queryset = queryset.filter(date_realisation__lte=form.cleaned_data["date_au"])
+
+    count = queryset.count()
+
+    if request.method == "POST":
+        return generer_export_excel(queryset)
+
+    return render(request, "bdc/export_facturation.html", {
+        "form": form,
+        "count": count,
     })
 
 

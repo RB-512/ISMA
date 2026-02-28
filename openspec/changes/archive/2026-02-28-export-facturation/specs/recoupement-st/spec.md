@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Le CDT dispose d'un écran de recoupement par sous-traitant
 Le système SHALL fournir un écran listant tous les sous-traitants actifs avec le nombre de BDC par statut (en cours, à facturer, facturé). Le CDT SHALL pouvoir cliquer sur un ST pour voir le détail de ses BDC. Un bouton "Exporter" SHALL être affiché, pointant vers `/bdc/export/`.
 
@@ -16,18 +18,3 @@ Le système SHALL fournir un écran listant tous les sous-traitants actifs avec 
 #### Scenario: Bouton Exporter visible
 - **WHEN** le CDT accède à `/bdc/recoupement/`
 - **THEN** un bouton "Exporter" est affiché dans l'en-tête, pointant vers `/bdc/export/`
-
-### Requirement: Le CDT peut voir le détail des BDC d'un sous-traitant
-Le système SHALL afficher la liste des BDC d'un ST donné, filtrables par statut (en cours, à facturer, facturé). Chaque BDC SHALL afficher : numéro, adresse, statut, date d'attribution, date de réalisation (si renseignée).
-
-#### Scenario: Affichage des BDC d'un ST
-- **WHEN** le CDT accède à `/bdc/recoupement/<st_pk>/`
-- **THEN** la page affiche tous les BDC attribués à ce ST avec numéro, adresse, statut, dates
-
-#### Scenario: Filtre par statut
-- **WHEN** le CDT filtre par statut "À facturer"
-- **THEN** seuls les BDC A_FACTURER du ST sont affichés
-
-#### Scenario: Lien vers la fiche détail
-- **WHEN** le CDT clique sur un numéro de BDC
-- **THEN** il est redirigé vers la fiche détail du BDC

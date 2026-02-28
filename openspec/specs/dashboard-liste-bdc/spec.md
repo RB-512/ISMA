@@ -85,7 +85,7 @@ Le système SHALL appliquer tous les filtres et la recherche simultanément (int
 - **THEN** seuls les BDC en statut A_FAIRE dont le numéro, l'adresse ou l'occupant contient "Marseille" sont affichés
 
 ### Requirement: L'accès au dashboard nécessite une authentification
-Le système SHALL restreindre l'accès au dashboard aux utilisateurs authentifiés (Secrétaire et CDT).
+Le système SHALL restreindre l'accès au dashboard aux utilisateurs authentifiés (Secrétaire et CDT). Un lien "Export facturation" SHALL être affiché pour les utilisateurs CDT, pointant vers `/bdc/export/`.
 
 #### Scenario: Utilisateur non authentifié
 - **WHEN** un utilisateur non authentifié accède à `/bdc/`
@@ -94,3 +94,11 @@ Le système SHALL restreindre l'accès au dashboard aux utilisateurs authentifi�
 #### Scenario: Utilisateur authentifié (Secrétaire ou CDT)
 - **WHEN** un utilisateur authentifié accède à `/bdc/`
 - **THEN** le dashboard est affiché normalement
+
+#### Scenario: Lien Export facturation pour CDT
+- **WHEN** un utilisateur CDT accède à `/bdc/`
+- **THEN** un lien "Export facturation" est affiché dans la barre d'actions
+
+#### Scenario: Lien Export facturation masqué pour secrétaire
+- **WHEN** une secrétaire accède à `/bdc/`
+- **THEN** le lien "Export facturation" n'est pas affiché

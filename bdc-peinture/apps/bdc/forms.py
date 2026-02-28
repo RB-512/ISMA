@@ -74,6 +74,39 @@ class AttributionForm(forms.Form):
     )
 
 
+STATUT_EXPORT_CHOICES = [
+    ("", "Tous (à facturer + facturé)"),
+    ("A_FACTURER", "À facturer"),
+    ("FACTURE", "Facturé"),
+]
+
+
+class ExportFacturationForm(forms.Form):
+    """Formulaire de filtres pour l'export facturation."""
+
+    statut = forms.ChoiceField(
+        choices=STATUT_EXPORT_CHOICES,
+        required=False,
+        label="Statut",
+    )
+    sous_traitant = forms.ModelChoiceField(
+        queryset=SousTraitant.objects.filter(actif=True),
+        required=False,
+        label="Sous-traitant",
+        empty_label="Tous les sous-traitants",
+    )
+    date_du = forms.DateField(
+        required=False,
+        label="Date réalisation du",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    date_au = forms.DateField(
+        required=False,
+        label="Date réalisation au",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+
+
 class BDCEditionForm(forms.ModelForm):
     """
     Formulaire d'édition des champs manuels depuis la fiche détail.
