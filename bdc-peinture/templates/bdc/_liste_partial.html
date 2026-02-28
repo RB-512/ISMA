@@ -1,5 +1,5 @@
 {# HTMX-swappable partial: compteurs + alertes + filtres + tableau + pagination #}
-<div id="isma-dashboard-content">
+<div id="isma-dashboard-content" x-data="{ sidebarOpen: false, selectedBdc: null }">
 
 {# ── Onglets par statut ──────────────────────────────────────────── #}
 <div class="border-b border-[var(--color-border)]">
@@ -148,7 +148,12 @@
         </thead>
         <tbody class="divide-y divide-[var(--color-border)]">
             {% for bdc in page_obj %}
-            <tr class="hover:bg-accent/5 dark:hover:bg-accent/10 cursor-pointer transition-colors duration-100" onclick="window.location='{% url 'bdc:detail' pk=bdc.pk %}'">
+            <tr class="hover:bg-accent/5 dark:hover:bg-accent/10 cursor-pointer transition-colors duration-100"
+                :class="{ 'bg-accent/10 dark:bg-accent/15': selectedBdc == {{ bdc.pk }} }"
+                hx-get="{% url 'bdc:detail_sidebar' pk=bdc.pk %}"
+                hx-target="#sidebar-content"
+                hx-swap="innerHTML"
+                @htmx:after-swap.window="sidebarOpen = true; selectedBdc = {{ bdc.pk }}">
                 <td class="px-4 py-3 text-sm font-medium font-mono text-accent">{{ bdc.numero_bdc }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.bailleur.code }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.adresse|truncatechars:40 }}</td>
@@ -218,5 +223,31 @@
     </a>
 </div>
 {% endif %}
+
+{# ── Sidebar detail panel ────────────────────────────────────────── #}
+<div x-show="sidebarOpen"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="translate-x-full"
+     x-transition:enter-end="translate-x-0"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="translate-x-0"
+     x-transition:leave-end="translate-x-full"
+     class="fixed top-0 right-0 h-full w-[420px] bg-[var(--color-surface-card)] border-l border-[var(--color-border)] shadow-2xl z-50"
+     @click.outside="sidebarOpen = false; selectedBdc = null"
+     @keydown.escape.window="sidebarOpen = false; selectedBdc = null">
+    <div id="sidebar-content" class="h-full"></div>
+</div>
+
+{# Overlay #}
+<div x-show="sidebarOpen"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 bg-black/20 dark:bg-black/40 z-40"
+     @click="sidebarOpen = false; selectedBdc = null">
+</div>
 
 </div>{# /isma-dashboard-content #}
