@@ -15,20 +15,36 @@
         &mdash; créé le {{ bdc.created_at|date:"d/m/Y" }} par {{ bdc.cree_par }}
       </p>
     </div>
-    {% if bdc.pdf_original %}
-    <a
-      href="{{ bdc.pdf_original.url }}"
-      target="_blank"
-      class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
-    >
-      Voir le PDF
-    </a>
-    {% endif %}
+    <div class="flex items-center gap-2">
+      {% if is_secretaire and transitions %}
+        {% for statut_val, statut_label in transitions %}
+        <form method="POST" action="{% url 'bdc:changer_statut' bdc.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="nouveau_statut" value="{{ statut_val }}">
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+            {{ statut_label }}
+          </button>
+        </form>
+        {% endfor %}
+      {% endif %}
+      {% if bdc.pdf_original %}
+      <a
+        href="{{ bdc.pdf_original.url }}"
+        target="_blank"
+        class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
+      >
+        Voir le PDF
+      </a>
+      {% endif %}
+    </div>
   </div>
 
   {% if messages %}
     {% for message in messages %}
-      <div class="mb-4 p-4 rounded-lg bg-green-50 text-green-800 border border-green-200">{{ message }}</div>
+      <div class="mb-4 p-4 rounded-lg
+        {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200
+        {% else %}bg-green-50 text-green-800 border border-green-200{% endif %}
+      ">{{ message }}</div>
     {% endfor %}
   {% endif %}
 
@@ -68,16 +84,56 @@
         {% if bdc.delai_execution %}
         <div><dt class="inline text-gray-500">Délai :</dt> <dd class="inline text-gray-800">{{ bdc.delai_execution|date:"d/m/Y" }}</dd></div>
         {% endif %}
+        {% if bdc.sous_traitant %}
+        <div><dt class="inline text-gray-500">Sous-traitant :</dt> <dd class="inline text-gray-800">{{ bdc.sous_traitant }}</dd></div>
+        {% endif %}
         {% if bdc.modalite_acces %}
         <div><dt class="inline text-gray-500">Accès :</dt> <dd class="inline text-gray-800">{{ bdc.modalite_acces }}</dd></div>
         {% endif %}
         {% if bdc.rdv_pris %}
         <div><dt class="inline text-gray-500">RDV :</dt> <dd class="inline text-gray-800">{{ bdc.rdv_date|date:"d/m/Y H:i"|default:"Pris" }}</dd></div>
         {% endif %}
+        {% if bdc.notes %}
+        <div><dt class="inline text-gray-500">Notes :</dt> <dd class="inline text-gray-800">{{ bdc.notes }}</dd></div>
+        {% endif %}
       </dl>
     </section>
 
   </div>
+
+  {# Contacts #}
+  {% if bdc.occupant_nom or bdc.emetteur_nom %}
+  <section class="bg-white shadow-sm rounded-xl border border-gray-200 p-5 mt-6">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Contacts</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+      {% if bdc.occupant_nom %}
+      <div>
+        <h3 class="font-medium text-gray-700 mb-1">Occupant</h3>
+        <dl class="space-y-1">
+          <div><dt class="inline text-gray-500">Nom :</dt> <dd class="inline text-gray-800">{{ bdc.occupant_nom }}</dd></div>
+          {% if bdc.occupant_telephone %}
+          <div><dt class="inline text-gray-500">Tél :</dt> <dd class="inline text-gray-800">{{ bdc.occupant_telephone }}</dd></div>
+          {% endif %}
+          {% if bdc.occupant_email %}
+          <div><dt class="inline text-gray-500">Email :</dt> <dd class="inline text-gray-800">{{ bdc.occupant_email }}</dd></div>
+          {% endif %}
+        </dl>
+      </div>
+      {% endif %}
+      {% if bdc.emetteur_nom %}
+      <div>
+        <h3 class="font-medium text-gray-700 mb-1">Émetteur bailleur</h3>
+        <dl class="space-y-1">
+          <div><dt class="inline text-gray-500">Nom :</dt> <dd class="inline text-gray-800">{{ bdc.emetteur_nom }}</dd></div>
+          {% if bdc.emetteur_telephone %}
+          <div><dt class="inline text-gray-500">Tél :</dt> <dd class="inline text-gray-800">{{ bdc.emetteur_telephone }}</dd></div>
+          {% endif %}
+        </dl>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
 
   {# Lignes de prestation #}
   {% if lignes %}
@@ -104,6 +160,43 @@
   </section>
   {% endif %}
 
+  {# Édition des champs manuels (secrétaire uniquement) #}
+  {% if is_secretaire and form_edition %}
+  <section class="bg-white shadow-sm rounded-xl border border-gray-200 p-5 mt-6">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Compléter le BDC</h2>
+    <form method="POST" action="{% url 'bdc:modifier' bdc.pk %}">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div>
+          <label for="id_occupation" class="block text-gray-500 mb-1">Vacant / Occupé</label>
+          {{ form_edition.occupation }}
+        </div>
+        <div>
+          <label for="id_modalite_acces" class="block text-gray-500 mb-1">Modalité d'accès</label>
+          {{ form_edition.modalite_acces }}
+        </div>
+        <div class="flex items-center gap-3">
+          {{ form_edition.rdv_pris }}
+          <label for="id_rdv_pris" class="text-gray-700">RDV pris</label>
+        </div>
+        <div>
+          <label for="id_rdv_date" class="block text-gray-500 mb-1">Date / heure du RDV</label>
+          {{ form_edition.rdv_date }}
+        </div>
+        <div class="md:col-span-2">
+          <label for="id_notes" class="block text-gray-500 mb-1">Notes</label>
+          {{ form_edition.notes }}
+        </div>
+      </div>
+      <div class="mt-4">
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition">
+          Enregistrer
+        </button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
   {# Historique #}
   {% if historique %}
   <section class="bg-white shadow-sm rounded-xl border border-gray-200 p-5 mt-6">
@@ -112,7 +205,12 @@
       {% for action in historique %}
       <li class="flex gap-2">
         <span class="text-gray-400">{{ action.created_at|date:"d/m H:i" }}</span>
-        <span>{{ action.get_action_display }} par {{ action.utilisateur }}</span>
+        <span>
+          {{ action.get_action_display }} par {{ action.utilisateur }}
+          {% if action.action == "STATUT_CHANGE" and action.details %}
+            : {{ action.details.ancien_statut }} &rarr; {{ action.details.nouveau_statut }}
+          {% endif %}
+        </span>
       </li>
       {% endfor %}
     </ul>

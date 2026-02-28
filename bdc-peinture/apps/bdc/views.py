@@ -20,9 +20,9 @@ from apps.accounts.decorators import group_required
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
 
 from .filters import BonDeCommandeFilter
-from .forms import BonDeCommandeForm
+from .forms import BDCEditionForm, BonDeCommandeForm
 from .models import ActionChoices, Bailleur, BonDeCommande, LignePrestation, StatutChoices
-from .services import BDCIncomplet, changer_statut, enregistrer_action
+from .services import BDCIncomplet, TransitionInvalide, changer_statut, enregistrer_action
 
 # ─── Dashboard / Liste BDC ───────────────────────────────────────────────────
 
@@ -208,14 +208,68 @@ def creer_bdc(request):
 @login_required
 def detail_bdc(request, pk: int):
     """Fiche de détail d'un BDC — accessible à tous les utilisateurs authentifiés."""
-    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    from .services import TRANSITIONS
+
+    bdc = get_object_or_404(
+        BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk
+    )
     lignes = bdc.lignes_prestation.all()
     historique = bdc.historique.all()[:10]
+
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
+    form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
+    transitions = [
+        (statut, StatutChoices(statut).label)
+        for statut in TRANSITIONS.get(bdc.statut, [])
+    ] if is_secretaire else []
+
     return render(request, "bdc/detail.html", {
         "bdc": bdc,
         "lignes": lignes,
         "historique": historique,
+        "form_edition": form_edition,
+        "transitions": transitions,
+        "is_secretaire": is_secretaire,
     })
+
+
+@group_required("Secretaire")
+def modifier_bdc(request, pk: int):
+    """POST-only : sauvegarde les champs manuels depuis la fiche détail."""
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    form = BDCEditionForm(request.POST, instance=bdc)
+    if form.is_valid():
+        form.save()
+        enregistrer_action(bdc, request.user, ActionChoices.MODIFICATION)
+        messages.success(request, "BDC mis à jour.")
+    else:
+        for erreurs in form.errors.values():
+            for erreur in erreurs:
+                messages.error(request, erreur)
+    return redirect("bdc:detail", pk=pk)
+
+
+@group_required("Secretaire")
+def changer_statut_bdc(request, pk: int):
+    """POST-only : applique une transition de statut sur le BDC."""
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    nouveau_statut = request.POST.get("nouveau_statut", "")
+
+    try:
+        changer_statut(bdc, nouveau_statut, request.user)
+        messages.success(request, f"Statut changé en « {bdc.get_statut_display()} ».")
+    except TransitionInvalide:
+        messages.error(request, "Cette transition de statut n'est pas autorisée.")
+    except BDCIncomplet as e:
+        messages.error(request, str(e))
+
+    return redirect("bdc:detail", pk=pk)
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

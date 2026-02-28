@@ -53,3 +53,19 @@ class BonDeCommandeForm(forms.ModelForm):
                 f"Le BDC n°{numero} existe déjà dans le système."
             )
         return numero
+
+
+class BDCEditionForm(forms.ModelForm):
+    """
+    Formulaire d'édition des champs manuels depuis la fiche détail.
+    Seuls les champs saisissables par la secrétaire sont inclus.
+    """
+
+    class Meta:
+        model = BonDeCommande
+        fields = ["occupation", "modalite_acces", "rdv_pris", "rdv_date", "notes"]
+        widgets = {
+            "rdv_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "modalite_acces": forms.Textarea(attrs={"rows": 2}),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
