@@ -1,31 +1,40 @@
 {# HTMX-swappable partial: compteurs + alertes + filtres + tableau + pagination #}
 <div id="isma-dashboard-content">
 
-<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4 text-center">
-        <div class="text-2xl font-bold font-mono text-[var(--color-text)]">{{ total }}</div>
-        <div class="text-xs text-[var(--color-text-muted)] mt-1 font-medium">Total</div>
-    </div>
-    {% for choix in statut_choices.choices %}
-    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4 text-center
-        {% if choix.0 == 'A_TRAITER' %}ring-1 ring-amber-400/30
-        {% elif choix.0 == 'A_FAIRE' %}ring-1 ring-blue-400/30
-        {% elif choix.0 == 'EN_COURS' %}ring-1 ring-indigo-400/30
-        {% elif choix.0 == 'A_FACTURER' %}ring-1 ring-orange-400/30
-        {% elif choix.0 == 'FACTURE' %}ring-1 ring-emerald-400/30
-        {% endif %}">
-        <div class="text-2xl font-bold font-mono
-            {% if choix.0 == 'A_TRAITER' %}text-amber-600 dark:text-amber-400
-            {% elif choix.0 == 'A_FAIRE' %}text-blue-600 dark:text-blue-400
-            {% elif choix.0 == 'EN_COURS' %}text-indigo-600 dark:text-indigo-400
-            {% elif choix.0 == 'A_FACTURER' %}text-orange-600 dark:text-orange-400
-            {% elif choix.0 == 'FACTURE' %}text-emerald-600 dark:text-emerald-400
-            {% else %}text-[var(--color-text)]{% endif %}">
-            {% for k, v in compteurs.items %}{% if k == choix.0 %}{{ v }}{% endif %}{% endfor %}
-        </div>
-        <div class="text-xs text-[var(--color-text-muted)] mt-1 font-medium">{{ choix.1 }}</div>
-    </div>
-    {% endfor %}
+{# ── Onglets par statut ──────────────────────────────────────────── #}
+<div class="border-b border-[var(--color-border)]">
+    <nav class="flex space-x-1 overflow-x-auto" role="tablist">
+        {# Onglet "Tous" #}
+        <a href="{% url 'bdc:index' %}{% if recherche %}?q={{ recherche }}{% endif %}"
+           hx-get="{% url 'bdc:index' %}{% if recherche %}?q={{ recherche }}{% endif %}"
+           hx-target="#isma-dashboard-content"
+           hx-push-url="true"
+           role="tab"
+           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors
+                  {% if not filtre.form.statut.value %}
+                  text-accent border-b-2 border-accent
+                  {% else %}
+                  text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-b-2 hover:border-[var(--color-border)]
+                  {% endif %}">
+            Tous <span class="ml-1 font-mono text-xs">({{ total }})</span>
+        </a>
+        {% for choix in statut_choices.choices %}
+        <a href="{% url 'bdc:index' %}?statut={{ choix.0 }}"
+           hx-get="{% url 'bdc:index' %}?statut={{ choix.0 }}"
+           hx-target="#isma-dashboard-content"
+           hx-push-url="true"
+           role="tab"
+           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors
+                  {% if filtre.form.statut.value == choix.0 %}
+                  text-accent border-b-2 border-accent
+                  {% else %}
+                  text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-b-2 hover:border-[var(--color-border)]
+                  {% endif %}">
+            {{ choix.1 }}
+            <span class="ml-1 font-mono text-xs">({% for k, v in compteurs.items %}{% if k == choix.0 %}{{ v }}{% endif %}{% endfor %})</span>
+        </a>
+        {% endfor %}
+    </nav>
 </div>
 
 {# ── Alertes délais (CDT) ────────────────────────────────────────────── #}
@@ -73,24 +82,13 @@
           hx-target="#isma-dashboard-content"
           hx-push-url="true"
           hx-indicator="#loading-indicator"
-          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
 
         {# Recherche #}
         <div class="lg:col-span-2">
             <label for="id_q">Recherche</label>
             <input type="text" name="q" id="id_q" value="{{ recherche }}"
                    placeholder="N° BDC, adresse, occupant...">
-        </div>
-
-        {# Statut #}
-        <div>
-            <label for="id_statut">Statut</label>
-            <select name="statut" id="id_statut">
-                <option value="">Tous les statuts</option>
-                {% for choix in statut_choices.choices %}
-                <option value="{{ choix.0 }}" {% if filtre.form.statut.value == choix.0 %}selected{% endif %}>{{ choix.1 }}</option>
-                {% endfor %}
-            </select>
         </div>
 
         {# Bailleur #}
@@ -123,7 +121,7 @@
             <label for="id_date_au">Au</label>
             <input type="date" name="date_au" id="id_date_au" value="{{ filtre.form.date_au.value|default:'' }}">
         </div>
-        <div class="lg:col-span-4 flex items-center gap-4">
+        <div class="lg:col-span-3 flex items-center gap-4">
             <a href="{% url 'bdc:index' %}" class="text-sm text-[var(--color-text-muted)] hover:text-accent transition-colors">Réinitialiser les filtres</a>
             <div id="loading-indicator" class="htmx-indicator">
                 <svg class="w-4 h-4 animate-spin text-accent" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
