@@ -1,8 +1,10 @@
 """Tests de la vue liste_bdc : accès, filtres, recherche, pagination, compteurs."""
+from decimal import Decimal
+
 import pytest
 from django.urls import reverse
 
-from apps.bdc.models import BonDeCommande, StatutChoices
+from apps.bdc.models import BonDeCommande, LignePrestation, StatutChoices
 
 pytestmark = pytest.mark.django_db
 
@@ -165,3 +167,36 @@ class TestListeBDCCompteurs:
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:index"))
         assert response.context["total"] == 0
+
+
+# ─── Tests queryset optimisations ───────────────────────────────────────────
+
+class TestListeBDCQueryset:
+
+    def test_liste_bdc_includes_sous_traitant_and_montant(
+        self, client, bdc_a_traiter, utilisateur_secretaire
+    ):
+        """Dashboard queryset includes sous_traitant and montant_ht_total annotation."""
+        # Create a prestation line so the annotation has data
+        LignePrestation.objects.create(
+            bdc=bdc_a_traiter,
+            designation="Peinture murs",
+            quantite=Decimal("10.00"),
+            unite="m2",
+            prix_unitaire=Decimal("12.50"),
+            montant=Decimal("125.00"),
+            ordre=0,
+        )
+
+        client.force_login(utilisateur_secretaire)
+        resp = client.get(reverse("bdc:index"))
+
+        assert resp.status_code == 200
+        bdc = resp.context["page_obj"][0]
+
+        # sous_traitant should be accessible without extra query
+        assert hasattr(bdc, "sous_traitant")
+
+        # montant_ht_total annotation should be present
+        assert hasattr(bdc, "montant_ht_total")
+        assert bdc.montant_ht_total == Decimal("125.00")

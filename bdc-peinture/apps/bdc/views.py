@@ -13,7 +13,7 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -40,7 +40,11 @@ from .services import (
 @login_required
 def liste_bdc(request):
     """Tableau de bord : liste paginée des BDC avec filtres et recherche."""
-    queryset = BonDeCommande.objects.select_related("bailleur").all()
+    queryset = (
+        BonDeCommande.objects.select_related("bailleur", "sous_traitant")
+        .annotate(montant_ht_total=Sum("lignes_prestation__montant"))
+        .all()
+    )
 
     # Recherche textuelle
     recherche = request.GET.get("q", "").strip()
