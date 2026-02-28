@@ -3,6 +3,7 @@ Logique métier du workflow BDC.
 Toute la logique de transition de statut et d'historique est ici,
 jamais dans les vues ni les modèles.
 """
+import logging
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -10,6 +11,8 @@ from django.contrib.auth.models import User
 from apps.sous_traitants.models import SousTraitant
 
 from .models import ActionChoices, BonDeCommande, HistoriqueAction, StatutChoices
+
+logger = logging.getLogger(__name__)
 
 # ─── Dictionnaire de transitions autorisées ───────────────────────────────────
 
@@ -154,6 +157,8 @@ def attribuer_st(
         },
     )
 
+    _generer_terrain_si_possible(bdc)
+
     return bdc
 
 
@@ -193,4 +198,18 @@ def reattribuer_st(
         },
     )
 
+    _generer_terrain_si_possible(bdc)
+
     return bdc
+
+
+def _generer_terrain_si_possible(bdc: BonDeCommande) -> None:
+    """Génère le PDF terrain, non-bloquant en cas d'erreur."""
+    try:
+        from .terrain import generer_pdf_terrain
+
+        generer_pdf_terrain(bdc)
+    except Exception:
+        logger.warning(
+            "Échec génération PDF terrain pour BDC %s", bdc.numero_bdc, exc_info=True
+        )

@@ -37,6 +37,14 @@
         Réattribuer
       </a>
       {% endif %}
+      {% if bdc.pdf_terrain %}
+      <a
+        href="{% url 'bdc:terrain' bdc.pk %}"
+        class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+      >
+        BDC terrain
+      </a>
+      {% endif %}
       {% if bdc.pdf_original %}
       <a
         href="{{ bdc.pdf_original.url }}"

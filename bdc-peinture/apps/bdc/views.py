@@ -14,6 +14,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.decorators import group_required
@@ -371,6 +372,24 @@ def reattribuer_bdc(request, pk: int):
         f"BDC réattribué à {bdc.sous_traitant} ({bdc.pourcentage_st} %).",
     )
     return redirect("bdc:detail", pk=pk)
+
+
+# ─── Téléchargement PDF terrain ───────────────────────────────────────────────
+
+@login_required
+def telecharger_terrain(request, pk: int):
+    """Sert le PDF terrain (sans prix) en téléchargement."""
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+
+    if not bdc.pdf_terrain:
+        raise Http404("Aucun PDF terrain disponible pour ce BDC.")
+
+    return FileResponse(
+        bdc.pdf_terrain.open("rb"),
+        content_type="application/pdf",
+        as_attachment=True,
+        filename=f"BDC_{bdc.numero_bdc}_terrain.pdf",
+    )
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

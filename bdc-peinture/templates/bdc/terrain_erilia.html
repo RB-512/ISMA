@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>BDC Terrain — {{ bdc.numero_bdc }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 11pt; color: #333; margin: 2cm; }
+    h1 { font-size: 16pt; margin-bottom: 4px; }
+    .subtitle { font-size: 10pt; color: #666; margin-bottom: 20px; }
+    .section { margin-bottom: 16px; }
+    .section-title { font-size: 10pt; font-weight: bold; text-transform: uppercase; color: #555; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th { background: #f0f0f0; text-align: left; padding: 6px 8px; font-size: 10pt; border: 1px solid #ccc; }
+    td { padding: 6px 8px; font-size: 10pt; border: 1px solid #ccc; }
+    .label { color: #666; }
+    .info-grid { display: flex; flex-wrap: wrap; gap: 4px 24px; }
+    .info-item { margin-bottom: 4px; }
+    .footer { margin-top: 30px; font-size: 9pt; color: #999; text-align: center; }
+    .confidential { font-size: 9pt; color: #c00; font-weight: bold; text-align: center; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <h1>BON DE COMMANDE TERRAIN — N° {{ bdc.numero_bdc }}</h1>
+  <p class="subtitle">{{ bdc.bailleur }}{% if bdc.numero_marche %} — Marché {{ bdc.numero_marche }}{% endif %}</p>
+
+  <div class="section">
+    <div class="section-title">Localisation</div>
+    <div class="info-item"><span class="label">Adresse :</span> {{ bdc.adresse_complete }}</div>
+    {% if bdc.programme_residence %}
+    <div class="info-item"><span class="label">Résidence :</span> {{ bdc.programme_residence }}</div>
+    {% endif %}
+    {% if bdc.logement_numero %}
+    <div class="info-item">
+      <span class="label">Logement :</span> {{ bdc.logement_type }} n°{{ bdc.logement_numero }}
+      {% if bdc.logement_etage %} — Étage {{ bdc.logement_etage }}{% endif %}
+      {% if bdc.logement_porte %} / Porte {{ bdc.logement_porte }}{% endif %}
+    </div>
+    {% endif %}
+    {% if bdc.occupation %}
+    <div class="info-item"><span class="label">Occupation :</span> {{ bdc.get_occupation_display }}</div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Travaux</div>
+    {% if bdc.objet_travaux %}
+    <div class="info-item"><span class="label">Objet :</span> {{ bdc.objet_travaux }}</div>
+    {% endif %}
+    {% if bdc.delai_execution %}
+    <div class="info-item"><span class="label">Délai d'exécution :</span> {{ bdc.delai_execution|date:"d/m/Y" }}</div>
+    {% endif %}
+    {% if bdc.modalite_acces %}
+    <div class="info-item"><span class="label">Accès :</span> {{ bdc.modalite_acces }}</div>
+    {% endif %}
+  </div>
+
+  {% if bdc.occupant_nom %}
+  <div class="section">
+    <div class="section-title">Contact occupant</div>
+    <div class="info-item"><span class="label">Nom :</span> {{ bdc.occupant_nom }}</div>
+    {% if bdc.occupant_telephone %}
+    <div class="info-item"><span class="label">Téléphone :</span> {{ bdc.occupant_telephone }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if lignes %}
+  <div class="section">
+    <div class="section-title">Prestations</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Désignation</th>
+          <th style="text-align: right;">Quantité</th>
+          <th>Unité</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in lignes %}
+        <tr>
+          <td>{{ ligne.designation }}</td>
+          <td style="text-align: right;">{{ ligne.quantite }}</td>
+          <td>{{ ligne.unite }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <p class="confidential">DOCUMENT TERRAIN — SANS PRIX</p>
+
+</body>
+</html>

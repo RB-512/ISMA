@@ -20,7 +20,7 @@ La fiche détail BDC SHALL afficher une section **Contacts** avec le nom, télé
 - **THEN** la section Contacts n'est pas affichée
 
 ### Requirement: La fiche détail affiche le sous-traitant attribué
-La fiche détail SHALL afficher le sous-traitant attribué au BDC quand il existe. Le montant ST et le pourcentage ST ne SHALL pas être affichés (confidentiels).
+La fiche détail SHALL afficher le sous-traitant attribué au BDC quand il existe. Le montant ST et le pourcentage ST ne SHALL pas être affichés (confidentiels). Un bouton "BDC terrain" SHALL être affiché quand le champ `pdf_terrain` est renseigné, permettant le téléchargement du PDF sans prix.
 
 #### Scenario: BDC avec sous-traitant attribué
 - **WHEN** le BDC a un `sous_traitant` renseigné
@@ -29,6 +29,14 @@ La fiche détail SHALL afficher le sous-traitant attribué au BDC quand il exist
 #### Scenario: BDC sans sous-traitant
 - **WHEN** le BDC n'a pas de `sous_traitant`
 - **THEN** aucune information sous-traitant n'est affichée
+
+#### Scenario: Bouton BDC terrain visible
+- **WHEN** le BDC a un `pdf_terrain` renseigné
+- **THEN** un bouton "BDC terrain" est affiché dans l'en-tête, pointant vers `/<pk>/terrain/`
+
+#### Scenario: Bouton BDC terrain masqué
+- **WHEN** le BDC n'a pas de `pdf_terrain`
+- **THEN** le bouton "BDC terrain" n'est pas affiché
 
 ### Requirement: La secrétaire peut éditer les champs manuels depuis la fiche détail
 La fiche détail SHALL afficher un formulaire d'édition pour les champs manuels : `occupation` (select vacant/occupé), `modalite_acces` (textarea), `rdv_pris` (checkbox), `rdv_date` (datetime), `notes` (textarea). Le formulaire SHALL être visible uniquement pour les utilisateurs du groupe "Secretaire". La soumission SHALL sauvegarder les champs et enregistrer une action MODIFICATION dans l'historique.

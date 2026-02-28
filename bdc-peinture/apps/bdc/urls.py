@@ -13,4 +13,5 @@ urlpatterns = [
     path("<int:pk>/statut/", views.changer_statut_bdc, name="changer_statut"),
     path("<int:pk>/attribuer/", views.attribuer_bdc, name="attribuer"),
     path("<int:pk>/reattribuer/", views.reattribuer_bdc, name="reattribuer"),
+    path("<int:pk>/terrain/", views.telecharger_terrain, name="terrain"),
 ]

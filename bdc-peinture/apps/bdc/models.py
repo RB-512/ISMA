@@ -13,6 +13,12 @@ def pdf_upload_path(instance: "BonDeCommande", filename: str) -> str:
     return f"bdc/{today.year}/{today.month:02d}/{instance.numero_bdc}_{basename}"
 
 
+def pdf_terrain_upload_path(instance: "BonDeCommande", filename: str) -> str:
+    """Stocke les PDFs terrain dans bdc_terrain/<annee>/<mois>/<numero_bdc>_terrain.pdf."""
+    today = date.today()
+    return f"bdc_terrain/{today.year}/{today.month:02d}/{instance.numero_bdc}_terrain.pdf"
+
+
 # ─── Bailleur ─────────────────────────────────────────────────────────────────
 
 class Bailleur(models.Model):
@@ -157,6 +163,12 @@ class BonDeCommande(models.Model):
         blank=True,
         verbose_name="PDF original",
         help_text="Fichier PDF du BDC tel que reçu du bailleur",
+    )
+    pdf_terrain = models.FileField(
+        upload_to=pdf_terrain_upload_path,
+        blank=True,
+        verbose_name="PDF terrain",
+        help_text="Version sans prix du BDC, destinée au sous-traitant",
     )
 
     # ── Métadonnées ──────────────────────────────────────────────────────────
