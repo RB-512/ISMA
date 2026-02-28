@@ -140,6 +140,8 @@
                 <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Bailleur</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Adresse</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Ville</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Sous-traitant</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Montant HT</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Statut</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Date</th>
             </tr>
@@ -151,6 +153,10 @@
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.bailleur.code }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.adresse|truncatechars:40 }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.ville }}</td>
+                <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.sous_traitant.nom|default:"—" }}</td>
+                <td class="px-4 py-3 text-sm font-mono text-right text-[var(--color-text)]">
+                    {% if bdc.montant_ht_total %}{{ bdc.montant_ht_total|floatformat:2 }} €{% else %}—{% endif %}
+                </td>
                 <td class="px-4 py-3 text-sm">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
                         {% if bdc.statut == 'A_TRAITER' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300
