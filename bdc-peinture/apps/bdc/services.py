@@ -3,7 +3,11 @@ Logique métier du workflow BDC.
 Toute la logique de transition de statut et d'historique est ici,
 jamais dans les vues ni les modèles.
 """
+from decimal import Decimal
+
 from django.contrib.auth.models import User
+
+from apps.sous_traitants.models import SousTraitant
 
 from .models import ActionChoices, BonDeCommande, HistoriqueAction, StatutChoices
 
@@ -104,3 +108,89 @@ def enregistrer_action(
         action=action,
         details=details,
     )
+
+
+# ─── Attribution / Réattribution ─────────────────────────────────────────────
+
+
+def _calculer_montant_st(bdc: BonDeCommande, pourcentage: Decimal) -> Decimal | None:
+    if bdc.montant_ht is None:
+        return None
+    return (bdc.montant_ht * pourcentage / Decimal("100")).quantize(Decimal("0.01"))
+
+
+def attribuer_st(
+    bdc: BonDeCommande,
+    sous_traitant: SousTraitant,
+    pourcentage: Decimal,
+    utilisateur: User,
+) -> BonDeCommande:
+    """
+    Attribue un BDC à un sous-traitant. Le BDC doit être en statut A_FAIRE.
+    Passe le statut en EN_COURS et trace l'attribution.
+    """
+    if bdc.statut != StatutChoices.A_FAIRE:
+        raise TransitionInvalide(
+            f"Attribution impossible : le BDC est en '{bdc.get_statut_display()}', "
+            f"il doit être en 'À faire'."
+        )
+
+    bdc.sous_traitant = sous_traitant
+    bdc.pourcentage_st = pourcentage
+    bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+    bdc.statut = StatutChoices.EN_COURS
+    bdc.save(update_fields=[
+        "sous_traitant", "pourcentage_st", "montant_st", "statut", "updated_at",
+    ])
+
+    HistoriqueAction.objects.create(
+        bdc=bdc,
+        utilisateur=utilisateur,
+        action=ActionChoices.ATTRIBUTION,
+        details={
+            "sous_traitant": str(sous_traitant),
+            "pourcentage": str(pourcentage),
+            "montant_st": str(bdc.montant_st) if bdc.montant_st else None,
+        },
+    )
+
+    return bdc
+
+
+def reattribuer_st(
+    bdc: BonDeCommande,
+    nouveau_st: SousTraitant,
+    pourcentage: Decimal,
+    utilisateur: User,
+) -> BonDeCommande:
+    """
+    Réattribue un BDC en cours à un autre sous-traitant.
+    Le statut reste EN_COURS. Trace l'ancien et le nouveau ST.
+    """
+    if bdc.statut != StatutChoices.EN_COURS:
+        raise TransitionInvalide(
+            f"Réattribution impossible : le BDC est en '{bdc.get_statut_display()}', "
+            f"il doit être en 'En cours'."
+        )
+
+    ancien_st = str(bdc.sous_traitant) if bdc.sous_traitant else ""
+
+    bdc.sous_traitant = nouveau_st
+    bdc.pourcentage_st = pourcentage
+    bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+    bdc.save(update_fields=[
+        "sous_traitant", "pourcentage_st", "montant_st", "updated_at",
+    ])
+
+    HistoriqueAction.objects.create(
+        bdc=bdc,
+        utilisateur=utilisateur,
+        action=ActionChoices.REATTRIBUTION,
+        details={
+            "ancien_st": ancien_st,
+            "nouveau_st": str(nouveau_st),
+            "pourcentage": str(pourcentage),
+        },
+    )
+
+    return bdc

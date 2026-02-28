@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Sous-traitants — BDC Peinture{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto mt-8 mb-12">
+
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">Sous-traitants actifs</h1>
+
+  {% if sous_traitants %}
+  <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="text-left px-4 py-3 text-gray-600 font-medium">Nom</th>
+          <th class="text-left px-4 py-3 text-gray-600 font-medium">Téléphone</th>
+          <th class="text-left px-4 py-3 text-gray-600 font-medium">Email</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for st in sous_traitants %}
+        <tr>
+          <td class="px-4 py-3 text-gray-800 font-medium">{{ st.nom }}</td>
+          <td class="px-4 py-3 text-gray-700">{{ st.telephone }}</td>
+          <td class="px-4 py-3 text-gray-700">{{ st.email|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-gray-500">Aucun sous-traitant actif.</p>
+  {% endif %}
+
+</div>
+{% endblock %}

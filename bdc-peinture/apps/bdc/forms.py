@@ -1,5 +1,7 @@
 from django import forms
 
+from apps.sous_traitants.models import SousTraitant
+
 from .models import BonDeCommande
 
 
@@ -53,6 +55,23 @@ class BonDeCommandeForm(forms.ModelForm):
                 f"Le BDC n°{numero} existe déjà dans le système."
             )
         return numero
+
+
+class AttributionForm(forms.Form):
+    """Formulaire d'attribution d'un BDC à un sous-traitant."""
+
+    sous_traitant = forms.ModelChoiceField(
+        queryset=SousTraitant.objects.filter(actif=True),
+        label="Sous-traitant",
+        empty_label="— Choisir un sous-traitant —",
+    )
+    pourcentage_st = forms.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        label="Pourcentage ST (%)",
+        min_value=0,
+        max_value=100,
+    )
 
 
 class BDCEditionForm(forms.ModelForm):

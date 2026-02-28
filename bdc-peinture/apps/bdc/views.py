@@ -20,9 +20,17 @@ from apps.accounts.decorators import group_required
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
 
 from .filters import BonDeCommandeFilter
-from .forms import BDCEditionForm, BonDeCommandeForm
+from .forms import AttributionForm, BDCEditionForm, BonDeCommandeForm
 from .models import ActionChoices, Bailleur, BonDeCommande, LignePrestation, StatutChoices
-from .services import BDCIncomplet, TransitionInvalide, changer_statut, enregistrer_action
+from .notifications import notifier_st_attribution
+from .services import (
+    BDCIncomplet,
+    TransitionInvalide,
+    attribuer_st,
+    changer_statut,
+    enregistrer_action,
+    reattribuer_st,
+)
 
 # ─── Dashboard / Liste BDC ───────────────────────────────────────────────────
 
@@ -217,10 +225,17 @@ def detail_bdc(request, pk: int):
     historique = bdc.historique.all()[:10]
 
     is_secretaire = request.user.groups.filter(name="Secretaire").exists()
+    is_cdt = request.user.groups.filter(name="CDT").exists()
     form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
+
+    # Transitions de statut pour la secrétaire
+    # Masquer A_FAIRE → EN_COURS (cette transition passe par l'attribution CDT)
+    transitions_possibles = TRANSITIONS.get(bdc.statut, [])
+    if bdc.statut == StatutChoices.A_FAIRE:
+        transitions_possibles = [s for s in transitions_possibles if s != StatutChoices.EN_COURS]
     transitions = [
         (statut, StatutChoices(statut).label)
-        for statut in TRANSITIONS.get(bdc.statut, [])
+        for statut in transitions_possibles
     ] if is_secretaire else []
 
     return render(request, "bdc/detail.html", {
@@ -230,6 +245,7 @@ def detail_bdc(request, pk: int):
         "form_edition": form_edition,
         "transitions": transitions,
         "is_secretaire": is_secretaire,
+        "is_cdt": is_cdt,
     })
 
 
@@ -269,6 +285,91 @@ def changer_statut_bdc(request, pk: int):
     except BDCIncomplet as e:
         messages.error(request, str(e))
 
+    return redirect("bdc:detail", pk=pk)
+
+
+# ─── Attribution / Réattribution ─────────────────────────────────────────
+
+@group_required("CDT")
+def attribuer_bdc(request, pk: int):
+    """GET : formulaire d'attribution — POST : attribue le BDC à un ST."""
+    bdc = get_object_or_404(
+        BonDeCommande.objects.select_related("bailleur"), pk=pk
+    )
+
+    if bdc.statut != StatutChoices.A_FAIRE:
+        messages.error(request, "Ce BDC n'est pas en statut « À faire ».")
+        return redirect("bdc:detail", pk=pk)
+
+    if request.method == "GET":
+        form = AttributionForm()
+        return render(request, "bdc/attribuer.html", {"bdc": bdc, "form": form})
+
+    form = AttributionForm(request.POST)
+    if not form.is_valid():
+        return render(request, "bdc/attribuer.html", {"bdc": bdc, "form": form})
+
+    try:
+        attribuer_st(
+            bdc,
+            form.cleaned_data["sous_traitant"],
+            form.cleaned_data["pourcentage_st"],
+            request.user,
+        )
+    except TransitionInvalide as e:
+        messages.error(request, str(e))
+        return redirect("bdc:detail", pk=pk)
+
+    notifier_st_attribution(bdc)
+    messages.success(
+        request,
+        f"BDC attribué à {bdc.sous_traitant} ({bdc.pourcentage_st} %).",
+    )
+    return redirect("bdc:detail", pk=pk)
+
+
+@group_required("CDT")
+def reattribuer_bdc(request, pk: int):
+    """GET : formulaire pré-rempli — POST : réattribue le BDC à un autre ST."""
+    bdc = get_object_or_404(
+        BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk
+    )
+
+    if bdc.statut != StatutChoices.EN_COURS:
+        messages.error(request, "Ce BDC n'est pas en statut « En cours ».")
+        return redirect("bdc:detail", pk=pk)
+
+    if request.method == "GET":
+        form = AttributionForm(initial={
+            "sous_traitant": bdc.sous_traitant_id,
+            "pourcentage_st": bdc.pourcentage_st,
+        })
+        return render(request, "bdc/attribuer.html", {
+            "bdc": bdc, "form": form, "reattribution": True,
+        })
+
+    form = AttributionForm(request.POST)
+    if not form.is_valid():
+        return render(request, "bdc/attribuer.html", {
+            "bdc": bdc, "form": form, "reattribution": True,
+        })
+
+    try:
+        reattribuer_st(
+            bdc,
+            form.cleaned_data["sous_traitant"],
+            form.cleaned_data["pourcentage_st"],
+            request.user,
+        )
+    except TransitionInvalide as e:
+        messages.error(request, str(e))
+        return redirect("bdc:detail", pk=pk)
+
+    notifier_st_attribution(bdc)
+    messages.success(
+        request,
+        f"BDC réattribué à {bdc.sous_traitant} ({bdc.pourcentage_st} %).",
+    )
     return redirect("bdc:detail", pk=pk)
 
 
