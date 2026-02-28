@@ -1,0 +1,218 @@
+{# HTMX-swappable partial: compteurs + alertes + filtres + tableau + pagination #}
+<div id="isma-dashboard-content">
+
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4 text-center">
+        <div class="text-2xl font-bold font-mono text-[var(--color-text)]">{{ total }}</div>
+        <div class="text-xs text-[var(--color-text-muted)] mt-1 font-medium">Total</div>
+    </div>
+    {% for choix in statut_choices.choices %}
+    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4 text-center
+        {% if choix.0 == 'A_TRAITER' %}ring-1 ring-amber-400/30
+        {% elif choix.0 == 'A_FAIRE' %}ring-1 ring-blue-400/30
+        {% elif choix.0 == 'EN_COURS' %}ring-1 ring-indigo-400/30
+        {% elif choix.0 == 'A_FACTURER' %}ring-1 ring-orange-400/30
+        {% elif choix.0 == 'FACTURE' %}ring-1 ring-emerald-400/30
+        {% endif %}">
+        <div class="text-2xl font-bold font-mono
+            {% if choix.0 == 'A_TRAITER' %}text-amber-600 dark:text-amber-400
+            {% elif choix.0 == 'A_FAIRE' %}text-blue-600 dark:text-blue-400
+            {% elif choix.0 == 'EN_COURS' %}text-indigo-600 dark:text-indigo-400
+            {% elif choix.0 == 'A_FACTURER' %}text-orange-600 dark:text-orange-400
+            {% elif choix.0 == 'FACTURE' %}text-emerald-600 dark:text-emerald-400
+            {% else %}text-[var(--color-text)]{% endif %}">
+            {% for k, v in compteurs.items %}{% if k == choix.0 %}{{ v }}{% endif %}{% endfor %}
+        </div>
+        <div class="text-xs text-[var(--color-text-muted)] mt-1 font-medium">{{ choix.1 }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+{# ── Alertes délais (CDT) ────────────────────────────────────────────── #}
+{% if alertes_retard or alertes_proches %}
+<div class="space-y-3">
+    {% if alertes_retard %}
+    <div class="bg-danger/10 dark:bg-danger/20 border border-danger/20 dark:border-danger/30 rounded-xl p-4">
+        <h3 class="text-sm font-semibold text-danger mb-2 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            {{ alertes_retard|length }} BDC en retard
+        </h3>
+        <ul class="text-sm text-danger/80 space-y-1">
+            {% for bdc in alertes_retard %}
+            <li>
+                <a href="{% url 'bdc:detail' bdc.pk %}" class="hover:underline font-medium font-mono">{{ bdc.numero_bdc }}</a>
+                — {{ bdc.adresse }} — Délai : {{ bdc.delai_execution|date:"d/m/Y" }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% if alertes_proches %}
+    <div class="bg-warning/10 dark:bg-warning/20 border border-warning/20 dark:border-warning/30 rounded-xl p-4">
+        <h3 class="text-sm font-semibold text-warning mb-2 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+            {{ alertes_proches|length }} BDC proches du délai
+        </h3>
+        <ul class="text-sm text-warning/80 space-y-1">
+            {% for bdc in alertes_proches %}
+            <li>
+                <a href="{% url 'bdc:detail' bdc.pk %}" class="hover:underline font-medium font-mono">{{ bdc.numero_bdc }}</a>
+                — {{ bdc.adresse }} — Délai : {{ bdc.delai_execution|date:"d/m/Y" }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{# ── Filtres + Recherche ───────────────────────────────────────────────── #}
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+    <form method="get" action="{% url 'bdc:index' %}"
+          hx-get="{% url 'bdc:index' %}"
+          hx-target="#isma-dashboard-content"
+          hx-push-url="true"
+          hx-indicator="#loading-indicator"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+
+        {# Recherche #}
+        <div class="lg:col-span-2">
+            <label for="id_q">Recherche</label>
+            <input type="text" name="q" id="id_q" value="{{ recherche }}"
+                   placeholder="N° BDC, adresse, occupant...">
+        </div>
+
+        {# Statut #}
+        <div>
+            <label for="id_statut">Statut</label>
+            <select name="statut" id="id_statut">
+                <option value="">Tous les statuts</option>
+                {% for choix in statut_choices.choices %}
+                <option value="{{ choix.0 }}" {% if filtre.form.statut.value == choix.0 %}selected{% endif %}>{{ choix.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# Bailleur #}
+        <div>
+            <label for="id_bailleur">Bailleur</label>
+            {{ filtre.form.bailleur }}
+        </div>
+
+        {# Ville #}
+        <div>
+            <label for="id_ville">Ville</label>
+            <input type="text" name="ville" id="id_ville" value="{{ filtre.form.ville.value|default:'' }}"
+                   placeholder="Ville...">
+        </div>
+
+        {# Bouton #}
+        <div>
+            <button type="submit"
+                    class="w-full bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 shadow-sm hover:shadow-md">
+                Filtrer
+            </button>
+        </div>
+
+        {# Dates (ligne 2) #}
+        <div>
+            <label for="id_date_du">Du</label>
+            <input type="date" name="date_du" id="id_date_du" value="{{ filtre.form.date_du.value|default:'' }}">
+        </div>
+        <div>
+            <label for="id_date_au">Au</label>
+            <input type="date" name="date_au" id="id_date_au" value="{{ filtre.form.date_au.value|default:'' }}">
+        </div>
+        <div class="lg:col-span-4 flex items-center gap-4">
+            <a href="{% url 'bdc:index' %}" class="text-sm text-[var(--color-text-muted)] hover:text-accent transition-colors">Réinitialiser les filtres</a>
+            <div id="loading-indicator" class="htmx-indicator">
+                <svg class="w-4 h-4 animate-spin text-accent" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </div>
+        </div>
+    </form>
+</div>
+
+{# ── Tableau des BDC ───────────────────────────────────────────────────── #}
+{% if page_obj %}
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+    <table class="min-w-full divide-y divide-[var(--color-border)]">
+        <thead>
+            <tr class="bg-primary/5 dark:bg-white/5">
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">N° BDC</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Bailleur</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Adresse</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Ville</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Statut</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Date</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-[var(--color-border)]">
+            {% for bdc in page_obj %}
+            <tr class="hover:bg-accent/5 dark:hover:bg-accent/10 cursor-pointer transition-colors duration-100" onclick="window.location='{% url 'bdc:detail' pk=bdc.pk %}'">
+                <td class="px-4 py-3 text-sm font-medium font-mono text-accent">{{ bdc.numero_bdc }}</td>
+                <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.bailleur.code }}</td>
+                <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.adresse|truncatechars:40 }}</td>
+                <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.ville }}</td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                        {% if bdc.statut == 'A_TRAITER' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300
+                        {% elif bdc.statut == 'A_FAIRE' %}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300
+                        {% elif bdc.statut == 'EN_COURS' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300
+                        {% elif bdc.statut == 'A_FACTURER' %}bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300
+                        {% elif bdc.statut == 'FACTURE' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300
+                        {% endif %}">
+                        {{ bdc.get_statut_display }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-sm font-mono text-[var(--color-text-muted)]">{{ bdc.created_at|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {# ── Pagination ────────────────────────────────────────────────────── #}
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="px-4 py-3 border-t border-[var(--color-border)] flex items-center justify-between">
+        <div class="text-sm text-[var(--color-text-muted)]">
+            <span class="font-mono">{{ page_obj.paginator.count }}</span> résultat{{ page_obj.paginator.count|pluralize }}
+            — page <span class="font-mono">{{ page_obj.number }}</span> / <span class="font-mono">{{ page_obj.paginator.num_pages }}</span>
+        </div>
+        <div class="flex space-x-1">
+            {% if page_obj.has_previous %}
+            <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+               class="px-3 py-1 border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text)] hover:bg-accent/10 transition-colors">Précédent</a>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                <span class="px-3 py-1 bg-accent text-white rounded-lg text-sm font-mono">{{ num }}</span>
+                {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ num }}"
+                   class="px-3 py-1 border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text)] hover:bg-accent/10 transition-colors font-mono">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+               class="px-3 py-1 border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text)] hover:bg-accent/10 transition-colors">Suivant</a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</div>
+
+{% else %}
+{# ── Liste vide ────────────────────────────────────────────────────────── #}
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-12 text-center">
+    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/10 text-accent mb-4">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    </div>
+    <p class="text-[var(--color-text-muted)] text-lg mb-4">Aucun bon de commande trouvé</p>
+    <a href="{% url 'bdc:upload' %}"
+       class="inline-flex items-center px-5 py-2.5 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm font-medium transition-all duration-150 shadow-sm hover:shadow-md">
+        Uploader un PDF
+    </a>
+</div>
+{% endif %}
+
+</div>{# /isma-dashboard-content #}

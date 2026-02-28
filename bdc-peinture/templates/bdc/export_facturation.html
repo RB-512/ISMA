@@ -1,64 +1,59 @@
 {% extends "base.html" %}
 
-{% block title %}Export facturation — BDC Peinture{% endblock %}
+{% block title %}Export facturation — ISMA{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto mt-8 mb-12 space-y-6">
+<div class="max-w-2xl mx-auto space-y-6">
 
-  <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-gray-800">Export facturation</h1>
-    <a href="{% url 'bdc:index' %}" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
-      Retour au tableau de bord
-    </a>
-  </div>
+    <h1 class="text-2xl font-bold text-[var(--color-text)]">Export facturation</h1>
 
-  {# Formulaire de filtres #}
-  <div class="bg-white rounded-lg border border-gray-200 p-5">
-    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Filtres</h2>
-    <form method="GET" action="{% url 'bdc:export_facturation' %}" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-      <div>
-        <label for="id_statut" class="block text-gray-600 mb-1">Statut</label>
-        {{ form.statut }}
-      </div>
-      <div>
-        <label for="id_sous_traitant" class="block text-gray-600 mb-1">Sous-traitant</label>
-        {{ form.sous_traitant }}
-      </div>
-      <div>
-        <label for="id_date_du" class="block text-gray-600 mb-1">Date réalisation du</label>
-        {{ form.date_du }}
-      </div>
-      <div>
-        <label for="id_date_au" class="block text-gray-600 mb-1">Date réalisation au</label>
-        {{ form.date_au }}
-      </div>
-      <div class="md:col-span-2">
-        <button type="submit" class="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition">
-          Filtrer
+    {# Filtres #}
+    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+        <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-4">Filtres</h2>
+        <form method="GET" action="{% url 'bdc:export_facturation' %}" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+                <label for="id_statut">Statut</label>
+                {{ form.statut }}
+            </div>
+            <div>
+                <label for="id_sous_traitant">Sous-traitant</label>
+                {{ form.sous_traitant }}
+            </div>
+            <div>
+                <label for="id_date_du">Date réalisation du</label>
+                {{ form.date_du }}
+            </div>
+            <div>
+                <label for="id_date_au">Date réalisation au</label>
+                {{ form.date_au }}
+            </div>
+            <div class="md:col-span-2">
+                <button type="submit" class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                    Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {# Aperçu + bouton export #}
+    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+        {% if count > 0 %}
+        <p class="text-sm text-[var(--color-text)] mb-4">
+            <span class="font-semibold font-mono text-accent">{{ count }}</span> BDC correspondent à votre sélection.
+        </p>
+        <form method="POST" action="{% url 'bdc:export_facturation' %}?{{ request.GET.urlencode }}">
+            {% csrf_token %}
+            <button type="submit" class="px-5 py-2.5 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                Télécharger (.xlsx)
+            </button>
+        </form>
+        {% else %}
+        <p class="text-sm text-[var(--color-text-muted)]">Aucun BDC ne correspond à vos critères.</p>
+        <button disabled class="mt-3 px-5 py-2.5 bg-[var(--color-border)] text-[var(--color-text-muted)] text-sm font-medium rounded-lg cursor-not-allowed">
+            Télécharger (.xlsx)
         </button>
-      </div>
-    </form>
-  </div>
-
-  {# Aperçu + bouton export #}
-  <div class="bg-white rounded-lg border border-gray-200 p-5">
-    {% if count > 0 %}
-      <p class="text-sm text-gray-700 mb-4">
-        <span class="font-semibold text-gray-900">{{ count }}</span> BDC correspondent à votre sélection.
-      </p>
-      <form method="POST" action="{% url 'bdc:export_facturation' %}?{{ request.GET.urlencode }}">
-        {% csrf_token %}
-        <button type="submit" class="px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition">
-          Télécharger (.xlsx)
-        </button>
-      </form>
-    {% else %}
-      <p class="text-sm text-gray-500">Aucun BDC ne correspond à vos critères.</p>
-      <button disabled class="mt-3 px-5 py-2.5 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed">
-        Télécharger (.xlsx)
-      </button>
-    {% endif %}
-  </div>
+        {% endif %}
+    </div>
 
 </div>
 {% endblock %}

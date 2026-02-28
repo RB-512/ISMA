@@ -65,7 +65,9 @@ def liste_bdc(request):
         BonDeCommande.objects.values("statut")
         .annotate(count=Count("id"))
     )
-    compteurs = {row["statut"]: row["count"] for row in compteurs_qs}
+    compteurs = {s.value: 0 for s in StatutChoices}
+    for row in compteurs_qs:
+        compteurs[row["statut"]] = row["count"]
     total = sum(compteurs.values())
 
     is_cdt = request.user.groups.filter(name="CDT").exists()
@@ -79,7 +81,7 @@ def liste_bdc(request):
         alertes_retard = get_bdc_en_retard()
         alertes_proches = get_bdc_delai_proche()
 
-    return render(request, "bdc/liste.html", {
+    context = {
         "page_obj": page_obj,
         "filtre": filtre,
         "recherche": recherche,
@@ -89,7 +91,13 @@ def liste_bdc(request):
         "is_cdt": is_cdt,
         "alertes_retard": alertes_retard,
         "alertes_proches": alertes_proches,
-    })
+    }
+
+    # HTMX: return only the dashboard fragment, not the full layout
+    if request.headers.get("HX-Request"):
+        return render(request, "bdc/_liste_partial.html", context)
+
+    return render(request, "bdc/liste.html", context)
 
 
 # ─── Upload PDF ───────────────────────────────────────────────────────────────

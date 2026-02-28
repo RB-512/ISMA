@@ -1,89 +1,259 @@
 <!DOCTYPE html>
-<html lang="fr" x-data>
+<html lang="fr" x-data :class="$store.theme.dark && 'dark'">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}BDC Peinture{% endblock %}</title>
+    <title>{% block title %}ISMA{% endblock %}</title>
 
-    {# Tailwind CSS (généré par CLI standalone) #}
-    <link rel="stylesheet" href="/static/css/output.css">
+    {# ── Dark mode : apply before render to avoid flash ── #}
+    <script>
+      if (localStorage.getItem('isma-theme') === 'dark' ||
+          (!localStorage.getItem('isma-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
 
-    {# HTMX 2.x #}
+    {# ── Google Fonts ── #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    {# ── Tailwind CSS via CDN Play ── #}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+            },
+            colors: {
+              primary:   { DEFAULT: '#1B2B3A', light: '#2A3F52', dark: '#131A22' },
+              accent:    { DEFAULT: '#3B82F6', light: '#60A5FA', dark: '#2563EB' },
+              success:   { DEFAULT: '#2D9F6F', light: '#34B87F', dark: '#248A5E' },
+              warning:   { DEFAULT: '#D4842A', light: '#E8963E', dark: '#B8721F' },
+              danger:    { DEFAULT: '#C4423C', light: '#D45550', dark: '#A93832' },
+              surface:   { DEFAULT: '#F7F5F2', card: '#FFFFFF', dark: '#131A22', 'dark-card': '#1B2B3A' },
+              muted:     { DEFAULT: '#8B8680', light: '#B5B0AA', dark: '#5C5955' },
+            },
+          },
+        },
+      }
+    </script>
+
+    {# ── Design System CSS Variables + Global Styles ── #}
+    <style type="text/tailwindcss">
+      :root {
+        --color-surface: #F7F5F2;
+        --color-surface-card: #FFFFFF;
+        --color-text: #1B2B3A;
+        --color-text-muted: #8B8680;
+        --color-border: #E5E0DB;
+      }
+      .dark {
+        --color-surface: #131A22;
+        --color-surface-card: #1B2B3A;
+        --color-text: #E8E4DF;
+        --color-text-muted: #8B8680;
+        --color-border: #2A3F52;
+      }
+
+      body {
+        background-color: var(--color-surface);
+        color: var(--color-text);
+      }
+
+      /* ── Global widget styles ── */
+      input[type="text"], input[type="email"], input[type="password"],
+      input[type="number"], input[type="date"], input[type="datetime-local"],
+      input[type="search"], input[type="tel"], input[type="url"],
+      select, textarea {
+        @apply w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-150
+               border-[var(--color-border)] bg-[var(--color-surface-card)]
+               text-[var(--color-text)]
+               focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent;
+      }
+      input[type="checkbox"] {
+        @apply h-4 w-4 rounded border-[var(--color-border)] text-accent
+               focus:ring-accent focus:ring-2;
+      }
+      label {
+        @apply block text-sm font-medium text-[var(--color-text-muted)] mb-1;
+      }
+    </style>
+
+    {# ── HTMX 2.x ── #}
     <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
 
-    {# Alpine.js 3.x #}
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {# ── Alpine.js 3.x ── #}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script>
+      document.addEventListener('alpine:init', () => {
+        Alpine.store('theme', {
+          dark: localStorage.getItem('isma-theme') === 'dark' ||
+                (!localStorage.getItem('isma-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+          toggle() {
+            this.dark = !this.dark;
+            localStorage.setItem('isma-theme', this.dark ? 'dark' : 'light');
+          }
+        });
+        Alpine.store('sidebar', {
+          collapsed: localStorage.getItem('isma-sidebar') === 'collapsed',
+          toggle() {
+            this.collapsed = !this.collapsed;
+            localStorage.setItem('isma-sidebar', this.collapsed ? 'collapsed' : 'expanded');
+          }
+        });
+      });
+    </script>
 
     {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-screen bg-gray-50 font-sans text-gray-900">
+<body class="min-h-screen font-sans antialiased">
 
-    {# ── Navigation ─────────────────────────────────────────────────────────── #}
     {% if user.is_authenticated %}
-    <nav class="bg-white border-b border-gray-200 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
+    <div class="flex min-h-screen">
 
-                {# Logo / Titre #}
-                <div class="flex items-center">
-                    <a href="/" class="flex items-center space-x-2">
-                        <span class="text-blue-600 font-bold text-lg">🖌️ BDC Peinture</span>
+        {# ── Sidebar ─────────────────────────────────────────────────────────── #}
+        <aside
+          :class="$store.sidebar.collapsed ? 'w-16' : 'w-60'"
+          class="fixed inset-y-0 left-0 z-30 flex flex-col
+                 bg-primary text-white transition-all duration-300 ease-in-out"
+        >
+            {# Logo #}
+            <div class="flex items-center h-16 px-4 border-b border-white/10">
+                <a href="{% url 'bdc:index' %}" class="flex items-center gap-2 overflow-hidden">
+                    <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-accent flex items-center justify-center font-bold text-white text-sm">I</span>
+                    <span x-show="!$store.sidebar.collapsed" x-transition class="font-bold text-lg tracking-tight whitespace-nowrap">ISMA</span>
+                </a>
+            </div>
+
+            {# Navigation links #}
+            <nav class="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+                {% url 'bdc:index' as url_index %}
+                {% url 'bdc:upload' as url_upload %}
+                {% url 'sous_traitants:list' as url_st %}
+
+                <a href="{{ url_index }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                   {% if request.path == url_index %}bg-white/15 text-white{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>
+                    <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap">Tableau de bord</span>
+                </a>
+
+                <a href="{{ url_upload }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                   {% if request.path == url_upload %}bg-white/15 text-white{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                    <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap">Upload PDF</span>
+                </a>
+
+                <a href="{{ url_st }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                   {% if '/sous-traitants/' in request.path %}bg-white/15 text-white{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap">Sous-traitants</span>
+                </a>
+
+                {% if is_cdt %}
+                <div class="pt-3 mt-3 border-t border-white/10">
+                    <p x-show="!$store.sidebar.collapsed" x-transition class="px-3 mb-2 text-xs font-semibold text-white/40 uppercase tracking-wider">CDT</p>
+
+                    {% url 'bdc:recoupement_liste' as url_recoup %}
+                    <a href="{{ url_recoup }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                       {% if '/recoupement/' in request.path %}bg-white/15 text-white{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap">Recoupement</span>
                     </a>
 
-                    {# Liens principaux #}
-                    <div class="hidden md:flex ml-8 space-x-4">
-                        <a href="{% url 'bdc:index' %}" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            Tableau de bord
-                        </a>
-                        <a href="{% url 'bdc:upload' %}" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            Upload PDF
-                        </a>
+                    {% url 'bdc:export_facturation' as url_export %}
+                    <a href="{{ url_export }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                       {% if '/export/' in request.path %}bg-white/15 text-white{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap">Export facturation</span>
+                    </a>
+                </div>
+                {% endif %}
+            </nav>
+
+            {# Bottom section: theme toggle, user, collapse #}
+            <div class="border-t border-white/10 p-2 space-y-1">
+                {# Theme toggle #}
+                <button @click="$store.theme.toggle()"
+                        class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <template x-if="$store.theme.dark">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    </template>
+                    <template x-if="!$store.theme.dark">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    </template>
+                    <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap" x-text="$store.theme.dark ? 'Mode clair' : 'Mode sombre'"></span>
+                </button>
+
+                {# User info #}
+                <div class="flex items-center gap-3 px-3 py-2.5 text-sm">
+                    <div class="w-5 h-5 flex-shrink-0 rounded-full bg-accent/30 flex items-center justify-center text-xs font-bold text-accent-light">
+                        {{ user.get_full_name|default:user.username|make_list|first|upper }}
+                    </div>
+                    <div x-show="!$store.sidebar.collapsed" x-transition class="min-w-0">
+                        <p class="text-white text-xs font-medium truncate">{{ user.get_full_name|default:user.username }}</p>
+                        {% if user.groups.all %}
+                        <p class="text-white/50 text-xs">{{ user.groups.first.name }}</p>
+                        {% endif %}
                     </div>
                 </div>
 
-                {# Utilisateur connecté + déconnexion #}
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-500">
-                        {{ user.get_full_name|default:user.username }}
-                        {% if user.groups.all %}
-                        <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                            {{ user.groups.first.name }}
-                        </span>
-                        {% endif %}
-                    </span>
-                    <a href="/accounts/logout/"
-                       class="text-sm text-gray-500 hover:text-red-600 transition-colors font-medium">
-                        Déconnexion
-                    </a>
-                </div>
+                {# Logout #}
+                <a href="/accounts/logout/"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/50 hover:bg-red-500/20 hover:text-red-300 transition-colors">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap">Déconnexion</span>
+                </a>
 
+                {# Collapse toggle #}
+                <button @click="$store.sidebar.toggle()"
+                        class="flex items-center justify-center w-full px-3 py-2 rounded-lg text-white/40 hover:bg-white/10 hover:text-white transition-colors">
+                    <svg :class="$store.sidebar.collapsed && 'rotate-180'" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+                </button>
             </div>
-        </div>
-    </nav>
-    {% endif %}
+        </aside>
 
-    {# ── Messages flash ──────────────────────────────────────────────────────── #}
-    {% if messages %}
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-        {% for message in messages %}
-        <div x-data="{ show: true }" x-show="show"
-             class="flex items-center justify-between p-4 mb-2 rounded-lg border
-                    {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
-                    {% elif message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
-                    {% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800
-                    {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
-            <span class="text-sm">{{ message }}</span>
-            <button @click="show = false" class="ml-4 text-current opacity-50 hover:opacity-100">✕</button>
+        {# ── Main content ────────────────────────────────────────────────────── #}
+        <div :class="$store.sidebar.collapsed ? 'ml-16' : 'ml-60'"
+             class="flex-1 transition-all duration-300 ease-in-out">
+
+            {# ── Messages flash ── #}
+            {% if messages %}
+            <div class="px-6 pt-4">
+                {% for message in messages %}
+                <div x-data="{ show: true }" x-show="show" x-transition
+                     class="flex items-center justify-between p-4 mb-2 rounded-lg border text-sm
+                            {% if message.tags == 'error' %}bg-danger/10 border-danger/20 text-danger dark:bg-danger/20 dark:border-danger/30
+                            {% elif message.tags == 'success' %}bg-success/10 border-success/20 text-success dark:bg-success/20 dark:border-success/30
+                            {% elif message.tags == 'warning' %}bg-warning/10 border-warning/20 text-warning dark:bg-warning/20 dark:border-warning/30
+                            {% else %}bg-accent/10 border-accent/20 text-accent dark:bg-accent/20 dark:border-accent/30{% endif %}">
+                    <span>{{ message }}</span>
+                    <button @click="show = false" class="ml-4 opacity-50 hover:opacity-100 transition-opacity">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {# ── Page content ── #}
+            <main class="p-6">
+                {% block content %}
+                {% endblock %}
+            </main>
         </div>
-        {% endfor %}
     </div>
-    {% endif %}
 
-    {# ── Contenu principal ───────────────────────────────────────────────────── #}
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {% block content %}
+    {% else %}
+    {# ── Unauthenticated: no sidebar ── #}
+    <main>
+        {% block content_anon %}
+        {% block content_public %}{% endblock %}
         {% endblock %}
     </main>
+    {% endif %}
 
     {% block extra_scripts %}{% endblock %}
 
