@@ -156,6 +156,12 @@ class BonDeCommande(models.Model):
         verbose_name="% ST",
         help_text="Pourcentage du BDC attribué au sous-traitant",
     )
+    date_realisation = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date de réalisation",
+        help_text="Date à laquelle les travaux ont été déclarés terminés",
+    )
 
     # ── Fichiers ─────────────────────────────────────────────────────────────
     pdf_original = models.FileField(

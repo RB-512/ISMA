@@ -36,6 +36,27 @@
       <a href="{% url 'bdc:reattribuer' bdc.pk %}" class="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition">
         Réattribuer
       </a>
+      <form method="POST" action="{% url 'bdc:valider_realisation' bdc.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition">
+          Valider réalisation
+        </button>
+      </form>
+      {% endif %}
+      {% if is_cdt and bdc.statut == "A_FACTURER" %}
+      <form method="POST" action="{% url 'bdc:valider_facturation' bdc.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+          Passer en facturation
+        </button>
+      </form>
+      <form method="POST" action="{% url 'bdc:changer_statut' bdc.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="nouveau_statut" value="EN_COURS">
+        <button type="submit" class="px-4 py-2 bg-gray-400 text-white text-sm font-medium rounded-lg hover:bg-gray-500 transition">
+          Annuler validation
+        </button>
+      </form>
       {% endif %}
       {% if bdc.pdf_terrain %}
       <a

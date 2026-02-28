@@ -31,6 +31,8 @@ from .services import (
     changer_statut,
     enregistrer_action,
     reattribuer_st,
+    valider_facturation,
+    valider_realisation,
 )
 
 # ─── Dashboard / Liste BDC ───────────────────────────────────────────────────
@@ -372,6 +374,85 @@ def reattribuer_bdc(request, pk: int):
         f"BDC réattribué à {bdc.sous_traitant} ({bdc.pourcentage_st} %).",
     )
     return redirect("bdc:detail", pk=pk)
+
+
+# ─── Validation réalisation / Facturation ────────────────────────────────────
+
+@group_required("CDT")
+def valider_realisation_bdc(request, pk: int):
+    """POST-only : le CDT valide la réalisation (EN_COURS → A_FACTURER)."""
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+
+    try:
+        valider_realisation(bdc, request.user)
+        messages.success(request, f"BDC n°{bdc.numero_bdc} : réalisation validée.")
+    except TransitionInvalide as e:
+        messages.error(request, str(e))
+
+    return redirect("bdc:detail", pk=pk)
+
+
+@group_required("CDT")
+def valider_facturation_bdc(request, pk: int):
+    """POST-only : le CDT passe le BDC en facturation (A_FACTURER → FACTURE)."""
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+
+    try:
+        valider_facturation(bdc, request.user)
+        messages.success(request, f"BDC n°{bdc.numero_bdc} : passé en facturation.")
+    except TransitionInvalide as e:
+        messages.error(request, str(e))
+
+    return redirect("bdc:detail", pk=pk)
+
+
+# ─── Recoupement par sous-traitant ────────────────────────────────────────────
+
+@group_required("CDT")
+def recoupement_st_liste(request):
+    """Liste des sous-traitants avec compteurs BDC par statut."""
+    from apps.sous_traitants.models import SousTraitant
+
+    sous_traitants = (
+        SousTraitant.objects.filter(actif=True, bons_de_commande__isnull=False)
+        .distinct()
+        .annotate(
+            nb_en_cours=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.EN_COURS)),
+            nb_a_facturer=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.A_FACTURER)),
+            nb_facture=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.FACTURE)),
+        )
+        .order_by("nom")
+    )
+
+    return render(request, "bdc/recoupement_liste.html", {
+        "sous_traitants": sous_traitants,
+    })
+
+
+@group_required("CDT")
+def recoupement_st_detail(request, st_pk: int):
+    """BDC d'un sous-traitant donné, avec filtre par statut."""
+    from apps.sous_traitants.models import SousTraitant
+
+    sous_traitant = get_object_or_404(SousTraitant, pk=st_pk)
+    queryset = BonDeCommande.objects.filter(sous_traitant=sous_traitant).select_related("bailleur")
+
+    filtre_statut = request.GET.get("statut", "")
+    if filtre_statut in [StatutChoices.EN_COURS, StatutChoices.A_FACTURER, StatutChoices.FACTURE]:
+        queryset = queryset.filter(statut=filtre_statut)
+
+    return render(request, "bdc/recoupement_detail.html", {
+        "sous_traitant": sous_traitant,
+        "bdc_list": queryset,
+        "filtre_statut": filtre_statut,
+        "statut_choices": StatutChoices,
+    })
 
 
 # ─── Téléchargement PDF terrain ───────────────────────────────────────────────

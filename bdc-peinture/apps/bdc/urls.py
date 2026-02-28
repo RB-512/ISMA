@@ -14,4 +14,8 @@ urlpatterns = [
     path("<int:pk>/attribuer/", views.attribuer_bdc, name="attribuer"),
     path("<int:pk>/reattribuer/", views.reattribuer_bdc, name="reattribuer"),
     path("<int:pk>/terrain/", views.telecharger_terrain, name="terrain"),
+    path("<int:pk>/valider/", views.valider_realisation_bdc, name="valider_realisation"),
+    path("<int:pk>/facturer/", views.valider_facturation_bdc, name="valider_facturation"),
+    path("recoupement/", views.recoupement_st_liste, name="recoupement_liste"),
+    path("recoupement/<int:st_pk>/", views.recoupement_st_detail, name="recoupement_detail"),
 ]

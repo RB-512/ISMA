@@ -4,6 +4,7 @@ Toute la logique de transition de statut et d'historique est ici,
 jamais dans les vues ni les modèles.
 """
 import logging
+from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -69,9 +70,13 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             "Le champ 'Vacant / Occupé' est obligatoire avant d'enregistrer le BDC en 'À faire'."
         )
 
+    # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation à null
+    if ancien_statut == StatutChoices.A_FACTURER and nouveau_statut == StatutChoices.EN_COURS:
+        bdc.date_realisation = None
+
     # Application du changement
     bdc.statut = nouveau_statut
-    bdc.save(update_fields=["statut", "updated_at"])
+    bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
 
     # Traçabilité
     HistoriqueAction.objects.create(
@@ -111,6 +116,57 @@ def enregistrer_action(
         action=action,
         details=details,
     )
+
+
+# ─── Validation réalisation / Facturation ────────────────────────────────────
+
+
+def valider_realisation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
+    """
+    Marque un BDC EN_COURS comme réalisé → A_FACTURER.
+    Remplit date_realisation et trace l'action VALIDATION.
+    """
+    if bdc.statut != StatutChoices.EN_COURS:
+        raise TransitionInvalide(
+            f"Validation impossible : le BDC est en '{bdc.get_statut_display()}', "
+            f"il doit être en 'En cours'."
+        )
+
+    bdc.statut = StatutChoices.A_FACTURER
+    bdc.date_realisation = date.today()
+    bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
+
+    HistoriqueAction.objects.create(
+        bdc=bdc,
+        utilisateur=utilisateur,
+        action=ActionChoices.VALIDATION,
+        details={"date_realisation": str(bdc.date_realisation)},
+    )
+
+    return bdc
+
+
+def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
+    """
+    Passe un BDC A_FACTURER au statut FACTURE.
+    Trace l'action FACTURATION.
+    """
+    if bdc.statut != StatutChoices.A_FACTURER:
+        raise TransitionInvalide(
+            f"Facturation impossible : le BDC est en '{bdc.get_statut_display()}', "
+            f"il doit être en 'À facturer'."
+        )
+
+    bdc.statut = StatutChoices.FACTURE
+    bdc.save(update_fields=["statut", "updated_at"])
+
+    HistoriqueAction.objects.create(
+        bdc=bdc,
+        utilisateur=utilisateur,
+        action=ActionChoices.FACTURATION,
+    )
+
+    return bdc
 
 
 # ─── Attribution / Réattribution ─────────────────────────────────────────────
