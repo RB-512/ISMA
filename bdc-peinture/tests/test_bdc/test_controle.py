@@ -259,8 +259,8 @@ class TestChecklistValidation:
         bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
         assert bdc.statut == StatutChoices.A_FAIRE
 
-    def test_occupe_sans_type_acces_transition_ok(self, bdc_a_traiter, utilisateur_secretaire):
-        """Logement occupé : type_acces non requis pour passer en A_FAIRE."""
+    def test_occupe_avec_rdv_transition_ok(self, bdc_a_traiter, utilisateur_secretaire):
+        """Logement occupé avec rdv_date : type_acces non requis, transition permise."""
         from datetime import datetime
         bdc_a_traiter.occupation = "OCCUPE"
         bdc_a_traiter.type_acces = ""
@@ -269,6 +269,15 @@ class TestChecklistValidation:
 
         bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
         assert bdc.statut == StatutChoices.A_FAIRE
+
+    def test_occupe_sans_rdv_bloque_transition(self, bdc_a_traiter, utilisateur_secretaire):
+        """Logement occupé sans rdv_date : transition bloquée."""
+        bdc_a_traiter.occupation = "OCCUPE"
+        bdc_a_traiter.rdv_date = None
+        bdc_a_traiter.save()
+
+        with pytest.raises(BDCIncomplet, match="RDV"):
+            changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
 
 
 # ─── Test sidebar button ────────────────────────────────────────────────────
