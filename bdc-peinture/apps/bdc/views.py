@@ -664,6 +664,10 @@ def attribution_partial(request, pk: int):
     bdc = get_object_or_404(BonDeCommande, pk=pk)
     reattribution = bdc.statut == StatutChoices.EN_COURS
 
+    # Detecter le contexte d'appel via le header HX-Target
+    hx_target_id = request.headers.get("HX-Target", "attribution-zone")
+    hx_target = f"#{hx_target_id}"
+
     date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
 
     def _build_context(form):
@@ -677,7 +681,7 @@ def attribution_partial(request, pk: int):
             "date_du": date_du.isoformat() if date_du else "",
             "date_au": date_au.isoformat() if date_au else "",
             "hx_url": reverse("bdc:attribution_partial", kwargs={"pk": bdc.pk}),
-            "hx_target": "#attribution-zone",
+            "hx_target": hx_target,
         }
 
     if request.method == "POST":

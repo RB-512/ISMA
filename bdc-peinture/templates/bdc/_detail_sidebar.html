@@ -22,10 +22,14 @@
             </span>
         </div>
 
-        {# CDT-only buttons (attribution) #}
+        {# CDT-only buttons (attribution inline) #}
         {% if is_cdt and bdc.statut == 'A_FAIRE' and not bdc.sous_traitant %}
         <div class="mt-3">
-            <a href="{% url 'bdc:attribuer' pk=bdc.pk %}" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">Attribuer</a>
+            <button hx-get="{% url 'bdc:attribution_partial' bdc.pk %}"
+                    hx-target="#sidebar-content" hx-swap="innerHTML"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
+                Attribuer
+            </button>
         </div>
         {% endif %}
     </div>

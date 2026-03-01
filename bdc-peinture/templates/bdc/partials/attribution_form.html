@@ -50,7 +50,7 @@
     {# ── Formulaire d'attribution ── #}
     <form method="POST"
           hx-post="{% url 'bdc:attribution_partial' bdc.pk %}"
-          hx-target="#attribution-zone"
+          hx-target="{{ hx_target }}"
           hx-swap="innerHTML">
         {% csrf_token %}
 
@@ -82,7 +82,7 @@
                 {% if reattribution %}Réattribuer{% else %}Attribuer{% endif %}
             </button>
             <button type="button"
-                    onclick="document.getElementById('attribution-zone').innerHTML = ''"
+                    onclick="document.querySelector('{{ hx_target }}').innerHTML = ''"
                     class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-sm font-medium rounded-lg hover:bg-accent/10 transition-colors">
                 Annuler
             </button>
