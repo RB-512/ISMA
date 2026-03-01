@@ -71,9 +71,7 @@ def _parse_decimal(value):
 
 # Transitions "avant" que la Secrétaire peut déclencher depuis la sidebar.
 # Seul A_TRAITER → A_FAIRE est pertinent ; les autres avancements passent par le CDT.
-SIDEBAR_TRANSITIONS: dict[str, list[str]] = {
-    StatutChoices.A_TRAITER: [StatutChoices.A_FAIRE],
-}
+SIDEBAR_TRANSITIONS: dict[str, list[str]] = {}
 
 # ─── Dashboard / Liste BDC ───────────────────────────────────────────────────
 

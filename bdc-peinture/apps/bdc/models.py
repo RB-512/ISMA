@@ -47,7 +47,7 @@ class Bailleur(models.Model):
 # ─── BonDeCommande ────────────────────────────────────────────────────────────
 
 class StatutChoices(models.TextChoices):
-    A_TRAITER = "A_TRAITER", "À traiter"
+    A_TRAITER = "A_TRAITER", "À contrôler"
     A_FAIRE = "A_FAIRE", "À attribuer"
     EN_COURS = "EN_COURS", "En cours"
     A_FACTURER = "A_FACTURER", "À facturer"

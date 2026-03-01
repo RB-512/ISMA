@@ -3,155 +3,140 @@
 {% block title %}Confirmer l'import — ISMA{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <h1 class="text-2xl font-bold text-[var(--color-text)] mb-2">Confirmer l'import</h1>
-    <p class="text-sm text-[var(--color-text-muted)] mb-6">
-        V&eacute;rifiez les donn&eacute;es extraites du PDF avant d'enregistrer le bon de commande.
-    </p>
+<div class="max-w-4xl mx-auto space-y-6">
 
     {% if error_message %}
-    <div class="p-4 mb-6 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm">
+    <div class="p-4 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm">
         {{ error_message }}
     </div>
     {% endif %}
 
-    {# ── Identification ── #}
-    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6 mb-6">
-        <h2 class="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-4">Identification</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">N&deg; BDC</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.numero_bdc|default:"—" }}</p>
-            </div>
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">N&deg; March&eacute;</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.numero_marche|default:"—" }}</p>
-            </div>
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">Bailleur</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.bailleur_code|default:"—" }}</p>
-            </div>
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">Date d'&eacute;mission</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.date_emission|default:"—" }}</p>
-            </div>
+    {# ── En-tête ── #}
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-[var(--color-text)]">
+                BDC n&deg;<span class="font-mono">{{ donnees.numero_bdc|default:"—" }}</span>
+            </h1>
+            <p class="text-sm text-[var(--color-text-muted)] mt-1">
+                {{ donnees.bailleur_code|default:"—" }}
+                {% if donnees.numero_marche %}&mdash; March&eacute; {{ donnees.numero_marche }}{% endif %}
+                {% if donnees.date_emission %}&mdash; &eacute;mis le <span class="font-mono">{{ donnees.date_emission }}</span>{% endif %}
+            </p>
         </div>
-    </section>
 
-    {# ── Localisation ── #}
-    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6 mb-6">
-        <h2 class="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-4">Localisation</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-            {% if donnees.programme_residence %}
-            <div class="md:col-span-2">
-                <span class="text-xs text-[var(--color-text-muted)]">Programme / R&eacute;sidence</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.programme_residence }}</p>
-            </div>
-            {% endif %}
-            <div class="md:col-span-2">
-                <span class="text-xs text-[var(--color-text-muted)]">Adresse</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.adresse|default:"—" }}</p>
-            </div>
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">Code postal</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.code_postal|default:"—" }}</p>
-            </div>
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">Ville</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.ville|default:"—" }}</p>
-            </div>
-            {% if donnees.logement_numero or donnees.logement_type or donnees.logement_etage %}
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">Logement</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">
-                    {% if donnees.logement_numero %}n&deg;{{ donnees.logement_numero }}{% endif %}
-                    {% if donnees.logement_type %}— {{ donnees.logement_type }}{% endif %}
-                </p>
-            </div>
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">&Eacute;tage / Porte</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">
-                    {{ donnees.logement_etage|default:"" }} {{ donnees.logement_porte|default:"" }}
-                </p>
-            </div>
-            {% endif %}
+        {# Action buttons #}
+        <div class="flex items-center gap-2">
+            <a href="{% url 'bdc:upload' %}"
+               class="px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-medium rounded-lg hover:bg-accent/10 transition-colors">
+                &larr; R&eacute;-importer
+            </a>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit"
+                        class="px-3 py-1.5 bg-accent hover:bg-accent-dark text-white text-xs font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                    Enregistrer le BDC
+                </button>
+            </form>
         </div>
-    </section>
+    </div>
 
-    {# ── Travaux ── #}
-    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6 mb-6">
-        <h2 class="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-4">Travaux</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-            <div class="md:col-span-2">
-                <span class="text-xs text-[var(--color-text-muted)]">Objet / Nature des travaux</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.objet_travaux|default:"—" }}</p>
-            </div>
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">D&eacute;lai d'ex&eacute;cution</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.delai_execution|default:"—" }}</p>
-            </div>
-        </div>
-    </section>
+    {# ── Grid: Localisation + Travaux ── #}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {# Localisation #}
+        <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+            <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Localisation</h2>
+            <dl class="space-y-2 text-sm">
+                {% if donnees.programme_residence %}
+                <div><dt class="inline text-[var(--color-text-muted)]">R&eacute;sidence :</dt> <dd class="inline text-[var(--color-text)]">{{ donnees.programme_residence }}</dd></div>
+                {% endif %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Adresse :</dt> <dd class="inline text-[var(--color-text)]">{{ donnees.adresse|default:"—" }} {{ donnees.code_postal|default:"" }} {{ donnees.ville|default:"" }}</dd></div>
+                {% if donnees.logement_numero or donnees.logement_type %}
+                <div>
+                    <dt class="inline text-[var(--color-text-muted)]">Logement :</dt>
+                    <dd class="inline text-[var(--color-text)]">
+                        {% if donnees.logement_type %}{{ donnees.logement_type }}{% endif %}
+                        {% if donnees.logement_numero %}n&deg;<span class="font-mono">{{ donnees.logement_numero }}</span>{% endif %}
+                        {% if donnees.logement_etage %} &mdash; &Eacute;tage {{ donnees.logement_etage }}{% endif %}
+                        {% if donnees.logement_porte %} / Porte {{ donnees.logement_porte }}{% endif %}
+                    </dd>
+                </div>
+                {% endif %}
+            </dl>
+        </section>
+
+        {# Travaux #}
+        <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+            <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Travaux</h2>
+            <dl class="space-y-2 text-sm">
+                <div><dt class="inline text-[var(--color-text-muted)]">Objet :</dt> <dd class="inline text-[var(--color-text)]">{{ donnees.objet_travaux|default:"—" }}</dd></div>
+                {% if donnees.delai_execution %}
+                <div><dt class="inline text-[var(--color-text-muted)]">D&eacute;lai :</dt> <dd class="inline text-[var(--color-text)] font-mono">{{ donnees.delai_execution }}</dd></div>
+                {% endif %}
+            </dl>
+        </section>
+    </div>
 
     {# ── Contacts ── #}
-    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6 mb-6">
-        <h2 class="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-4">Contacts</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+    {% if donnees.occupant_nom or donnees.emetteur_nom %}
+    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+        <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Contacts</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             {% if donnees.occupant_nom %}
             <div>
-                <span class="text-xs text-[var(--color-text-muted)]">Occupant</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.occupant_nom }}</p>
-            </div>
-            {% endif %}
-            {% if donnees.occupant_telephone %}
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">T&eacute;l. occupant</span>
-                <p class="text-sm font-mono font-medium text-[var(--color-text)]">{{ donnees.occupant_telephone }}</p>
+                <h3 class="font-medium text-[var(--color-text)] mb-1">Occupant</h3>
+                <dl class="space-y-1">
+                    <div><dt class="inline text-[var(--color-text-muted)]">Nom :</dt> <dd class="inline text-[var(--color-text)]">{{ donnees.occupant_nom }}</dd></div>
+                    {% if donnees.occupant_telephone %}
+                    <div><dt class="inline text-[var(--color-text-muted)]">T&eacute;l :</dt> <dd class="inline text-[var(--color-text)] font-mono">{{ donnees.occupant_telephone }}</dd></div>
+                    {% endif %}
+                    {% if donnees.occupant_email %}
+                    <div><dt class="inline text-[var(--color-text-muted)]">Email :</dt> <dd class="inline text-[var(--color-text)]">{{ donnees.occupant_email }}</dd></div>
+                    {% endif %}
+                </dl>
             </div>
             {% endif %}
             {% if donnees.emetteur_nom %}
             <div>
-                <span class="text-xs text-[var(--color-text-muted)]">&Eacute;metteur bailleur</span>
-                <p class="text-sm font-medium text-[var(--color-text)]">{{ donnees.emetteur_nom }}</p>
-            </div>
-            {% endif %}
-            {% if donnees.emetteur_telephone %}
-            <div>
-                <span class="text-xs text-[var(--color-text-muted)]">T&eacute;l. &eacute;metteur</span>
-                <p class="text-sm font-mono font-medium text-[var(--color-text)]">{{ donnees.emetteur_telephone }}</p>
+                <h3 class="font-medium text-[var(--color-text)] mb-1">&Eacute;metteur bailleur</h3>
+                <dl class="space-y-1">
+                    <div><dt class="inline text-[var(--color-text-muted)]">Nom :</dt> <dd class="inline text-[var(--color-text)]">{{ donnees.emetteur_nom }}</dd></div>
+                    {% if donnees.emetteur_telephone %}
+                    <div><dt class="inline text-[var(--color-text-muted)]">T&eacute;l :</dt> <dd class="inline text-[var(--color-text)] font-mono">{{ donnees.emetteur_telephone }}</dd></div>
+                    {% endif %}
+                </dl>
             </div>
             {% endif %}
         </div>
     </section>
+    {% endif %}
 
-    {# ── Lignes de prestation ── #}
+    {# ── Prestations ── #}
     {% if lignes_session %}
-    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6 mb-6">
-        <h2 class="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-4">Lignes de prestation extraites</h2>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-[var(--color-border)]">
-                <thead>
-                    <tr class="bg-primary/5 dark:bg-white/5">
-                        <th class="text-left px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">D&eacute;signation</th>
-                        <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Qt&eacute;</th>
-                        <th class="text-left px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Unit&eacute;</th>
-                        <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">P.U. HT</th>
-                        <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Montant HT</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-[var(--color-border)]">
-                    {% for ligne in lignes_session %}
-                    <tr>
-                        <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ ligne.designation }}</td>
-                        <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.quantite }}</td>
-                        <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ ligne.unite }}</td>
-                        <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.prix_unitaire }} &euro;</td>
-                        <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.montant_ht }} &euro;</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+        <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Prestations</h2>
+        <table class="min-w-full divide-y divide-[var(--color-border)]">
+            <thead>
+                <tr class="bg-primary/5 dark:bg-white/5">
+                    <th class="text-left px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">D&eacute;signation</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Qt&eacute;</th>
+                    <th class="px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Unit&eacute;</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">P.U. HT</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Montant HT</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--color-border)]">
+                {% for ligne in lignes_session %}
+                <tr>
+                    <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ ligne.designation }}</td>
+                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.quantite }}</td>
+                    <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ ligne.unite }}</td>
+                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.prix_unitaire }} &euro;</td>
+                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.montant_ht }} &euro;</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% if donnees.montant_ht %}
         <div class="flex justify-end gap-6 mt-3 pt-3 border-t border-[var(--color-border)] text-sm">
             <span class="text-[var(--color-text-muted)]">Total HT</span>
@@ -161,18 +146,5 @@
     </section>
     {% endif %}
 
-    {# ── Actions ── #}
-    <div class="flex gap-3 justify-end">
-        <a href="{% url 'bdc:upload' %}" class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-accent transition-colors">
-            &larr; R&eacute;-importer
-        </a>
-        <form method="post">
-            {% csrf_token %}
-            <button type="submit"
-                    class="px-6 py-2.5 bg-accent hover:bg-accent-dark text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
-                Enregistrer le BDC
-            </button>
-        </form>
-    </div>
 </div>
 {% endblock %}

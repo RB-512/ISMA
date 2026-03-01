@@ -27,7 +27,7 @@
         </div>
 
         {# Action buttons #}
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-2">
             {% if is_secretaire and transitions %}
                 {% for statut_val, statut_label in transitions %}
                 <form method="POST" action="{% url 'bdc:changer_statut' bdc.pk %}">
@@ -70,6 +70,16 @@
                 </button>
             </form>
             {% endif %}
+            {% if is_secretaire and bdc.statut == "A_TRAITER" %}
+            <a href="{% url 'bdc:controle' pk=bdc.pk %}"
+               class="px-3 py-1.5 bg-accent hover:bg-accent-dark text-white text-xs font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                Contr&ocirc;ler
+            </a>
+            <a href="{% url 'bdc:upload' %}"
+               class="px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-medium rounded-lg hover:bg-accent/10 transition-colors">
+                Nouveau BDC
+            </a>
+            {% endif %}
             {% if bdc.pdf_terrain %}
             <a href="{% url 'bdc:terrain' bdc.pk %}"
                class="px-4 py-2 bg-primary/10 dark:bg-white/10 text-primary dark:text-white text-sm font-medium rounded-lg hover:bg-primary/20 dark:hover:bg-white/20 transition-colors">
@@ -78,7 +88,7 @@
             {% endif %}
             {% if bdc.pdf_original %}
             <a href="{{ bdc.pdf_original.url }}" target="_blank"
-               class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium rounded-lg hover:bg-accent/10 transition-colors">
+               class="px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-medium rounded-lg hover:bg-accent/10 transition-colors">
                 Voir le PDF
             </a>
             {% endif %}
