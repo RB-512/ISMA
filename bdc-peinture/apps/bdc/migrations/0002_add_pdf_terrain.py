@@ -6,15 +6,19 @@ import apps.bdc.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0001_initial'),
+        ("bdc", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='bondecommande',
-            name='pdf_terrain',
-            field=models.FileField(blank=True, help_text='Version sans prix du BDC, destinée au sous-traitant', upload_to=apps.bdc.models.pdf_terrain_upload_path, verbose_name='PDF terrain'),
+            model_name="bondecommande",
+            name="pdf_terrain",
+            field=models.FileField(
+                blank=True,
+                help_text="Version sans prix du BDC, destinée au sous-traitant",
+                upload_to=apps.bdc.models.pdf_terrain_upload_path,
+                verbose_name="PDF terrain",
+            ),
         ),
     ]

@@ -1,6 +1,7 @@
 """
 Tests unitaires de ERILIAParser — pdfplumber mocké avec texte au format réel.
 """
+
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -105,13 +106,28 @@ def test_extraire_retourne_dict_complet(mock_open):
     result = ERILIAParser(PDF_FICTIF).extraire()
 
     cles_attendues = [
-        "bailleur_code", "numero_bdc", "numero_marche", "date_emission",
-        "programme_residence", "adresse", "code_postal", "ville",
-        "logement_numero", "logement_type", "logement_etage", "logement_porte",
-        "objet_travaux", "delai_execution",
-        "occupant_nom", "occupant_telephone", "occupant_email",
-        "emetteur_nom", "emetteur_telephone",
-        "montant_ht", "montant_tva", "montant_ttc",
+        "bailleur_code",
+        "numero_bdc",
+        "numero_marche",
+        "date_emission",
+        "programme_residence",
+        "adresse",
+        "code_postal",
+        "ville",
+        "logement_numero",
+        "logement_type",
+        "logement_etage",
+        "logement_porte",
+        "objet_travaux",
+        "delai_execution",
+        "occupant_nom",
+        "occupant_telephone",
+        "occupant_email",
+        "emetteur_nom",
+        "emetteur_telephone",
+        "montant_ht",
+        "montant_tva",
+        "montant_ttc",
         "lignes_prestation",
     ]
     for cle in cles_attendues:

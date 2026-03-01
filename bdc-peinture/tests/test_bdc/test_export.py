@@ -1,6 +1,7 @@
 """
 Tests unitaires — export facturation (service Excel, vue, templates).
 """
+
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
@@ -76,7 +77,6 @@ def _load_wb(response):
 
 
 class TestGenererExportExcel:
-
     def test_colonnes_correctes(self, bdc_a_facturer):
         qs = BonDeCommande.objects.filter(pk=bdc_a_facturer.pk)
         response = generer_export_excel(qs)
@@ -102,9 +102,7 @@ class TestGenererExportExcel:
     def test_fichier_xlsx_valide(self, bdc_a_facturer):
         qs = BonDeCommande.objects.filter(pk=bdc_a_facturer.pk)
         response = generer_export_excel(qs)
-        assert response["Content-Type"] == (
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        assert response["Content-Type"] == ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         assert "export_facturation_" in response["Content-Disposition"]
         assert ".xlsx" in response["Content-Disposition"]
 
@@ -130,9 +128,7 @@ class TestGenererExportExcel:
             assert cell.font.bold is True
 
     def test_plusieurs_lignes(self, bdc_a_facturer, bdc_facture):
-        qs = BonDeCommande.objects.filter(
-            pk__in=[bdc_a_facturer.pk, bdc_facture.pk]
-        )
+        qs = BonDeCommande.objects.filter(pk__in=[bdc_a_facturer.pk, bdc_facture.pk])
         response = generer_export_excel(qs)
         wb = _load_wb(response)
         ws = wb.active
@@ -146,7 +142,6 @@ URL_EXPORT = "bdc:export_facturation"
 
 
 class TestVueExportAcces:
-
     def test_cdt_acces_ok(self, client, utilisateur_cdt, bdc_a_facturer):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse(URL_EXPORT))
@@ -163,76 +158,50 @@ class TestVueExportAcces:
 
 
 class TestVueExportFiltres:
-
-    def test_filtre_statut_a_facturer(
-        self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture
-    ):
+    def test_filtre_statut_a_facturer(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse(URL_EXPORT), {"statut": "A_FACTURER"})
         assert response.context["count"] == 1
 
-    def test_filtre_statut_facture(
-        self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture
-    ):
+    def test_filtre_statut_facture(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse(URL_EXPORT), {"statut": "FACTURE"})
         assert response.context["count"] == 1
 
-    def test_filtre_tous_statuts(
-        self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture
-    ):
+    def test_filtre_tous_statuts(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse(URL_EXPORT))
         assert response.context["count"] == 2
 
-    def test_filtre_sous_traitant(
-        self, client, utilisateur_cdt, bdc_a_facturer, sous_traitant
-    ):
+    def test_filtre_sous_traitant(self, client, utilisateur_cdt, bdc_a_facturer, sous_traitant):
         client.force_login(utilisateur_cdt)
-        response = client.get(
-            reverse(URL_EXPORT), {"sous_traitant": sous_traitant.pk}
-        )
+        response = client.get(reverse(URL_EXPORT), {"sous_traitant": sous_traitant.pk})
         assert response.context["count"] == 1
 
-    def test_filtre_date_du(
-        self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture
-    ):
+    def test_filtre_date_du(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
         client.force_login(utilisateur_cdt)
-        response = client.get(
-            reverse(URL_EXPORT), {"date_du": "2026-02-01"}
-        )
+        response = client.get(reverse(URL_EXPORT), {"date_du": "2026-02-01"})
         assert response.context["count"] == 1  # Seulement EXP-001
 
-    def test_filtre_date_au(
-        self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture
-    ):
+    def test_filtre_date_au(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
         client.force_login(utilisateur_cdt)
-        response = client.get(
-            reverse(URL_EXPORT), {"date_au": "2026-01-31"}
-        )
+        response = client.get(reverse(URL_EXPORT), {"date_au": "2026-01-31"})
         assert response.context["count"] == 1  # Seulement EXP-002
 
-    def test_en_cours_exclus_par_defaut(
-        self, client, utilisateur_cdt, bdc_en_cours
-    ):
+    def test_en_cours_exclus_par_defaut(self, client, utilisateur_cdt, bdc_en_cours):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse(URL_EXPORT))
         assert response.context["count"] == 0
 
 
 class TestVueExportTelechargement:
-
-    def test_post_telecharge_xlsx(
-        self, client, utilisateur_cdt, bdc_a_facturer
-    ):
+    def test_post_telecharge_xlsx(self, client, utilisateur_cdt, bdc_a_facturer):
         client.force_login(utilisateur_cdt)
         response = client.post(reverse(URL_EXPORT))
         assert response.status_code == 200
         assert "spreadsheetml" in response["Content-Type"]
 
-    def test_post_avec_filtres_get(
-        self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture
-    ):
+    def test_post_avec_filtres_get(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
         client.force_login(utilisateur_cdt)
         url = reverse(URL_EXPORT) + "?statut=A_FACTURER"
         response = client.post(url)
@@ -245,10 +214,7 @@ class TestVueExportTelechargement:
 
 
 class TestTemplateExport:
-
-    def test_apercu_compte_affiche(
-        self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture
-    ):
+    def test_apercu_compte_affiche(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse(URL_EXPORT))
         content = response.content.decode()
@@ -264,10 +230,7 @@ class TestTemplateExport:
 
 
 class TestTemplateRecoupementExporter:
-
-    def test_bouton_exporter_visible(
-        self, client, utilisateur_cdt, bdc_a_facturer
-    ):
+    def test_bouton_exporter_visible(self, client, utilisateur_cdt, bdc_a_facturer):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:recoupement_liste"))
         content = response.content.decode()
@@ -276,19 +239,14 @@ class TestTemplateRecoupementExporter:
 
 
 class TestTemplateDashboardExport:
-
-    def test_lien_export_visible_cdt(
-        self, client, utilisateur_cdt, bdc_a_facturer
-    ):
+    def test_lien_export_visible_cdt(self, client, utilisateur_cdt, bdc_a_facturer):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:index"))
         content = response.content.decode()
         assert "Export facturation" in content
         assert reverse("bdc:export_facturation") in content
 
-    def test_lien_export_absent_secretaire(
-        self, client, utilisateur_secretaire, bdc_a_facturer
-    ):
+    def test_lien_export_absent_secretaire(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:index"))
         content = response.content.decode()

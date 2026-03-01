@@ -2,6 +2,7 @@
 Notifications SMS pour les sous-traitants.
 V1 : stub — le message est construit et loggé, pas d'envoi réel.
 """
+
 import logging
 
 from .models import BonDeCommande

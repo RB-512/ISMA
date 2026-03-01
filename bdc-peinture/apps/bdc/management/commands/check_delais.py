@@ -2,6 +2,7 @@
 Management command : affiche les BDC en retard ou proches du délai.
 Usage : python manage.py check_delais
 """
+
 from django.core.management.base import BaseCommand
 
 from apps.notifications.alertes import get_bdc_delai_proche, get_bdc_en_retard
@@ -14,9 +15,9 @@ class Command(BaseCommand):
         en_retard = get_bdc_en_retard()
         delai_proche = get_bdc_delai_proche()
 
-        self.stdout.write(self.style.WARNING(f"\n{'='*60}"))
+        self.stdout.write(self.style.WARNING(f"\n{'=' * 60}"))
         self.stdout.write(self.style.WARNING("  ALERTES DÉLAIS BDC"))
-        self.stdout.write(self.style.WARNING(f"{'='*60}\n"))
+        self.stdout.write(self.style.WARNING(f"{'=' * 60}\n"))
 
         if en_retard.exists():
             self.stdout.write(self.style.ERROR(f"  {en_retard.count()} BDC en retard :"))

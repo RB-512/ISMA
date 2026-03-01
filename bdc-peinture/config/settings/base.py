@@ -1,6 +1,7 @@
 """
 Settings communs à tous les environnements.
 """
+
 from pathlib import Path
 
 from decouple import config

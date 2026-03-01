@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0002_add_pdf_terrain'),
+        ("bdc", "0002_add_pdf_terrain"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='bondecommande',
-            name='date_realisation',
-            field=models.DateField(blank=True, help_text='Date à laquelle les travaux ont été déclarés terminés', null=True, verbose_name='Date de réalisation'),
+            model_name="bondecommande",
+            name="date_realisation",
+            field=models.DateField(
+                blank=True,
+                help_text="Date à laquelle les travaux ont été déclarés terminés",
+                null=True,
+                verbose_name="Date de réalisation",
+            ),
         ),
     ]

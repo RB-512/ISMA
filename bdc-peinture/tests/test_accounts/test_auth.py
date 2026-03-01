@@ -1,6 +1,7 @@
 """
 Tests d'authentification et de contrôle d'accès.
 """
+
 from django.test import Client
 
 
@@ -12,19 +13,25 @@ class TestLogin:
 
     def test_login_reussi_redirige(self, utilisateur_secretaire):
         client = Client()
-        response = client.post("/accounts/login/", {
-            "login": "secretaire@test.fr",
-            "password": "testpass123",
-        })
+        response = client.post(
+            "/accounts/login/",
+            {
+                "login": "secretaire@test.fr",
+                "password": "testpass123",
+            },
+        )
         # allauth redirige vers LOGIN_REDIRECT_URL après login réussi
         assert response.status_code in (302, 200)
 
     def test_login_echoue_mauvais_mot_de_passe(self, utilisateur_secretaire):
         client = Client()
-        response = client.post("/accounts/login/", {
-            "login": "secretaire@test.fr",
-            "password": "mauvais_password",
-        })
+        response = client.post(
+            "/accounts/login/",
+            {
+                "login": "secretaire@test.fr",
+                "password": "mauvais_password",
+            },
+        )
         # Reste sur la page de login (pas de redirection)
         assert response.status_code == 200
 

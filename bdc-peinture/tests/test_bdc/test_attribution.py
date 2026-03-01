@@ -2,6 +2,7 @@
 Tests unitaires — attribution et réattribution de BDC à un sous-traitant.
 Couvre les tâches 7.1 (services), 7.2 (notifications), 7.3 (vues), 7.4 (template detail).
 """
+
 import logging
 from decimal import Decimal
 
@@ -64,7 +65,9 @@ class TestReattribuerST:
     @pytest.fixture
     def autre_st(self, db):
         return SousTraitant.objects.create(
-            nom="Martin Peinture", telephone="0698765432", actif=True,
+            nom="Martin Peinture",
+            telephone="0698765432",
+            actif=True,
         )
 
     def test_reattribution_ok(self, bdc_en_cours, autre_st, utilisateur_cdt):
@@ -161,10 +164,13 @@ class TestAttribuerBDCView:
 
     def test_post_valide_attribue(self, client_cdt, bdc_a_faire, sous_traitant):
         url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
-        resp = client_cdt.post(url, {
-            "sous_traitant": sous_traitant.pk,
-            "pourcentage_st": "65",
-        })
+        resp = client_cdt.post(
+            url,
+            {
+                "sous_traitant": sous_traitant.pk,
+                "pourcentage_st": "65",
+            },
+        )
         assert resp.status_code == 302
 
         bdc_a_faire.refresh_from_db()
@@ -173,10 +179,13 @@ class TestAttribuerBDCView:
 
     def test_post_invalide_renvoie_formulaire(self, client_cdt, bdc_a_faire):
         url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
-        resp = client_cdt.post(url, {
-            "sous_traitant": "",
-            "pourcentage_st": "",
-        })
+        resp = client_cdt.post(
+            url,
+            {
+                "sous_traitant": "",
+                "pourcentage_st": "",
+            },
+        )
         assert resp.status_code == 200  # formulaire ré-affiché
 
 
@@ -190,7 +199,9 @@ class TestReattribuerBDCView:
     @pytest.fixture
     def autre_st(self, db):
         return SousTraitant.objects.create(
-            nom="Martin Peinture", telephone="0698765432", actif=True,
+            nom="Martin Peinture",
+            telephone="0698765432",
+            actif=True,
         )
 
     def test_acces_cdt_ok(self, client_cdt, bdc_en_cours):
@@ -205,10 +216,13 @@ class TestReattribuerBDCView:
 
     def test_post_valide_reattribue(self, client_cdt, bdc_en_cours, autre_st):
         url = reverse("bdc:reattribuer", args=[bdc_en_cours.pk])
-        resp = client_cdt.post(url, {
-            "sous_traitant": autre_st.pk,
-            "pourcentage_st": "70",
-        })
+        resp = client_cdt.post(
+            url,
+            {
+                "sous_traitant": autre_st.pk,
+                "pourcentage_st": "70",
+            },
+        )
         assert resp.status_code == 302
 
         bdc_en_cours.refresh_from_db()

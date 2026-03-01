@@ -1,6 +1,7 @@
 """
 Tests de la page de contrôle BDC (split-screen PDF + checklist).
 """
+
 import pytest
 from django.urls import reverse
 
@@ -29,8 +30,7 @@ class TestBDCEditionForm:
 
     def test_notes_not_required(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "VACANT", "type_acces": "BADGE_CODE",
-                  "acces_complement": "Code 1234"},
+            data={"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": "Code 1234"},
             instance=bdc_a_traiter,
         )
         assert form.is_valid()
@@ -45,8 +45,7 @@ class TestBDCEditionForm:
 
     def test_vacant_requires_acces_complement(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "VACANT", "type_acces": "BADGE_CODE",
-                  "acces_complement": ""},
+            data={"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": ""},
             instance=bdc_a_traiter,
         )
         assert not form.is_valid()
@@ -66,6 +65,7 @@ class TestBDCEditionForm:
             instance=bdc_a_traiter,
         )
         assert form.is_valid()
+
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -151,7 +151,6 @@ class TestControlePost:
             "occupation": "VACANT",
             "type_acces": "BADGE_CODE",
             "acces_complement": "Code 1234",
-
             "rdv_date": "",
             "notes": "RAS",
             "nouveau_statut": "",
@@ -184,7 +183,6 @@ class TestControlePost:
             # items 1 et 2 non cochés
             "occupation": "VACANT",
             "type_acces": "BADGE_CODE",
-
             "rdv_date": "",
             "notes": "",
             "nouveau_statut": "A_FAIRE",
@@ -195,16 +193,13 @@ class TestControlePost:
         bdc_a_traiter.refresh_from_db()
         assert bdc_a_traiter.statut == StatutChoices.A_TRAITER
 
-    def test_transition_avec_checklist_complete_et_occupation(
-        self, client_secretaire, bdc_a_traiter, checklist_items
-    ):
+    def test_transition_avec_checklist_complete_et_occupation(self, client_secretaire, bdc_a_traiter, checklist_items):
         """POST transition avec checklist complète + occupation → passe en A_FAIRE, redirect."""
         url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
         data = {
             "occupation": "VACANT",
             "type_acces": "BADGE_CODE",
             "acces_complement": "Code 1234",
-
             "rdv_date": "",
             "notes": "",
             "nouveau_statut": "A_FAIRE",
@@ -248,7 +243,13 @@ class TestControlePost:
     def test_transition_bloquee_si_type_acces_manquant_vacant(self, client_secretaire, bdc_a_traiter):
         """POST avec occupation=VACANT sans type_acces → formulaire invalide, transition bloquée."""
         url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
-        data = {"occupation": "VACANT", "type_acces": "", "acces_complement": "", "notes": "", "nouveau_statut": "A_FAIRE"}
+        data = {
+            "occupation": "VACANT",
+            "type_acces": "",
+            "acces_complement": "",
+            "notes": "",
+            "nouveau_statut": "A_FAIRE",
+        }
         response = client_secretaire.post(url, data)
 
         assert response.status_code == 200
@@ -295,6 +296,7 @@ class TestChecklistValidation:
     def test_occupe_avec_rdv_transition_ok(self, bdc_a_traiter, utilisateur_secretaire):
         """Logement occupé avec rdv_date : type_acces non requis, transition permise."""
         from datetime import datetime
+
         bdc_a_traiter.occupation = "OCCUPE"
         bdc_a_traiter.type_acces = ""
         bdc_a_traiter.rdv_date = datetime(2026, 3, 15, 10, 0)
@@ -352,9 +354,7 @@ class TestRenvoiControle:
     def test_renvoi_creates_historique_with_comment(self, client_cdt, bdc_a_faire):
         url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
         client_cdt.post(url, {"commentaire": "RDV non renseigné"})
-        hist = HistoriqueAction.objects.filter(
-            bdc=bdc_a_faire, action=ActionChoices.RENVOI
-        ).first()
+        hist = HistoriqueAction.objects.filter(bdc=bdc_a_faire, action=ActionChoices.RENVOI).first()
         assert hist is not None
         assert hist.details["commentaire"] == "RDV non renseigné"
 

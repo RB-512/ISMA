@@ -1,6 +1,7 @@
 """
 Tests d'intégration ERILIAParser avec le vrai PDF modèle (docs/Modèle_bdc_ERILIA.pdf).
 """
+
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -24,7 +25,6 @@ def resultat():
 
 
 class TestERILIAIntegration:
-
     def test_bailleur_code(self, resultat):
         assert resultat["bailleur_code"] == "ERILIA"
 

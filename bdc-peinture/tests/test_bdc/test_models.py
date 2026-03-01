@@ -1,6 +1,7 @@
 """
 Tests des modèles du domaine BDC.
 """
+
 import pytest
 
 from apps.bdc.models import (

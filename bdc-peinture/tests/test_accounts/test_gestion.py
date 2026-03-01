@@ -19,7 +19,6 @@ def client_secretaire(client, utilisateur_secretaire):
 
 
 class TestListeUtilisateurs:
-
     def test_acces_cdt(self, client_cdt):
         resp = client_cdt.get(reverse("gestion:liste"))
         assert resp.status_code == 200
@@ -34,30 +33,35 @@ class TestListeUtilisateurs:
 
 
 class TestCreerUtilisateur:
-
     def test_creer_compte_valide(self, client_cdt):
         Group.objects.get_or_create(name="Secrétaire")
-        resp = client_cdt.post(reverse("gestion:creer"), {
-            "username": "nouveau.user",
-            "first_name": "Nouveau",
-            "last_name": "User",
-            "password1": "motdepasse123!",
-            "password2": "motdepasse123!",
-            "role": "Secrétaire",
-        })
+        resp = client_cdt.post(
+            reverse("gestion:creer"),
+            {
+                "username": "nouveau.user",
+                "first_name": "Nouveau",
+                "last_name": "User",
+                "password1": "motdepasse123!",
+                "password2": "motdepasse123!",
+                "role": "Secrétaire",
+            },
+        )
         assert resp.status_code == 302
         assert User.objects.filter(username="nouveau.user").exists()
 
     def test_creer_compte_groupe_assigne(self, client_cdt):
         Group.objects.get_or_create(name="CDT")
-        client_cdt.post(reverse("gestion:creer"), {
-            "username": "cdt.user",
-            "first_name": "Chef",
-            "last_name": "Travaux",
-            "password1": "motdepasse123!",
-            "password2": "motdepasse123!",
-            "role": "CDT",
-        })
+        client_cdt.post(
+            reverse("gestion:creer"),
+            {
+                "username": "cdt.user",
+                "first_name": "Chef",
+                "last_name": "Travaux",
+                "password1": "motdepasse123!",
+                "password2": "motdepasse123!",
+                "role": "CDT",
+            },
+        )
         user = User.objects.get(username="cdt.user")
         assert user.groups.filter(name="CDT").exists()
 
@@ -68,7 +72,6 @@ class TestCreerUtilisateur:
 
 
 class TestModifierRole:
-
     def test_modifier_role_valide(self, client_cdt, utilisateur_secretaire):
         Group.objects.get_or_create(name="CDT")
         client_cdt.post(
@@ -80,7 +83,6 @@ class TestModifierRole:
 
 
 class TestDesactiverUtilisateur:
-
     def test_desactiver_autre_utilisateur(self, client_cdt, utilisateur_secretaire):
         client_cdt.post(reverse("gestion:desactiver", kwargs={"pk": utilisateur_secretaire.pk}))
         utilisateur_secretaire.refresh_from_db()

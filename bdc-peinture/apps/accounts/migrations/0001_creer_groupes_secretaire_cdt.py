@@ -2,6 +2,7 @@
 Data migration : crée les groupes 'Secretaire' et 'CDT' s'ils n'existent pas.
 Ces groupes sont utilisés pour le contrôle d'accès (RBAC) dans toute l'application.
 """
+
 from django.db import migrations
 
 
@@ -17,7 +18,6 @@ def supprimer_groupes(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("auth", "0012_alter_user_first_name_max_length"),
     ]

@@ -2,6 +2,7 @@
 Service d'envoi d'emails aux sous-traitants.
 Les emails ne contiennent JAMAIS de prix.
 """
+
 from __future__ import annotations
 
 import logging

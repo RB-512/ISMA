@@ -2,6 +2,7 @@
 Tests unitaires — validation réalisation, facturation, retour, vues CDT,
 boutons template et recoupement par sous-traitant.
 """
+
 from datetime import date
 from decimal import Decimal
 
@@ -12,6 +13,7 @@ from apps.bdc.models import BonDeCommande, HistoriqueAction, StatutChoices
 from apps.bdc.services import TransitionInvalide, changer_statut, valider_facturation, valider_realisation
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def bdc_en_cours(db, bailleur_gdh, utilisateur_cdt, sous_traitant):
@@ -48,7 +50,6 @@ def bdc_a_facturer(db, bailleur_gdh, utilisateur_cdt, sous_traitant):
 
 
 class TestValiderRealisation:
-
     def test_transition_ok(self, bdc_en_cours, utilisateur_cdt):
         bdc = valider_realisation(bdc_en_cours, utilisateur_cdt)
         assert bdc.statut == StatutChoices.A_FACTURER
@@ -59,9 +60,7 @@ class TestValiderRealisation:
 
     def test_historique_validation_cree(self, bdc_en_cours, utilisateur_cdt):
         valider_realisation(bdc_en_cours, utilisateur_cdt)
-        action = HistoriqueAction.objects.filter(
-            bdc=bdc_en_cours, action="VALIDATION"
-        ).first()
+        action = HistoriqueAction.objects.filter(bdc=bdc_en_cours, action="VALIDATION").first()
         assert action is not None
         assert action.details["date_realisation"] == str(date.today())
 
@@ -78,16 +77,13 @@ class TestValiderRealisation:
 
 
 class TestValiderFacturation:
-
     def test_transition_ok(self, bdc_a_facturer, utilisateur_cdt):
         bdc = valider_facturation(bdc_a_facturer, utilisateur_cdt)
         assert bdc.statut == StatutChoices.FACTURE
 
     def test_historique_facturation_cree(self, bdc_a_facturer, utilisateur_cdt):
         valider_facturation(bdc_a_facturer, utilisateur_cdt)
-        action = HistoriqueAction.objects.filter(
-            bdc=bdc_a_facturer, action="FACTURATION"
-        ).first()
+        action = HistoriqueAction.objects.filter(bdc=bdc_a_facturer, action="FACTURATION").first()
         assert action is not None
 
     def test_refus_si_pas_a_facturer(self, bdc_en_cours, utilisateur_cdt):
@@ -99,7 +95,6 @@ class TestValiderFacturation:
 
 
 class TestRetourAFacturerEnCours:
-
     def test_date_realisation_remise_a_null(self, bdc_a_facturer, utilisateur_cdt):
         assert bdc_a_facturer.date_realisation is not None
         bdc = changer_statut(bdc_a_facturer, StatutChoices.EN_COURS, utilisateur_cdt)
@@ -116,7 +111,6 @@ class TestRetourAFacturerEnCours:
 
 
 class TestVueValiderRealisation:
-
     def test_post_cdt_ok(self, client, utilisateur_cdt, bdc_en_cours):
         client.force_login(utilisateur_cdt)
         response = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
@@ -136,7 +130,6 @@ class TestVueValiderRealisation:
 
 
 class TestVueValiderFacturation:
-
     def test_post_cdt_ok(self, client, utilisateur_cdt, bdc_a_facturer):
         client.force_login(utilisateur_cdt)
         response = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
@@ -159,7 +152,6 @@ class TestVueValiderFacturation:
 
 
 class TestTemplateBoutonsValidation:
-
     def test_bouton_valider_realisation_visible_en_cours(self, client, utilisateur_cdt, bdc_en_cours):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:detail", kwargs={"pk": bdc_en_cours.pk}))
@@ -195,7 +187,6 @@ class TestTemplateBoutonsValidation:
 
 
 class TestRecoupementListe:
-
     def test_cdt_accede(self, client, utilisateur_cdt, bdc_en_cours):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:recoupement_liste"))
@@ -223,7 +214,6 @@ class TestRecoupementListe:
 
 
 class TestRecoupementDetail:
-
     def test_detail_st_accessible(self, client, utilisateur_cdt, bdc_en_cours, sous_traitant):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:recoupement_detail", kwargs={"st_pk": sous_traitant.pk}))

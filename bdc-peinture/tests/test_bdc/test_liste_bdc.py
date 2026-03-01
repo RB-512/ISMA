@@ -1,4 +1,5 @@
 """Tests de la vue liste_bdc : accès, filtres, recherche, pagination, compteurs."""
+
 from decimal import Decimal
 
 import pytest
@@ -24,8 +25,8 @@ def bdc_erilia_marseille(bailleur_erilia, utilisateur_secretaire):
 
 # ─── Tests accès ─────────────────────────────────────────────────────────────
 
-class TestListeBDCAcces:
 
+class TestListeBDCAcces:
     def test_acces_authentifie(self, client, utilisateur_secretaire):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:index"))
@@ -56,8 +57,8 @@ class TestListeBDCAcces:
 
 # ─── Tests pagination ────────────────────────────────────────────────────────
 
-class TestListeBDCPagination:
 
+class TestListeBDCPagination:
     def test_pagination_page_2(self, client, utilisateur_secretaire, bailleur_gdh):
         # Créer 30 BDC pour dépasser la pagination de 25
         for i in range(30):
@@ -80,8 +81,8 @@ class TestListeBDCPagination:
 
 # ─── Tests filtres ───────────────────────────────────────────────────────────
 
-class TestListeBDCFiltres:
 
+class TestListeBDCFiltres:
     def test_filtre_statut(self, client, utilisateur_secretaire, bdc_a_traiter, bdc_a_faire):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:index"), {"statut": "A_FAIRE"})
@@ -141,7 +142,9 @@ class TestListeBDCFiltres:
         content = response.content.decode()
         assert "Aucun bon de commande" in content
 
-    def test_combinaison_statut_et_recherche(self, client, utilisateur_secretaire, bdc_a_traiter, bdc_a_faire, bdc_erilia_marseille):
+    def test_combinaison_statut_et_recherche(
+        self, client, utilisateur_secretaire, bdc_a_traiter, bdc_a_faire, bdc_erilia_marseille
+    ):
         client.force_login(utilisateur_secretaire)
         # A_TRAITER + recherche "François" (bdc_a_traiter adresse = "3 Rue François 1er")
         response = client.get(reverse("bdc:index"), {"statut": "A_TRAITER", "q": "François"})
@@ -153,8 +156,8 @@ class TestListeBDCFiltres:
 
 # ─── Tests compteurs ─────────────────────────────────────────────────────────
 
-class TestListeBDCCompteurs:
 
+class TestListeBDCCompteurs:
     def test_compteurs_dans_context(self, client, utilisateur_secretaire, bdc_a_traiter, bdc_a_faire):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:index"))
@@ -171,11 +174,9 @@ class TestListeBDCCompteurs:
 
 # ─── Tests queryset optimisations ───────────────────────────────────────────
 
-class TestListeBDCQueryset:
 
-    def test_liste_bdc_includes_sous_traitant_and_montant(
-        self, client, bdc_a_traiter, utilisateur_secretaire
-    ):
+class TestListeBDCQueryset:
+    def test_liste_bdc_includes_sous_traitant_and_montant(self, client, bdc_a_traiter, utilisateur_secretaire):
         """Dashboard queryset includes sous_traitant and montant_ht_total annotation."""
         # Create a prestation line so the annotation has data
         LignePrestation.objects.create(
@@ -204,8 +205,8 @@ class TestListeBDCQueryset:
 
 # ─── Tests sidebar detail ──────────────────────────────────────────────────
 
-class TestDetailSidebar:
 
+class TestDetailSidebar:
     def test_detail_sidebar_returns_partial(self, client, bdc_a_traiter, utilisateur_secretaire):
         """Sidebar endpoint returns partial HTML without base layout."""
         client.force_login(utilisateur_secretaire)
@@ -225,7 +226,6 @@ class TestDetailSidebar:
 
 
 class TestTabFiltering:
-
     def test_tab_filtering_by_statut(self, client, bdc_a_traiter, utilisateur_secretaire):
         """Filtering by statut via query param returns only matching BDCs."""
         client.force_login(utilisateur_secretaire)
@@ -239,7 +239,6 @@ class TestTabFiltering:
 
 
 class TestSidebarSaveAndTransition:
-
     def test_post_saves_fields_returns_partial(self, client, utilisateur_secretaire, bdc_a_traiter):
         """POST sidebar_action saves fields and returns partial HTML."""
         client.force_login(utilisateur_secretaire)

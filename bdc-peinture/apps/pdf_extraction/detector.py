@@ -1,6 +1,7 @@
 """
 Détecte automatiquement le type de PDF (GDH ou ERILIA) et retourne le parser approprié.
 """
+
 from pathlib import Path
 
 import pdfplumber
@@ -49,7 +50,4 @@ def detecter_parser(pdf_path: str | Path) -> PDFParser:
     if MARQUEUR_ERILIA in texte_upper:
         return ERILIAParser(pdf_path)
 
-    raise PDFTypeInconnu(
-        f"Type de PDF non reconnu pour '{pdf_path.name}'. "
-        f"Formats supportés : GDH, ERILIA"
-    )
+    raise PDFTypeInconnu(f"Type de PDF non reconnu pour '{pdf_path.name}'. Formats supportés : GDH, ERILIA")

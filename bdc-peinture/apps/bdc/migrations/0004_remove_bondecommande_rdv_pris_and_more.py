@@ -4,34 +4,60 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0003_add_date_realisation'),
+        ("bdc", "0003_add_date_realisation"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='bondecommande',
-            name='rdv_pris',
+            model_name="bondecommande",
+            name="rdv_pris",
         ),
         migrations.AddField(
-            model_name='bondecommande',
-            name='acces_complement',
-            field=models.CharField(blank=True, help_text='Code/badge ou lieu de récupération de la clé', max_length=255, verbose_name='Détail accès'),
+            model_name="bondecommande",
+            name="acces_complement",
+            field=models.CharField(
+                blank=True,
+                help_text="Code/badge ou lieu de récupération de la clé",
+                max_length=255,
+                verbose_name="Détail accès",
+            ),
         ),
         migrations.AddField(
-            model_name='bondecommande',
-            name='type_acces',
-            field=models.CharField(blank=True, choices=[('BADGE_CODE', 'Badge / Code'), ('CLE', 'Clé à récupérer')], max_length=15, verbose_name="Type d'accès"),
+            model_name="bondecommande",
+            name="type_acces",
+            field=models.CharField(
+                blank=True,
+                choices=[("BADGE_CODE", "Badge / Code"), ("CLE", "Clé à récupérer")],
+                max_length=15,
+                verbose_name="Type d'accès",
+            ),
         ),
         migrations.AlterField(
-            model_name='bondecommande',
-            name='occupation',
-            field=models.CharField(blank=True, choices=[('VACANT', 'Vacant'), ('OCCUPE', 'Occupé')], help_text="Obligatoire avant passage en statut 'À attribuer'", max_length=10, verbose_name='Vacant / Occupé'),
+            model_name="bondecommande",
+            name="occupation",
+            field=models.CharField(
+                blank=True,
+                choices=[("VACANT", "Vacant"), ("OCCUPE", "Occupé")],
+                help_text="Obligatoire avant passage en statut 'À attribuer'",
+                max_length=10,
+                verbose_name="Vacant / Occupé",
+            ),
         ),
         migrations.AlterField(
-            model_name='bondecommande',
-            name='statut',
-            field=models.CharField(choices=[('A_TRAITER', 'À traiter'), ('A_FAIRE', 'À attribuer'), ('EN_COURS', 'En cours'), ('A_FACTURER', 'À facturer'), ('FACTURE', 'Facturé')], default='A_TRAITER', max_length=20, verbose_name='Statut'),
+            model_name="bondecommande",
+            name="statut",
+            field=models.CharField(
+                choices=[
+                    ("A_TRAITER", "À traiter"),
+                    ("A_FAIRE", "À attribuer"),
+                    ("EN_COURS", "En cours"),
+                    ("A_FACTURER", "À facturer"),
+                    ("FACTURE", "Facturé"),
+                ],
+                default="A_TRAITER",
+                max_length=20,
+                verbose_name="Statut",
+            ),
         ),
     ]

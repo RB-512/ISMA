@@ -6,6 +6,7 @@ from django.db import models
 
 # ─── Upload path ──────────────────────────────────────────────────────────────
 
+
 def pdf_upload_path(instance: "BonDeCommande", filename: str) -> str:
     """Stocke les PDFs dans bdc/<annee>/<mois>/<numero_bdc>_<filename>."""
     today = date.today()
@@ -20,6 +21,7 @@ def pdf_terrain_upload_path(instance: "BonDeCommande", filename: str) -> str:
 
 
 # ─── Bailleur ─────────────────────────────────────────────────────────────────
+
 
 class Bailleur(models.Model):
     """
@@ -45,6 +47,7 @@ class Bailleur(models.Model):
 
 
 # ─── BonDeCommande ────────────────────────────────────────────────────────────
+
 
 class StatutChoices(models.TextChoices):
     A_TRAITER = "A_TRAITER", "À contrôler"
@@ -106,9 +109,7 @@ class BonDeCommande(models.Model):
     montant_ht = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Montant HT (€)"
     )
-    montant_tva = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="TVA (€)"
-    )
+    montant_tva = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="TVA (€)")
     montant_ttc = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Montant TTC (€)"
     )
@@ -227,6 +228,7 @@ class BonDeCommande(models.Model):
 
 # ─── LignePrestation ──────────────────────────────────────────────────────────
 
+
 class LignePrestation(models.Model):
     """
     Ligne de prestation d'un BDC.
@@ -243,9 +245,7 @@ class LignePrestation(models.Model):
     designation = models.TextField(verbose_name="Désignation")
     quantite = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantité")
     unite = models.CharField(max_length=20, blank=True, verbose_name="Unité")
-    prix_unitaire = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="Prix unitaire (€)"
-    )
+    prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Prix unitaire (€)")
     montant = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Montant (€)")
     ordre = models.PositiveSmallIntegerField(default=0, verbose_name="Ordre")
 
@@ -297,6 +297,7 @@ class ChecklistResultat(models.Model):
 
 
 # ─── HistoriqueAction ─────────────────────────────────────────────────────────
+
 
 class ActionChoices(models.TextChoices):
     CREATION = "CREATION", "Création"

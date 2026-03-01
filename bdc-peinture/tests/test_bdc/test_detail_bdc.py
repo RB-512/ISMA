@@ -1,6 +1,7 @@
 """
 Tests des vues fiche détail BDC : detail_bdc, modifier_bdc, changer_statut_bdc.
 """
+
 from django.contrib.messages import get_messages
 from django.urls import reverse
 
@@ -10,7 +11,6 @@ from apps.bdc.models import ActionChoices, BonDeCommande, HistoriqueAction, Stat
 
 
 class TestModifierBDC:
-
     def test_post_valide_met_a_jour_bdc(self, client, utilisateur_secretaire, bdc_a_traiter):
         client.force_login(utilisateur_secretaire)
         response = client.post(
@@ -69,7 +69,6 @@ class TestModifierBDC:
 
 
 class TestChangerStatutBDC:
-
     def test_transition_valide(self, client, utilisateur_secretaire, bdc_a_traiter):
         """A_TRAITER → A_FAIRE avec occupation VACANT + type_acces renseignés."""
         bdc_a_traiter.occupation = "VACANT"
@@ -140,7 +139,6 @@ class TestChangerStatutBDC:
 
 
 class TestDetailBDCEnrichi:
-
     def test_contacts_occupant_affiches(self, client, utilisateur_secretaire, bdc_a_traiter):
         bdc_a_traiter.occupant_nom = "Mme Dupont"
         bdc_a_traiter.occupant_telephone = "0612345678"

@@ -146,7 +146,18 @@
       "Bash(rtk test:*)",
       "Bash(rtk git diff)",
       "Bash(rtk git add:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(rtk git push:*)",
+      "Bash(rtk gh run list:*)",
+      "Bash(git remote get-url:*)",
+      "mcp__plugin_github_github__list_pull_requests",
+      "mcp__plugin_github_github__search_pull_requests",
+      "mcp__plugin_github_github__get_commit",
+      "mcp__plugin_github_github__pull_request_read",
+      "mcp__plugin_github_github__search_code",
+      "mcp__plugin_github_github__get_file_contents",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }

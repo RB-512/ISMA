@@ -1,4 +1,5 @@
 """Tests des formulaires BDC."""
+
 import pytest
 
 from apps.bdc.forms import BDCEditionForm
@@ -7,7 +8,6 @@ pytestmark = pytest.mark.django_db
 
 
 class TestBDCEditionForm:
-
     def test_fields_include_type_acces_and_acces_complement(self):
         form = BDCEditionForm()
         assert "type_acces" in form.fields

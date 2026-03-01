@@ -1,4 +1,5 @@
 """Tests de _get_repartition_st avec filtres de periode."""
+
 from datetime import date
 from decimal import Decimal
 

@@ -1,6 +1,7 @@
 """
 Service d'export Excel des BDC pour la facturation.
 """
+
 from datetime import date
 
 from django.db.models import QuerySet
@@ -40,18 +41,20 @@ def generer_export_excel(queryset: QuerySet) -> HttpResponse:
 
     # Données
     for bdc in queryset.select_related("bailleur", "sous_traitant"):
-        ws.append([
-            bdc.numero_bdc,
-            str(bdc.bailleur),
-            bdc.adresse,
-            bdc.ville,
-            str(bdc.sous_traitant) if bdc.sous_traitant else "",
-            float(bdc.pourcentage_st) if bdc.pourcentage_st else None,
-            float(bdc.montant_ht) if bdc.montant_ht else None,
-            float(bdc.montant_st) if bdc.montant_st else None,
-            bdc.date_realisation.strftime("%d/%m/%Y") if bdc.date_realisation else "",
-            bdc.get_statut_display(),
-        ])
+        ws.append(
+            [
+                bdc.numero_bdc,
+                str(bdc.bailleur),
+                bdc.adresse,
+                bdc.ville,
+                str(bdc.sous_traitant) if bdc.sous_traitant else "",
+                float(bdc.pourcentage_st) if bdc.pourcentage_st else None,
+                float(bdc.montant_ht) if bdc.montant_ht else None,
+                float(bdc.montant_st) if bdc.montant_st else None,
+                bdc.date_realisation.strftime("%d/%m/%Y") if bdc.date_realisation else "",
+                bdc.get_statut_display(),
+            ]
+        )
 
     # Ajuster la largeur des colonnes
     for col in ws.columns:

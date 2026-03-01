@@ -5,6 +5,7 @@ Couvre les tâches 7.1 à 7.6.
 Note : WeasyPrint nécessite des bibliothèques C natives (GTK/Pango).
 Les tests ERILIA mockent WeasyPrint et vérifient le HTML généré.
 """
+
 import sys
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -68,7 +69,6 @@ def _mock_weasyprint():
 
 
 class TestGenererTerrainGDH:
-
     def test_extraction_page_2_reussie(self, bdc_a_faire):
         pdf_2pages = _creer_pdf_2_pages()
         bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_2pages), save=True)
@@ -103,7 +103,6 @@ class TestGenererTerrainGDH:
 
 @pytest.mark.usefixtures("_mock_weasyprint")
 class TestGenererTerrainERILIA:
-
     def test_pdf_genere(self, bdc_a_faire):
         from apps.bdc.terrain import _generer_terrain_erilia
 
@@ -130,10 +129,13 @@ class TestGenererTerrainERILIA:
         )
 
         lignes = bdc_a_faire.lignes_prestation.all()
-        html = render_to_string("bdc/terrain_erilia.html", {
-            "bdc": bdc_a_faire,
-            "lignes": lignes,
-        })
+        html = render_to_string(
+            "bdc/terrain_erilia.html",
+            {
+                "bdc": bdc_a_faire,
+                "lignes": lignes,
+            },
+        )
 
         assert "1071" not in html
         assert "107.14" not in html
@@ -150,7 +152,6 @@ class TestGenererTerrainERILIA:
 
 @pytest.mark.usefixtures("_mock_weasyprint")
 class TestGenererPdfTerrain:
-
     def test_dispatch_gdh(self, bdc_a_faire):
         assert bdc_a_faire.bailleur.code == "GDH"
         pdf_2pages = _creer_pdf_2_pages()
@@ -188,7 +189,6 @@ class TestGenererPdfTerrain:
 
 @pytest.mark.usefixtures("_mock_weasyprint")
 class TestAttributionGenereTerrainIntegration:
-
     def test_attribution_genere_pdf_terrain(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
         pdf_2pages = _creer_pdf_2_pages()
         bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_2pages), save=True)
@@ -230,11 +230,8 @@ def client_logged(utilisateur_secretaire) -> Client:
 
 
 class TestTelechargerTerrain:
-
     def test_telechargement_ok(self, client_logged, bdc_a_faire):
-        bdc_a_faire.pdf_terrain.save(
-            "terrain.pdf", ContentFile(b"%PDF-1.4 fake pdf"), save=True
-        )
+        bdc_a_faire.pdf_terrain.save("terrain.pdf", ContentFile(b"%PDF-1.4 fake pdf"), save=True)
 
         url = reverse("bdc:terrain", args=[bdc_a_faire.pk])
         resp = client_logged.get(url)
@@ -255,11 +252,8 @@ class TestTelechargerTerrain:
 
 
 class TestDetailBoutonTerrain:
-
     def test_bouton_terrain_visible(self, client_logged, bdc_a_faire):
-        bdc_a_faire.pdf_terrain.save(
-            "terrain.pdf", ContentFile(b"%PDF-1.4 fake pdf"), save=True
-        )
+        bdc_a_faire.pdf_terrain.save("terrain.pdf", ContentFile(b"%PDF-1.4 fake pdf"), save=True)
 
         url = reverse("bdc:detail", args=[bdc_a_faire.pk])
         resp = client_logged.get(url)

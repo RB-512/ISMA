@@ -1,4 +1,5 @@
 """Utilitaires de calcul de bornes de periode pour l'analyse de charge ST."""
+
 import calendar
 from datetime import date, timedelta
 

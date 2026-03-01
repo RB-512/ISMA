@@ -1,6 +1,7 @@
 """
 Routes principales de l'application BDC Peinture.
 """
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin

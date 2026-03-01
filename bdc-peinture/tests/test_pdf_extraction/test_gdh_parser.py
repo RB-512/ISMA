@@ -1,6 +1,7 @@
 """
 Tests unitaires de GDHParser — pdfplumber mocké avec texte au format réel.
 """
+
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -67,10 +68,7 @@ TABLE_P1 = [
     ],
     ["P.U.H.T (€) Quantité Montant HT (€) TVA", None],
     [
-        (
-            "M-P : préparation et mis (PS1402) 11.19 15.00 (m²) 167.85 10.00%\n"
-            "M-P : préparation et mise en peinture"
-        ),
+        ("M-P : préparation et mis (PS1402) 11.19 15.00 (m²) 167.85 10.00%\nM-P : préparation et mise en peinture"),
         None,
     ],
 ]
@@ -105,13 +103,28 @@ def test_extraire_retourne_dict_complet(mock_open):
     result = GDHParser(PDF_FICTIF).extraire()
 
     cles_attendues = [
-        "bailleur_code", "numero_bdc", "numero_marche", "date_emission",
-        "programme_residence", "adresse", "code_postal", "ville",
-        "logement_numero", "logement_type", "logement_etage", "logement_porte",
-        "objet_travaux", "delai_execution",
-        "occupant_nom", "occupant_telephone", "occupant_email",
-        "emetteur_nom", "emetteur_telephone",
-        "montant_ht", "montant_tva", "montant_ttc",
+        "bailleur_code",
+        "numero_bdc",
+        "numero_marche",
+        "date_emission",
+        "programme_residence",
+        "adresse",
+        "code_postal",
+        "ville",
+        "logement_numero",
+        "logement_type",
+        "logement_etage",
+        "logement_porte",
+        "objet_travaux",
+        "delai_execution",
+        "occupant_nom",
+        "occupant_telephone",
+        "occupant_email",
+        "emetteur_nom",
+        "emetteur_telephone",
+        "montant_ht",
+        "montant_tva",
+        "montant_ttc",
         "lignes_prestation",
     ]
     for cle in cles_attendues:

@@ -20,15 +20,36 @@ class BonDeCommandeForm(forms.ModelForm):
     class Meta:
         model = BonDeCommande
         fields = [
-            "numero_bdc", "numero_marche", "bailleur", "date_emission",
-            "programme_residence", "adresse", "code_postal", "ville",
-            "logement_numero", "logement_type", "logement_etage", "logement_porte",
-            "objet_travaux", "delai_execution",
-            "occupant_nom", "occupant_telephone", "occupant_email",
-            "emetteur_nom", "emetteur_telephone",
-            "montant_ht", "montant_tva", "montant_ttc",
-            "occupation", "type_acces", "acces_complement", "rdv_date", "notes",
-            "sous_traitant", "montant_st", "pourcentage_st",
+            "numero_bdc",
+            "numero_marche",
+            "bailleur",
+            "date_emission",
+            "programme_residence",
+            "adresse",
+            "code_postal",
+            "ville",
+            "logement_numero",
+            "logement_type",
+            "logement_etage",
+            "logement_porte",
+            "objet_travaux",
+            "delai_execution",
+            "occupant_nom",
+            "occupant_telephone",
+            "occupant_email",
+            "emetteur_nom",
+            "emetteur_telephone",
+            "montant_ht",
+            "montant_tva",
+            "montant_ttc",
+            "occupation",
+            "type_acces",
+            "acces_complement",
+            "rdv_date",
+            "notes",
+            "sous_traitant",
+            "montant_st",
+            "pourcentage_st",
         ]
         widgets = {
             "date_emission": forms.DateInput(attrs={"type": "date"}),
@@ -50,9 +71,7 @@ class BonDeCommandeForm(forms.ModelForm):
             qs = qs.exclude(pk=self.instance.pk)
 
         if qs.exists():
-            raise forms.ValidationError(
-                f"Le BDC n°{numero} existe déjà dans le système."
-            )
+            raise forms.ValidationError(f"Le BDC n°{numero} existe déjà dans le système.")
         return numero
 
 
@@ -118,8 +137,11 @@ class BDCEditionForm(forms.ModelForm):
     class Meta:
         model = BonDeCommande
         fields = [
-            "occupation", "type_acces", "acces_complement",
-            "rdv_date", "notes",
+            "occupation",
+            "type_acces",
+            "acces_complement",
+            "rdv_date",
+            "notes",
         ]
         widgets = {
             "rdv_date": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),

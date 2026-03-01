@@ -5,6 +5,7 @@ Stratégies :
 - GDH : extraction de la page 2 du PDF original (bon d'intervention, nativement sans prix)
 - ERILIA / défaut : génération HTML → PDF via WeasyPrint
 """
+
 import logging
 
 import fitz  # PyMuPDF
@@ -34,9 +35,7 @@ def _generer_terrain_gdh(bdc: BonDeCommande) -> bytes:
         GenerationTerrainError: Si le PDF n'a pas de page 2 ou est illisible.
     """
     if not bdc.pdf_original:
-        raise GenerationTerrainError(
-            f"BDC {bdc.numero_bdc} : pas de PDF original pour extraire la page 2."
-        )
+        raise GenerationTerrainError(f"BDC {bdc.numero_bdc} : pas de PDF original pour extraire la page 2.")
 
     try:
         with bdc.pdf_original.open("rb") as f:
@@ -48,8 +47,7 @@ def _generer_terrain_gdh(bdc: BonDeCommande) -> bytes:
         if nb_pages < 2:
             doc.close()
             raise GenerationTerrainError(
-                f"BDC {bdc.numero_bdc} : le PDF original n'a que {nb_pages} page(s), "
-                f"impossible d'extraire la page 2."
+                f"BDC {bdc.numero_bdc} : le PDF original n'a que {nb_pages} page(s), impossible d'extraire la page 2."
             )
 
         # Créer un nouveau PDF avec uniquement la page 2
@@ -65,9 +63,7 @@ def _generer_terrain_gdh(bdc: BonDeCommande) -> bytes:
     except GenerationTerrainError:
         raise
     except Exception as e:
-        raise GenerationTerrainError(
-            f"BDC {bdc.numero_bdc} : erreur lors de l'extraction page 2 — {e}"
-        ) from e
+        raise GenerationTerrainError(f"BDC {bdc.numero_bdc} : erreur lors de l'extraction page 2 — {e}") from e
 
 
 # ─── Stratégie ERILIA / défaut : HTML → PDF ─────────────────────────────────
@@ -82,10 +78,13 @@ def _generer_terrain_erilia(bdc: BonDeCommande) -> bytes:
     """
     lignes = bdc.lignes_prestation.all()
 
-    html_string = render_to_string("bdc/terrain_erilia.html", {
-        "bdc": bdc,
-        "lignes": lignes,
-    })
+    html_string = render_to_string(
+        "bdc/terrain_erilia.html",
+        {
+            "bdc": bdc,
+            "lignes": lignes,
+        },
+    )
 
     from weasyprint import HTML
 

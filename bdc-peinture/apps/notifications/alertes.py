@@ -1,6 +1,7 @@
 """
 Service d'alertes sur les délais d'exécution des BDC.
 """
+
 from datetime import date, timedelta
 
 from django.db.models import QuerySet

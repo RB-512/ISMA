@@ -3,6 +3,7 @@ Vues d'authentification.
 Le login/logout est géré par django-allauth, mais on fournit
 des vues custom pour styler avec Tailwind.
 """
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -28,11 +29,15 @@ class HomeRedirectView(TemplateView):
 def liste_utilisateurs(request):
     utilisateurs = User.objects.prefetch_related("groups").order_by("last_name", "first_name")
     form_creer = CreerUtilisateurForm()
-    return render(request, "accounts/utilisateurs.html", {
-        "utilisateurs": utilisateurs,
-        "form_creer": form_creer,
-        "is_cdt": True,
-    })
+    return render(
+        request,
+        "accounts/utilisateurs.html",
+        {
+            "utilisateurs": utilisateurs,
+            "form_creer": form_creer,
+            "is_cdt": True,
+        },
+    )
 
 
 @group_required("CDT")
@@ -45,11 +50,15 @@ def creer_utilisateur(request):
         messages.success(request, f"Compte créé pour {user.get_full_name() or user.username}.")
         return redirect("gestion:liste")
     utilisateurs = User.objects.prefetch_related("groups").order_by("last_name", "first_name")
-    return render(request, "accounts/utilisateurs.html", {
-        "utilisateurs": utilisateurs,
-        "form_creer": form,
-        "is_cdt": True,
-    })
+    return render(
+        request,
+        "accounts/utilisateurs.html",
+        {
+            "utilisateurs": utilisateurs,
+            "form_creer": form,
+            "is_cdt": True,
+        },
+    )
 
 
 @group_required("CDT")

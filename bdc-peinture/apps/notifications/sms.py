@@ -2,6 +2,7 @@
 Service d'envoi de SMS aux sous-traitants.
 Les messages ne contiennent JAMAIS de prix.
 """
+
 from __future__ import annotations
 
 import logging

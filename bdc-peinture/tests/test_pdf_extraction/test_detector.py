@@ -1,6 +1,7 @@
 """
 Tests unitaires de detecter_parser() — pdfplumber mocké.
 """
+
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 

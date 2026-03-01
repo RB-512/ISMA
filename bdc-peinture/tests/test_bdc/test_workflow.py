@@ -2,6 +2,7 @@
 Tests du workflow de statuts BDC.
 Vérifie les transitions autorisées, invalides, et les règles métier.
 """
+
 import pytest
 
 from apps.bdc.models import StatutChoices

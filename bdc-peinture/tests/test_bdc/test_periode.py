@@ -1,4 +1,5 @@
 """Tests unitaires du calcul de bornes de periode."""
+
 from datetime import date
 
 from apps.bdc.periode import calculer_bornes_periode

@@ -1,6 +1,7 @@
 """
 Backends d'envoi de SMS — architecture pluggable via settings.SMS_BACKEND.
 """
+
 import hashlib
 import logging
 import time

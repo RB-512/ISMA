@@ -2,6 +2,7 @@
 Tests des vues BDC : upload_pdf, creer_bdc, detail_bdc.
 Tests unitaires (parsers mockés) et tests d'intégration (flux complet).
 """
+
 import io
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -12,6 +13,7 @@ from django.urls import reverse
 from apps.bdc.models import ActionChoices, BonDeCommande, HistoriqueAction, LignePrestation, StatutChoices
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def _fake_pdf_file(content: bytes = b"%PDF-1.4 fake content") -> io.BytesIO:
     """Crée un faux fichier PDF en mémoire."""
@@ -46,7 +48,13 @@ def _mock_donnees_gdh(**overrides) -> dict:
         "montant_tva": Decimal("100.00"),
         "montant_ttc": Decimal("1100.00"),
         "lignes_prestation": [
-            {"designation": "Peinture murs", "quantite": Decimal("20.00"), "unite": "m²", "prix_unitaire": Decimal("10.00"), "montant": Decimal("200.00")},
+            {
+                "designation": "Peinture murs",
+                "quantite": Decimal("20.00"),
+                "unite": "m²",
+                "prix_unitaire": Decimal("10.00"),
+                "montant": Decimal("200.00"),
+            },
         ],
     }
     base.update(overrides)
@@ -55,8 +63,8 @@ def _mock_donnees_gdh(**overrides) -> dict:
 
 # ─── Tests upload_pdf ─────────────────────────────────────────────────────────
 
-class TestUploadPDF:
 
+class TestUploadPDF:
     def test_get_affiche_formulaire(self, client, utilisateur_secretaire):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:upload"))
@@ -93,6 +101,7 @@ class TestUploadPDF:
     @patch("apps.bdc.views.default_storage")
     def test_post_pdf_inconnu_affiche_erreur(self, mock_storage, mock_detect, client, utilisateur_secretaire):
         from apps.pdf_extraction.detector import PDFTypeInconnu
+
         mock_detect.side_effect = PDFTypeInconnu("inconnu")
         client.force_login(utilisateur_secretaire)
         pdf = _fake_pdf_file()
@@ -103,7 +112,9 @@ class TestUploadPDF:
 
     @patch("apps.bdc.views.detecter_parser")
     @patch("apps.bdc.views.default_storage")
-    def test_post_pdf_valide_gdh_redirige(self, mock_storage, mock_detect, client, utilisateur_secretaire, bailleur_gdh):
+    def test_post_pdf_valide_gdh_redirige(
+        self, mock_storage, mock_detect, client, utilisateur_secretaire, bailleur_gdh
+    ):
         mock_parser = MagicMock()
         mock_parser.extraire.return_value = _mock_donnees_gdh()
         mock_detect.return_value = mock_parser
@@ -134,8 +145,8 @@ class TestUploadPDF:
 
 # ─── Tests creer_bdc ──────────────────────────────────────────────────────────
 
-class TestCreerBDC:
 
+class TestCreerBDC:
     def _set_session(self, client, numero_bdc="NOUVEAU-001", bailleur_code="GDH", **extra):
         """Met les données extraites en session pour simuler un import PDF."""
         session = client.session
@@ -196,7 +207,9 @@ class TestCreerBDC:
         ).exists()
 
     @patch("apps.bdc.views.default_storage")
-    def test_post_cree_lignes_prestation_depuis_session(self, mock_storage, client, utilisateur_secretaire, bailleur_gdh):
+    def test_post_cree_lignes_prestation_depuis_session(
+        self, mock_storage, client, utilisateur_secretaire, bailleur_gdh
+    ):
         mock_storage.exists.return_value = False  # Pas de PDF temp
 
         client.force_login(utilisateur_secretaire)
@@ -206,7 +219,13 @@ class TestCreerBDC:
             "numero_bdc": "NOUVEAU-004",
             "adresse": "5 Rue des Tests",
             "lignes_prestation": [
-                {"designation": "Peinture murs", "quantite": "20.00", "unite": "m²", "prix_unitaire": "10.00", "montant": "200.00"},
+                {
+                    "designation": "Peinture murs",
+                    "quantite": "20.00",
+                    "unite": "m²",
+                    "prix_unitaire": "10.00",
+                    "montant": "200.00",
+                },
             ],
         }
         session.save()
@@ -234,8 +253,8 @@ class TestCreerBDC:
 
 # ─── Tests detail_bdc ─────────────────────────────────────────────────────────
 
-class TestDetailBDC:
 
+class TestDetailBDC:
     def test_detail_accessible_aux_authentifies(self, client, utilisateur_cdt, bdc_a_traiter):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:detail", kwargs={"pk": bdc_a_traiter.pk}))

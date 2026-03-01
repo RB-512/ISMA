@@ -4,20 +4,44 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0005_checklistitem_checklistresultat'),
+        ("bdc", "0005_checklistitem_checklistresultat"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='bondecommande',
-            name='statut',
-            field=models.CharField(choices=[('A_TRAITER', 'À contrôler'), ('A_FAIRE', 'À attribuer'), ('EN_COURS', 'En cours'), ('A_FACTURER', 'À facturer'), ('FACTURE', 'Facturé')], default='A_TRAITER', max_length=20, verbose_name='Statut'),
+            model_name="bondecommande",
+            name="statut",
+            field=models.CharField(
+                choices=[
+                    ("A_TRAITER", "À contrôler"),
+                    ("A_FAIRE", "À attribuer"),
+                    ("EN_COURS", "En cours"),
+                    ("A_FACTURER", "À facturer"),
+                    ("FACTURE", "Facturé"),
+                ],
+                default="A_TRAITER",
+                max_length=20,
+                verbose_name="Statut",
+            ),
         ),
         migrations.AlterField(
-            model_name='historiqueaction',
-            name='action',
-            field=models.CharField(choices=[('CREATION', 'Création'), ('MODIFICATION', 'Modification'), ('STATUT_CHANGE', 'Changement de statut'), ('ATTRIBUTION', 'Attribution'), ('REATTRIBUTION', 'Réattribution'), ('NOTIFICATION_SMS', 'SMS envoyé'), ('VALIDATION', 'Validation réalisation'), ('FACTURATION', 'Passage en facturation'), ('RENVOI', 'Renvoi au contrôle')], max_length=30, verbose_name='Action'),
+            model_name="historiqueaction",
+            name="action",
+            field=models.CharField(
+                choices=[
+                    ("CREATION", "Création"),
+                    ("MODIFICATION", "Modification"),
+                    ("STATUT_CHANGE", "Changement de statut"),
+                    ("ATTRIBUTION", "Attribution"),
+                    ("REATTRIBUTION", "Réattribution"),
+                    ("NOTIFICATION_SMS", "SMS envoyé"),
+                    ("VALIDATION", "Validation réalisation"),
+                    ("FACTURATION", "Passage en facturation"),
+                    ("RENVOI", "Renvoi au contrôle"),
+                ],
+                max_length=30,
+                verbose_name="Action",
+            ),
         ),
     ]

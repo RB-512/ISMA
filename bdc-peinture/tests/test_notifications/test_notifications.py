@@ -1,6 +1,7 @@
 """
 Tests unitaires — notifications SMS, email, branchement workflow et alertes délais.
 """
+
 from datetime import date, timedelta
 from decimal import Decimal
 from io import StringIO
@@ -82,7 +83,6 @@ def sous_traitant_sans_contact(db):
 
 
 class TestLogSmsBackend:
-
     def test_send_logge_message(self, caplog):
         backend = LogSmsBackend()
         with caplog.at_level("INFO"):
@@ -97,7 +97,6 @@ class TestLogSmsBackend:
 
 
 class TestOvhSmsBackend:
-
     @patch("apps.notifications.backends.requests.post")
     def test_send_appelle_api_ovh(self, mock_post, settings):
         settings.OVH_APPLICATION_KEY = "app-key"
@@ -127,7 +126,6 @@ class TestOvhSmsBackend:
 
 
 class TestEnvoyerSmsAttribution:
-
     def test_message_contient_adresse_et_travaux(self, bdc_a_faire, sous_traitant):
         bdc_a_faire.sous_traitant = sous_traitant
         bdc_a_faire.save()
@@ -180,7 +178,6 @@ class TestEnvoyerSmsAttribution:
 
 
 class TestEnvoyerSmsReattribution:
-
     def test_sms_envoye_ancien_et_nouveau(self, bdc_en_cours):
         with patch("apps.notifications.sms.get_sms_backend") as mock_backend:
             mock_instance = MagicMock()
@@ -197,7 +194,6 @@ class TestEnvoyerSmsReattribution:
 
 
 class TestEnvoyerEmailAttribution:
-
     def test_email_envoye_avec_contenu(self, bdc_a_faire, sous_traitant):
         bdc_a_faire.sous_traitant = sous_traitant
         bdc_a_faire.save()
@@ -232,7 +228,6 @@ class TestEnvoyerEmailAttribution:
 
 
 class TestEnvoyerEmailReattribution:
-
     def test_email_annulation_et_attribution(self, bdc_en_cours):
         result = envoyer_email_reattribution(bdc_en_cours, "ancien@test.fr")
 
@@ -251,7 +246,6 @@ class TestEnvoyerEmailReattribution:
 
 
 class TestBranchementAttribution:
-
     @patch("apps.bdc.services._notifier_st_si_possible")
     @patch("apps.bdc.services._generer_terrain_si_possible")
     def test_attribution_appelle_notifications(
@@ -273,7 +267,6 @@ class TestBranchementAttribution:
 
 
 class TestBranchementReattribution:
-
     @patch("apps.bdc.services._notifier_reattribution_si_possible")
     @patch("apps.bdc.services._generer_terrain_si_possible")
     def test_reattribution_appelle_notifications(
@@ -291,7 +284,6 @@ class TestBranchementReattribution:
 
 
 class TestAlertesService:
-
     def test_bdc_en_retard(self, db, bailleur_gdh, utilisateur_cdt):
         BonDeCommande.objects.create(
             numero_bdc="RETARD-001",
@@ -349,7 +341,6 @@ class TestAlertesService:
 
 
 class TestManagementCommand:
-
     def test_check_delais_output(self, db, bailleur_gdh, utilisateur_cdt):
         BonDeCommande.objects.create(
             numero_bdc="CMD-001",
@@ -367,10 +358,7 @@ class TestManagementCommand:
 
 
 class TestDashboardAlertes:
-
-    def test_encart_visible_cdt_avec_retard(
-        self, client, utilisateur_cdt, bailleur_gdh
-    ):
+    def test_encart_visible_cdt_avec_retard(self, client, utilisateur_cdt, bailleur_gdh):
         BonDeCommande.objects.create(
             numero_bdc="DASH-001",
             bailleur=bailleur_gdh,
@@ -385,9 +373,7 @@ class TestDashboardAlertes:
         assert "DASH-001" in content
         assert "en retard" in content
 
-    def test_encart_absent_secretaire(
-        self, client, utilisateur_secretaire, utilisateur_cdt, bailleur_gdh
-    ):
+    def test_encart_absent_secretaire(self, client, utilisateur_secretaire, utilisateur_cdt, bailleur_gdh):
         BonDeCommande.objects.create(
             numero_bdc="DASH-002",
             bailleur=bailleur_gdh,

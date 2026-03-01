@@ -3,6 +3,7 @@ Logique métier du workflow BDC.
 Toute la logique de transition de statut et d'historique est ici,
 jamais dans les vues ni les modèles.
 """
+
 import logging
 from datetime import date
 from decimal import Decimal
@@ -28,6 +29,7 @@ TRANSITIONS: dict[str, list[str]] = {
 
 # ─── Exceptions ───────────────────────────────────────────────────────────────
 
+
 class TransitionInvalide(Exception):  # noqa: N818
     """Levée quand une transition de statut n'est pas autorisée."""
 
@@ -37,6 +39,7 @@ class BDCIncomplet(Exception):  # noqa: N818
 
 
 # ─── Fonctions de service ─────────────────────────────────────────────────────
+
 
 def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -> BonDeCommande:
     """
@@ -67,13 +70,9 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
     # Règles métier : champs obligatoires avant passage en À_FAIRE (À attribuer)
     if nouveau_statut == StatutChoices.A_FAIRE:
         if not bdc.occupation:
-            raise BDCIncomplet(
-                "Le champ 'Vacant / Occupé' est obligatoire avant passage en 'À attribuer'."
-            )
+            raise BDCIncomplet("Le champ 'Vacant / Occupé' est obligatoire avant passage en 'À attribuer'.")
         if bdc.occupation == "VACANT" and not bdc.type_acces:
-            raise BDCIncomplet(
-                "Le type d'accès est obligatoire avant passage en 'À attribuer'."
-            )
+            raise BDCIncomplet("Le type d'accès est obligatoire avant passage en 'À attribuer'.")
         if bdc.occupation == "OCCUPE" and not bdc.rdv_date:
             raise BDCIncomplet(
                 "La date de RDV est obligatoire pour un logement occupé avant passage en 'À attribuer'."
@@ -145,8 +144,7 @@ def valider_realisation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
     """
     if bdc.statut != StatutChoices.EN_COURS:
         raise TransitionInvalide(
-            f"Validation impossible : le BDC est en '{bdc.get_statut_display()}', "
-            f"il doit être en 'En cours'."
+            f"Validation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'En cours'."
         )
 
     bdc.statut = StatutChoices.A_FACTURER
@@ -170,8 +168,7 @@ def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
     """
     if bdc.statut != StatutChoices.A_FACTURER:
         raise TransitionInvalide(
-            f"Facturation impossible : le BDC est en '{bdc.get_statut_display()}', "
-            f"il doit être en 'À facturer'."
+            f"Facturation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'À facturer'."
         )
 
     bdc.statut = StatutChoices.FACTURE
@@ -192,8 +189,7 @@ def renvoyer_controle(bdc: BonDeCommande, commentaire: str, utilisateur: User) -
     """
     if bdc.statut != StatutChoices.A_FAIRE:
         raise TransitionInvalide(
-            f"Renvoi impossible : le BDC est en '{bdc.get_statut_display()}', "
-            f"il doit être en 'À attribuer'."
+            f"Renvoi impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'À attribuer'."
         )
 
     bdc.statut = StatutChoices.A_TRAITER
@@ -230,17 +226,22 @@ def attribuer_st(
     """
     if bdc.statut != StatutChoices.A_FAIRE:
         raise TransitionInvalide(
-            f"Attribution impossible : le BDC est en '{bdc.get_statut_display()}', "
-            f"il doit être en 'À attribuer'."
+            f"Attribution impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'À attribuer'."
         )
 
     bdc.sous_traitant = sous_traitant
     bdc.pourcentage_st = pourcentage
     bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
     bdc.statut = StatutChoices.EN_COURS
-    bdc.save(update_fields=[
-        "sous_traitant", "pourcentage_st", "montant_st", "statut", "updated_at",
-    ])
+    bdc.save(
+        update_fields=[
+            "sous_traitant",
+            "pourcentage_st",
+            "montant_st",
+            "statut",
+            "updated_at",
+        ]
+    )
 
     HistoriqueAction.objects.create(
         bdc=bdc,
@@ -271,8 +272,7 @@ def reattribuer_st(
     """
     if bdc.statut != StatutChoices.EN_COURS:
         raise TransitionInvalide(
-            f"Réattribution impossible : le BDC est en '{bdc.get_statut_display()}', "
-            f"il doit être en 'En cours'."
+            f"Réattribution impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'En cours'."
         )
 
     ancien_st = str(bdc.sous_traitant) if bdc.sous_traitant else ""
@@ -282,9 +282,14 @@ def reattribuer_st(
     bdc.sous_traitant = nouveau_st
     bdc.pourcentage_st = pourcentage
     bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
-    bdc.save(update_fields=[
-        "sous_traitant", "pourcentage_st", "montant_st", "updated_at",
-    ])
+    bdc.save(
+        update_fields=[
+            "sous_traitant",
+            "pourcentage_st",
+            "montant_st",
+            "updated_at",
+        ]
+    )
 
     HistoriqueAction.objects.create(
         bdc=bdc,
@@ -310,9 +315,7 @@ def _generer_terrain_si_possible(bdc: BonDeCommande) -> None:
 
         generer_pdf_terrain(bdc)
     except Exception:
-        logger.warning(
-            "Échec génération PDF terrain pour BDC %s", bdc.numero_bdc, exc_info=True
-        )
+        logger.warning("Échec génération PDF terrain pour BDC %s", bdc.numero_bdc, exc_info=True)
 
 
 def _notifier_st_si_possible(bdc: BonDeCommande) -> None:
@@ -332,9 +335,7 @@ def _notifier_st_si_possible(bdc: BonDeCommande) -> None:
         logger.warning("Échec email attribution BDC %s", bdc.numero_bdc, exc_info=True)
 
 
-def _notifier_reattribution_si_possible(
-    bdc: BonDeCommande, ancien_st_telephone: str, ancien_st_email: str
-) -> None:
+def _notifier_reattribution_si_possible(bdc: BonDeCommande, ancien_st_telephone: str, ancien_st_email: str) -> None:
     """Envoie les notifications de réattribution, non-bloquant."""
     try:
         from apps.notifications.sms import envoyer_sms_reattribution

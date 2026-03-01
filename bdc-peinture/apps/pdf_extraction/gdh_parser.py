@@ -10,6 +10,7 @@ Texte pdfplumber réel :
   - Occupant dans table[0] même row (cellule droite)
   - Montants : "Total HT 167.85 €" (point décimal, pas virgule)
 """
+
 import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -70,15 +71,9 @@ class GDHParser(PDFParser):
             "occupant_email": self._extraire_email(bloc_occupant or texte_complet),
             "emetteur_nom": self._extraire_emetteur_nom(texte_p1),
             "emetteur_telephone": self._extraire_emetteur_telephone(texte_p1),
-            "montant_ht": self._extraire_montant(
-                texte_p1, r"Total\s+HT\s+([\d.,]+)\s*[€]?"
-            ),
-            "montant_tva": self._extraire_montant(
-                texte_p1, r"Total\s+TVA\s+[\d.,]+\s*%\s+([\d.,]+)\s*[€]?"
-            ),
-            "montant_ttc": self._extraire_montant(
-                texte_p1, r"Total\s+TTC\s+([\d.,]+)\s*[€]?"
-            ),
+            "montant_ht": self._extraire_montant(texte_p1, r"Total\s+HT\s+([\d.,]+)\s*[€]?"),
+            "montant_tva": self._extraire_montant(texte_p1, r"Total\s+TVA\s+[\d.,]+\s*%\s+([\d.,]+)\s*[€]?"),
+            "montant_ttc": self._extraire_montant(texte_p1, r"Total\s+TTC\s+([\d.,]+)\s*[€]?"),
             "lignes_prestation": self._extraire_lignes_prestation(tables_p1),
         }
 
@@ -110,9 +105,7 @@ class GDHParser(PDFParser):
             return lignes
 
         # Pattern GDH : désignation  prix_unitaire  quantité  (unité)  montant_ht  tva%
-        pattern = re.compile(
-            r"^(.+?)\s+(\d+[\d.]*)\s+(\d+[\d.]*)\s+\(([^)]+)\)\s+(\d+[\d.]*)\s+[\d.]+%$"
-        )
+        pattern = re.compile(r"^(.+?)\s+(\d+[\d.]*)\s+(\d+[\d.]*)\s+\(([^)]+)\)\s+(\d+[\d.]*)\s+[\d.]+%$")
 
         ligne_courante: dict | None = None
         for raw_line in cellule_prestations.split("\n"):
@@ -134,9 +127,7 @@ class GDHParser(PDFParser):
                 }
             elif ligne_courante is not None:
                 # Ligne de continuation de désignation
-                ligne_courante["designation"] = self._nettoyer_texte(
-                    ligne_courante["designation"] + " " + line
-                )
+                ligne_courante["designation"] = self._nettoyer_texte(ligne_courante["designation"] + " " + line)
 
         if ligne_courante is not None:
             lignes.append(ligne_courante)
@@ -255,9 +246,7 @@ class GDHParser(PDFParser):
 
     def _extraire_ville(self, texte: str) -> str:
         """Extrait la ville (mot en majuscules après le code postal)."""
-        match = re.search(
-            r"\b\d{5}\s+([A-ZÉÈÀÂÙÎÏ][A-ZÉÈÀÂÙÎÏ\s\-]+?)(?:\n|$)", texte
-        )
+        match = re.search(r"\b\d{5}\s+([A-ZÉÈÀÂÙÎÏ][A-ZÉÈÀÂÙÎÏ\s\-]+?)(?:\n|$)", texte)
         if match:
             return self._nettoyer_texte(match.group(1))
         return ""

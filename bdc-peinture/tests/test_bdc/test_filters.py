@@ -1,4 +1,5 @@
 """Tests unitaires du BonDeCommandeFilter."""
+
 import pytest
 
 from apps.bdc.filters import BonDeCommandeFilter

@@ -12,6 +12,7 @@ Texte pdfplumber réel :
   - Montants : "TOTAL H.T. 1.071,40" (virgule décimale, point milliers)
   - Date : "Édité le\n06-02-2026" (page 2)
 """
+
 import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -52,9 +53,7 @@ class ERILIAParser(PDFParser):
             "ville": self._extraire_ville_apres_adresse(texte_complet),
             "logement_numero": self._extraire_champ(texte_complet, r"Logement\s+(\d+)"),
             "logement_type": "",
-            "logement_etage": self._extraire_champ(
-                texte_complet, r"[eé]tage\s+(\S+)"
-            ),
+            "logement_etage": self._extraire_champ(texte_complet, r"[eé]tage\s+(\S+)"),
             "logement_porte": "",
             "objet_travaux": self._extraire_objet(texte_complet),
             "delai_execution": self._extraire_delai(texte_complet),
@@ -63,15 +62,9 @@ class ERILIAParser(PDFParser):
             "occupant_email": "",
             "emetteur_nom": self._extraire_emetteur_nom(texte_complet),
             "emetteur_telephone": self._extraire_emetteur_telephone(texte_complet),
-            "montant_ht": self._extraire_montant(
-                texte_complet, r"TOTAL\s+H\.T\.\s+([\d.,\s]+?)(?:\n|$)"
-            ),
-            "montant_tva": self._extraire_montant(
-                texte_complet, r"T\.V\.A\.\s+[\d,]+\s*%\s+([\d.,\s]+?)(?:\n|$)"
-            ),
-            "montant_ttc": self._extraire_montant(
-                texte_complet, r"TOTAL\s+T\.T\.C\.\s+([\d.,\s]+?)(?:\n|$)"
-            ),
+            "montant_ht": self._extraire_montant(texte_complet, r"TOTAL\s+H\.T\.\s+([\d.,\s]+?)(?:\n|$)"),
+            "montant_tva": self._extraire_montant(texte_complet, r"T\.V\.A\.\s+[\d,]+\s*%\s+([\d.,\s]+?)(?:\n|$)"),
+            "montant_ttc": self._extraire_montant(texte_complet, r"TOTAL\s+T\.T\.C\.\s+([\d.,\s]+?)(?:\n|$)"),
             "lignes_prestation": self._extraire_lignes_prestation(tables_p1),
         }
 
@@ -125,9 +118,7 @@ class ERILIAParser(PDFParser):
                 }
             elif ligne_courante is not None:
                 # Ligne de continuation de désignation
-                ligne_courante["designation"] = self._nettoyer_texte(
-                    ligne_courante["designation"] + " " + line
-                )
+                ligne_courante["designation"] = self._nettoyer_texte(ligne_courante["designation"] + " " + line)
 
         if ligne_courante is not None:
             lignes.append(ligne_courante)
@@ -203,9 +194,7 @@ class ERILIAParser(PDFParser):
         if idx < 0:
             return ""
         remaining = texte[idx:]
-        match = re.search(
-            r"\b\d{5}\s+([A-ZÉÈÀÂÙÎÏ][A-ZÉÈÀÂÙÎÏ\s\-]+?)(?:\n|$)", remaining
-        )
+        match = re.search(r"\b\d{5}\s+([A-ZÉÈÀÂÙÎÏ][A-ZÉÈÀÂÙÎÏ\s\-]+?)(?:\n|$)", remaining)
         return self._nettoyer_texte(match.group(1)) if match else ""
 
     def _extraire_programme(self, texte: str) -> str:

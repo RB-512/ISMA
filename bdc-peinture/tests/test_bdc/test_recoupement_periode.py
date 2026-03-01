@@ -1,4 +1,5 @@
 """Tests de la page recoupement avec filtre de periode."""
+
 from datetime import date
 from decimal import Decimal
 
@@ -22,12 +23,19 @@ def setup_recoupement(db, bailleur_gdh, utilisateur_secretaire, utilisateur_cdt)
         ("R-FEV2", st2, date(2026, 2, 20)),
     ]:
         bdc = BonDeCommande.objects.create(
-            numero_bdc=num, bailleur=bailleur_gdh,
-            adresse="Test", code_postal="84000", ville="Avignon",
-            objet_travaux="Test", occupation="OCCUPE",
-            type_acces="BADGE_CODE", modalite_acces="Badge",
-            cree_par=utilisateur_secretaire, statut=StatutChoices.A_FAIRE,
-            date_emission=emission, montant_ht=Decimal("1000"),
+            numero_bdc=num,
+            bailleur=bailleur_gdh,
+            adresse="Test",
+            code_postal="84000",
+            ville="Avignon",
+            objet_travaux="Test",
+            occupation="OCCUPE",
+            type_acces="BADGE_CODE",
+            modalite_acces="Badge",
+            cree_par=utilisateur_secretaire,
+            statut=StatutChoices.A_FAIRE,
+            date_emission=emission,
+            montant_ht=Decimal("1000"),
         )
         attribuer_st(bdc, st, Decimal("65"), utilisateur_cdt)
     return st1, st2

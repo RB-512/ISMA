@@ -5,38 +5,44 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0004_remove_bondecommande_rdv_pris_and_more'),
+        ("bdc", "0004_remove_bondecommande_rdv_pris_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ChecklistItem',
+            name="ChecklistItem",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('libelle', models.CharField(max_length=200)),
-                ('ordre', models.PositiveSmallIntegerField(default=0)),
-                ('actif', models.BooleanField(default=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("libelle", models.CharField(max_length=200)),
+                ("ordre", models.PositiveSmallIntegerField(default=0)),
+                ("actif", models.BooleanField(default=True)),
             ],
             options={
-                'verbose_name': 'Item de checklist',
-                'verbose_name_plural': 'Items de checklist',
-                'ordering': ['ordre'],
+                "verbose_name": "Item de checklist",
+                "verbose_name_plural": "Items de checklist",
+                "ordering": ["ordre"],
             },
         ),
         migrations.CreateModel(
-            name='ChecklistResultat',
+            name="ChecklistResultat",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('coche', models.BooleanField(default=False)),
-                ('note', models.TextField(blank=True)),
-                ('bdc', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='checklist_resultats', to='bdc.bondecommande')),
-                ('item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='bdc.checklistitem')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("coche", models.BooleanField(default=False)),
+                ("note", models.TextField(blank=True)),
+                (
+                    "bdc",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="checklist_resultats",
+                        to="bdc.bondecommande",
+                    ),
+                ),
+                ("item", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="bdc.checklistitem")),
             ],
             options={
-                'verbose_name': 'Résultat checklist',
-                'unique_together': {('bdc', 'item')},
+                "verbose_name": "Résultat checklist",
+                "unique_together": {("bdc", "item")},
             },
         ),
     ]

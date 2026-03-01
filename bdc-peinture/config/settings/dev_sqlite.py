@@ -1,6 +1,7 @@
 """
 Settings de développement avec SQLite (pour makemigrations sans Docker).
 """
+
 from .base import *  # noqa: F401, F403
 
 DEBUG = True

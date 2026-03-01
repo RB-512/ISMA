@@ -1,6 +1,7 @@
 """
 Fixtures pytest partagées entre tous les tests.
 """
+
 import pytest
 from django.contrib.auth.models import Group, User
 from django.test import Client
@@ -9,6 +10,7 @@ from apps.bdc.models import Bailleur, BonDeCommande, StatutChoices
 from apps.sous_traitants.models import SousTraitant
 
 # ─── Utilisateurs ────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def groupe_secretaire(db) -> Group:
@@ -50,6 +52,7 @@ def utilisateur_cdt(db, groupe_cdt) -> User:
 
 # ─── Clients authentifies ────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client_cdt(utilisateur_cdt) -> Client:
     client = Client()
@@ -66,6 +69,7 @@ def client_secretaire(utilisateur_secretaire) -> Client:
 
 # ─── Bailleurs ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def bailleur_gdh(db) -> Bailleur:
     return Bailleur.objects.create(nom="Grand Delta Habitat", code="GDH")
@@ -78,6 +82,7 @@ def bailleur_erilia(db) -> Bailleur:
 
 # ─── Sous-traitant ────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def sous_traitant(db) -> SousTraitant:
     return SousTraitant.objects.create(
@@ -88,6 +93,7 @@ def sous_traitant(db) -> SousTraitant:
 
 
 # ─── BDC ─────────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def bdc_a_traiter(db, bailleur_gdh, utilisateur_secretaire) -> BonDeCommande:

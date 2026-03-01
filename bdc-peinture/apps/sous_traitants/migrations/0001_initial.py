@@ -4,26 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='SousTraitant',
+            name="SousTraitant",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nom', models.CharField(max_length=150, verbose_name='Nom / Raison sociale')),
-                ('telephone', models.CharField(max_length=20, verbose_name='Téléphone')),
-                ('email', models.EmailField(blank=True, max_length=254, verbose_name='Email')),
-                ('actif', models.BooleanField(default=True, verbose_name='Actif')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("nom", models.CharField(max_length=150, verbose_name="Nom / Raison sociale")),
+                ("telephone", models.CharField(max_length=20, verbose_name="Téléphone")),
+                ("email", models.EmailField(blank=True, max_length=254, verbose_name="Email")),
+                ("actif", models.BooleanField(default=True, verbose_name="Actif")),
             ],
             options={
-                'verbose_name': 'Sous-traitant',
-                'verbose_name_plural': 'Sous-traitants',
-                'ordering': ['nom'],
+                "verbose_name": "Sous-traitant",
+                "verbose_name_plural": "Sous-traitants",
+                "ordering": ["nom"],
             },
         ),
     ]

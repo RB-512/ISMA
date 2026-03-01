@@ -3,6 +3,7 @@ Contrôle d'accès par groupe Django.
 Utiliser @group_required("CDT") sur les vues fonctions,
 GroupRequiredMixin sur les vues classes.
 """
+
 from functools import wraps
 
 from django.contrib.auth.decorators import login_required

@@ -2,6 +2,7 @@
 Classe abstraite de base pour les parsers PDF.
 Chaque bailleur a son propre parser héritant de cette classe.
 """
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
