@@ -5,7 +5,7 @@ import pytest
 from django.urls import reverse
 
 from apps.bdc.forms import BDCEditionForm
-from apps.bdc.models import ChecklistItem, ChecklistResultat, StatutChoices
+from apps.bdc.models import ActionChoices, ChecklistItem, ChecklistResultat, HistoriqueAction, StatutChoices
 from apps.bdc.services import BDCIncomplet, changer_statut
 
 # ─── Tests BDCEditionForm ───────────────────────────────────────────────────
@@ -280,3 +280,48 @@ class TestSidebarControle:
 
         content = response.content.decode()
         assert "sidebar-action" in content or "Enregistrer" in content
+
+
+# ─── Tests Renvoi CDT → Secrétaire ──────────────────────────────────────────
+
+
+class TestRenvoiControle:
+    """Tests for CDT renvoi BDC to secrétaire."""
+
+    def test_renvoi_changes_statut_to_a_traiter(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.post(url, {"commentaire": "Occupation manquante"})
+        bdc_a_faire.refresh_from_db()
+        assert bdc_a_faire.statut == StatutChoices.A_TRAITER
+        assert resp.status_code == 302
+
+    def test_renvoi_creates_historique_with_comment(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
+        client_cdt.post(url, {"commentaire": "RDV non renseigné"})
+        hist = HistoriqueAction.objects.filter(
+            bdc=bdc_a_faire, action=ActionChoices.RENVOI
+        ).first()
+        assert hist is not None
+        assert hist.details["commentaire"] == "RDV non renseigné"
+
+    def test_renvoi_requires_commentaire(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
+        client_cdt.post(url, {"commentaire": ""})
+        bdc_a_faire.refresh_from_db()
+        assert bdc_a_faire.statut == StatutChoices.A_FAIRE  # unchanged
+
+    def test_renvoi_only_from_a_faire(self, client_cdt, bdc_a_traiter):
+        url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_traiter.pk})
+        client_cdt.post(url, {"commentaire": "Test"})
+        bdc_a_traiter.refresh_from_db()
+        assert bdc_a_traiter.statut == StatutChoices.A_TRAITER  # unchanged (was already A_TRAITER)
+
+    def test_renvoi_forbidden_for_secretaire(self, client_secretaire, bdc_a_faire):
+        url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_secretaire.post(url, {"commentaire": "Test"})
+        assert resp.status_code == 403
+
+    def test_renvoi_get_not_allowed(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.get(url)
+        assert resp.status_code == 302  # redirects to detail

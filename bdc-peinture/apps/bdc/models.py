@@ -307,6 +307,7 @@ class ActionChoices(models.TextChoices):
     NOTIFICATION_SMS = "NOTIFICATION_SMS", "SMS envoyé"
     VALIDATION = "VALIDATION", "Validation réalisation"
     FACTURATION = "FACTURATION", "Passage en facturation"
+    RENVOI = "RENVOI", "Renvoi au contrôle"
 
 
 class HistoriqueAction(models.Model):

@@ -41,6 +41,7 @@ from .services import (
     changer_statut,
     enregistrer_action,
     reattribuer_st,
+    renvoyer_controle,
     valider_facturation,
     valider_realisation,
 )
@@ -803,6 +804,30 @@ def valider_facturation_bdc(request, pk: int):
     try:
         valider_facturation(bdc, request.user)
         messages.success(request, f"BDC n°{bdc.numero_bdc} : passé en facturation.")
+    except TransitionInvalide as e:
+        messages.error(request, str(e))
+
+    return redirect("bdc:detail", pk=pk)
+
+
+# ─── Renvoi CDT → Secrétaire ────────────────────────────────────────────────
+
+@group_required("CDT")
+def renvoyer_controle_bdc(request, pk: int):
+    """POST: CDT renvoie un BDC A_FAIRE au contrôle avec un commentaire."""
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    commentaire = request.POST.get("commentaire", "").strip()
+
+    if not commentaire:
+        messages.error(request, "Le commentaire est obligatoire pour renvoyer un BDC.")
+        return redirect("bdc:detail", pk=pk)
+
+    try:
+        renvoyer_controle(bdc, commentaire, request.user)
+        messages.success(request, f"BDC n°{bdc.numero_bdc} renvoyé au contrôle.")
     except TransitionInvalide as e:
         messages.error(request, str(e))
 

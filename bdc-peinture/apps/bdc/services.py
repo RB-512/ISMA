@@ -182,6 +182,29 @@ def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
     return bdc
 
 
+def renvoyer_controle(bdc: BonDeCommande, commentaire: str, utilisateur: User) -> BonDeCommande:
+    """
+    Renvoie un BDC A_FAIRE au contrôle (A_TRAITER) avec un commentaire du CDT.
+    """
+    if bdc.statut != StatutChoices.A_FAIRE:
+        raise TransitionInvalide(
+            f"Renvoi impossible : le BDC est en '{bdc.get_statut_display()}', "
+            f"il doit être en 'À attribuer'."
+        )
+
+    bdc.statut = StatutChoices.A_TRAITER
+    bdc.save(update_fields=["statut", "updated_at"])
+
+    HistoriqueAction.objects.create(
+        bdc=bdc,
+        utilisateur=utilisateur,
+        action=ActionChoices.RENVOI,
+        details={"commentaire": commentaire},
+    )
+
+    return bdc
+
+
 # ─── Attribution / Réattribution ─────────────────────────────────────────────
 
 
