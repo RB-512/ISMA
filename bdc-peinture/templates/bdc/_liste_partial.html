@@ -79,56 +79,71 @@
 </div>
 {% endif %}
 
-{# ── Filtres + Recherche ───────────────────────────────────────────────── #}
-<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+{# ── Filtres + Recherche (collapsible) ── #}
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4"
+     x-data="{ filtersOpen: {% if nb_filtres %}true{% else %}false{% endif %} }">
     <form method="get" action="{% url 'bdc:index' %}"
           hx-get="{% url 'bdc:index' %}"
           hx-target="#isma-dashboard-content"
           hx-push-url="true"
-          hx-indicator="#loading-indicator"
-          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          hx-indicator="#loading-indicator">
 
-        {# Recherche #}
-        <div class="lg:col-span-2">
-            <label for="id_q">Recherche</label>
-            <input type="text" name="q" id="id_q" value="{{ recherche }}"
-                   placeholder="N° BDC, adresse, occupant...">
-        </div>
-
-        {# Bailleur #}
-        <div>
-            <label for="id_bailleur">Bailleur</label>
-            {{ filtre.form.bailleur }}
-        </div>
-
-        {# Ville #}
-        <div>
-            <label for="id_ville">Ville</label>
-            <input type="text" name="ville" id="id_ville" value="{{ filtre.form.ville.value|default:'' }}"
-                   placeholder="Ville...">
-        </div>
-
-        {# Bouton #}
-        <div>
-            <button type="submit"
-                    class="w-full bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 shadow-sm hover:shadow-md">
-                Filtrer
+        {# Always visible: search + filters toggle #}
+        <div class="flex items-center gap-3">
+            <div class="flex-1">
+                <input type="text" name="q" value="{{ recherche }}"
+                       placeholder="N&deg; BDC, adresse, occupant..."
+                       class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]">
+            </div>
+            <button type="button" @click="filtersOpen = !filtersOpen"
+                    class="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm font-medium text-[var(--color-text)] hover:bg-accent/10 transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                Filtres
+                {% if nb_filtres %}
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent text-white text-xs font-bold">{{ nb_filtres }}</span>
+                {% endif %}
             </button>
-        </div>
-
-        {# Dates (ligne 2) #}
-        <div>
-            <label for="id_date_du">Du</label>
-            <input type="date" name="date_du" id="id_date_du" value="{{ filtre.form.date_du.value|default:'' }}">
-        </div>
-        <div>
-            <label for="id_date_au">Au</label>
-            <input type="date" name="date_au" id="id_date_au" value="{{ filtre.form.date_au.value|default:'' }}">
-        </div>
-        <div class="lg:col-span-3 flex items-center gap-4">
-            <a href="{% url 'bdc:index' %}" class="text-sm text-[var(--color-text-muted)] hover:text-accent transition-colors">Réinitialiser les filtres</a>
+            <button type="submit"
+                    class="bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 shadow-sm hover:shadow-md">
+                Rechercher
+            </button>
             <div id="loading-indicator" class="htmx-indicator">
                 <svg class="w-4 h-4 animate-spin text-accent" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </div>
+        </div>
+
+        {# Collapsible filter fields #}
+        <div x-show="filtersOpen" x-transition class="mt-3 space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label for="id_bailleur" class="text-xs text-[var(--color-text-muted)]">Bailleur</label>
+                    {{ filtre.form.bailleur }}
+                </div>
+                <div>
+                    <label for="id_ville" class="text-xs text-[var(--color-text-muted)]">Ville</label>
+                    <input type="text" name="ville" id="id_ville" value="{{ filtre.form.ville.value|default:'' }}"
+                           placeholder="Ville..."
+                           class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]">
+                </div>
+            </div>
+            <div class="flex items-end gap-3">
+                <div>
+                    <label for="id_date_du" class="text-xs text-[var(--color-text-muted)]">Du</label>
+                    <input type="date" name="date_du" id="id_date_du" value="{{ filtre.form.date_du.value|default:'' }}"
+                           class="rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                </div>
+                <div>
+                    <label for="id_date_au" class="text-xs text-[var(--color-text-muted)]">Au</label>
+                    <input type="date" name="date_au" id="id_date_au" value="{{ filtre.form.date_au.value|default:'' }}"
+                           class="rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                </div>
+                <button type="submit"
+                        class="bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Filtrer
+                </button>
+                <a href="{% url 'bdc:index' %}" class="text-sm text-[var(--color-text-muted)] hover:text-accent transition-colors whitespace-nowrap">
+                    R&eacute;initialiser
+                </a>
             </div>
         </div>
     </form>

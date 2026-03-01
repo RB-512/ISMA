@@ -189,6 +189,13 @@ def liste_bdc(request):
         alertes_retard = get_bdc_en_retard()
         alertes_proches = get_bdc_delai_proche()
 
+    nb_filtres = sum([
+        bool(request.GET.get("bailleur")),
+        bool(request.GET.get("ville")),
+        bool(request.GET.get("date_du")),
+        bool(request.GET.get("date_au")),
+    ])
+
     context = {
         "page_obj": page_obj,
         "filtre": filtre,
@@ -199,6 +206,7 @@ def liste_bdc(request):
         "is_cdt": is_cdt,
         "alertes_retard": alertes_retard,
         "alertes_proches": alertes_proches,
+        "nb_filtres": nb_filtres,
     }
 
     # HTMX: return only the dashboard fragment, not the full layout
