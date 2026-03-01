@@ -145,7 +145,8 @@
       "Bash(rtk git log:*)",
       "Bash(rtk test:*)",
       "Bash(rtk git diff)",
-      "Bash(rtk git add:*)"
+      "Bash(rtk git add:*)",
+      "Bash(git merge:*)"
     ]
   }
 }
