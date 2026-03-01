@@ -976,11 +976,15 @@ def controle_bdc(request, pk: int):
             "note": res.note if res else "",
         })
 
+    # Check for recent renvoi (CDT comment)
+    dernier_renvoi = bdc.historique.filter(action=ActionChoices.RENVOI).order_by("-created_at").first()
+
     return render(request, "bdc/controle.html", {
         "bdc": bdc,
         "form_edition": form,
         "checklist_items": checklist_items,
         "est_editable": est_editable,
+        "dernier_renvoi": dernier_renvoi,
     })
 
 

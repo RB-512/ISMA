@@ -40,10 +40,27 @@
                 {% endfor %}
             {% endif %}
             {% if is_cdt and bdc.statut == "A_FAIRE" %}
-            <a href="{% url 'bdc:attribution_split' bdc.pk %}"
-               class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
-                Attribuer
-            </a>
+            <div x-data="{ showRenvoi: false }">
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'bdc:attribution_split' bdc.pk %}"
+                       class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                        Attribuer
+                    </a>
+                    <button type="button" @click="showRenvoi = !showRenvoi"
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                        Renvoyer au contr&ocirc;le
+                    </button>
+                </div>
+                <form x-show="showRenvoi" x-transition method="POST" action="{% url 'bdc:renvoyer_controle' bdc.pk %}" class="mt-2 flex items-end gap-2">
+                    {% csrf_token %}
+                    <input type="text" name="commentaire" required placeholder="Motif du renvoi..."
+                           class="flex-1 rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                    <button type="submit"
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors">
+                        Confirmer
+                    </button>
+                </form>
+            </div>
             {% endif %}
             {% if is_cdt and bdc.statut == "EN_COURS" %}
             <a href="{% url 'bdc:attribution_split' bdc.pk %}"
