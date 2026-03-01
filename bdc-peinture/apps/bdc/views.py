@@ -4,7 +4,7 @@ Vues du workflow BDC Peinture.
 import os
 import tempfile
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
@@ -680,23 +680,76 @@ def valider_facturation_bdc(request, pk: int):
 
 @group_required("CDT")
 def recoupement_st_liste(request):
-    """Liste des sous-traitants avec compteurs BDC par statut."""
-    from apps.sous_traitants.models import SousTraitant
+    """Liste des sous-traitants avec compteurs BDC par statut, filtrable par periode."""
+    from apps.bdc.periode import calculer_bornes_periode
 
-    sous_traitants = (
-        SousTraitant.objects.filter(actif=True, bons_de_commande__isnull=False)
-        .distinct()
-        .annotate(
-            nb_en_cours=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.EN_COURS)),
-            nb_a_facturer=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.A_FACTURER)),
-            nb_facture=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.FACTURE)),
-        )
-        .order_by("nom")
+    statuts = [StatutChoices.EN_COURS, StatutChoices.A_FACTURER, StatutChoices.FACTURE]
+
+    # Parse period params
+    periode = request.GET.get("periode", "")
+    date_du_str = request.GET.get("date_du", "")
+    date_au_str = request.GET.get("date_au", "")
+    date_du = date_au = date_du_n1 = date_au_n1 = None
+    periode_active = ""
+
+    if periode and periode != "custom":
+        date_ref_str = request.GET.get("date", "")
+        date_ref = _parse_date(date_ref_str) if date_ref_str else None
+        bornes = calculer_bornes_periode(periode, date_ref)
+        if bornes:
+            date_du, date_au, date_du_n1, date_au_n1 = bornes
+            periode_active = periode
+    elif date_du_str and date_au_str:
+        date_du = _parse_date(date_du_str)
+        date_au = _parse_date(date_au_str)
+        if date_du and date_au:
+            delta = date_au - date_du
+            date_au_n1 = date_du - timedelta(days=1)
+            date_du_n1 = date_au_n1 - delta
+            periode_active = "custom"
+
+    sous_traitants = list(
+        _get_repartition_st(date_du=date_du, date_au=date_au, statuts=statuts).filter(nb_bdc__gt=0)
     )
 
-    return render(request, "bdc/recoupement_liste.html", {
+    # Periode N-1
+    has_n1 = False
+    if date_du_n1 and date_au_n1:
+        sous_traitants_n1_qs = _get_repartition_st(date_du=date_du_n1, date_au=date_au_n1, statuts=statuts)
+        n1_map = {st.pk: st for st in sous_traitants_n1_qs}
+        for st in sous_traitants:
+            st_n1 = n1_map.get(st.pk)
+            if st_n1:
+                st.nb_bdc_n1 = st_n1.nb_bdc
+                st.total_montant_st_n1 = st_n1.total_montant_st
+            else:
+                st.nb_bdc_n1 = 0
+                st.total_montant_st_n1 = None
+            st.delta_bdc = st.nb_bdc - (st.nb_bdc_n1 or 0)
+        has_n1 = True
+
+    periodes_choices = [
+        ("semaine", "Semaine"),
+        ("mois", "Mois"),
+        ("trimestre", "Trimestre"),
+        ("annee", "Année"),
+    ]
+
+    context = {
         "sous_traitants": sous_traitants,
-    })
+        "has_n1": has_n1,
+        "periodes": periodes_choices,
+        "periode_active": periode_active,
+        "date_du": date_du.isoformat() if date_du else "",
+        "date_au": date_au.isoformat() if date_au else "",
+        "hx_url": reverse("bdc:recoupement_liste"),
+        "hx_target": "#recoupement-content",
+    }
+
+    if request.headers.get("HX-Request"):
+        return render(request, "bdc/_recoupement_content.html", context)
+
+    return render(request, "bdc/recoupement_liste.html", context)
 
 
 @group_required("CDT")
