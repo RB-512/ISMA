@@ -273,13 +273,14 @@ class TestSidebarControle:
         assert "Contr" in content  # "Contrôler ce BDC" (HTML entity encoded)
         assert reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk}) in content
 
-    def test_sidebar_a_faire_affiche_formulaire(self, client_secretaire, bdc_a_faire):
-        """Sidebar BDC A_FAIRE affiche le formulaire d'édition, pas le bouton contrôle."""
+    def test_sidebar_a_faire_read_only(self, client_secretaire, bdc_a_faire):
+        """Sidebar BDC A_FAIRE shows read-only info, not the edit form."""
         url = reverse("bdc:detail_sidebar", kwargs={"pk": bdc_a_faire.pk})
         response = client_secretaire.get(url)
 
         content = response.content.decode()
-        assert "sidebar-action" in content or "Enregistrer" in content
+        assert "Informations" in content  # read-only section header
+        assert "id_occupation" not in content  # no dropdown form field
 
 
 # ─── Tests Renvoi CDT → Secrétaire ──────────────────────────────────────────
@@ -325,3 +326,24 @@ class TestRenvoiControle:
         url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
         resp = client_cdt.get(url)
         assert resp.status_code == 302  # redirects to detail
+
+
+# ─── Tests Sidebar read-only after contrôle ──────────────────────────────────
+
+
+class TestSidebarReadOnly:
+    """After contrôle (not A_TRAITER), sidebar shows read-only fields."""
+
+    def test_sidebar_a_faire_no_form(self, client_secretaire, bdc_a_faire):
+        """Secretaire sees no edit form for A_FAIRE BDC."""
+        url = reverse("bdc:detail_sidebar", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_secretaire.get(url)
+        content = resp.content.decode()
+        assert "id_occupation" not in content  # no dropdown
+
+    def test_sidebar_a_traiter_has_controle_button(self, client_secretaire, bdc_a_traiter):
+        """A_TRAITER shows 'Contrôler' button, not form."""
+        url = reverse("bdc:detail_sidebar", kwargs={"pk": bdc_a_traiter.pk})
+        resp = client_secretaire.get(url)
+        content = resp.content.decode()
+        assert "Contr" in content  # "Contrôler ce BDC"

@@ -402,7 +402,7 @@ def detail_sidebar(request, pk: int):
             for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])
         ]
 
-    form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
+    form_edition = BDCEditionForm(instance=bdc) if (is_secretaire and bdc.statut == StatutChoices.A_TRAITER) else None
 
     return render(request, "bdc/_detail_sidebar.html", {
         "bdc": bdc,
@@ -427,7 +427,7 @@ def detail_bdc(request, pk: int):
 
     is_secretaire = request.user.groups.filter(name="Secretaire").exists()
     is_cdt = request.user.groups.filter(name="CDT").exists()
-    form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
+    form_edition = BDCEditionForm(instance=bdc) if (is_secretaire and bdc.statut == StatutChoices.A_TRAITER) else None
 
     transitions = [
         (statut, StatutChoices(statut).label)
@@ -503,7 +503,7 @@ def sidebar_save_and_transition(request, pk: int):
             for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])
         ]
 
-    form_edition = BDCEditionForm(instance=bdc)
+    form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
     response = render(request, "bdc/_detail_sidebar.html", {
         "bdc": bdc,

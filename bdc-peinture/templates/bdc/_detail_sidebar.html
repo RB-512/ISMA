@@ -188,6 +188,29 @@
                 </button>
             </form>
         </div>
+
+        {# Read-only info for completed contrôle #}
+        {% elif bdc.statut != 'A_TRAITER' %}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Informations</h3>
+            <dl class="space-y-2 text-sm">
+                {% if bdc.occupation %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Occupation :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.get_occupation_display }}</dd></div>
+                {% endif %}
+                {% if bdc.type_acces %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Type d'acc&egrave;s :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.get_type_acces_display }}</dd></div>
+                {% endif %}
+                {% if bdc.acces_complement %}
+                <div><dt class="inline text-[var(--color-text-muted)]">D&eacute;tail acc&egrave;s :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.acces_complement }}</dd></div>
+                {% endif %}
+                {% if bdc.rdv_date %}
+                <div><dt class="inline text-[var(--color-text-muted)]">RDV :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.rdv_date|date:"d/m/Y H:i" }}</dd></div>
+                {% endif %}
+                {% if bdc.notes %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Commentaires :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.notes }}</dd></div>
+                {% endif %}
+            </dl>
+        </div>
         {% endif %}
 
         {# Historique #}
