@@ -1,5 +1,9 @@
 {# HTMX-swappable partial: compteurs + alertes + filtres + tableau + pagination #}
-<div id="isma-dashboard-content" x-data="{ sidebarOpen: false, selectedBdc: null }">
+<div id="isma-dashboard-content" x-data="{ sidebarOpen: false, selectedBdc: null }"
+     hx-trigger="bdc-updated from:body"
+     hx-get="{% url 'bdc:index' %}{% if filtre.form.statut.value %}?statut={{ filtre.form.statut.value }}{% endif %}"
+     hx-target="#isma-dashboard-content"
+     hx-swap="outerHTML">
 
 {# ── Onglets par statut ──────────────────────────────────────────── #}
 <div class="border-b border-[var(--color-border)]">
@@ -153,7 +157,7 @@
                 hx-get="{% url 'bdc:detail_sidebar' pk=bdc.pk %}"
                 hx-target="#sidebar-content"
                 hx-swap="innerHTML"
-                @htmx:after-swap.window="sidebarOpen = true; selectedBdc = {{ bdc.pk }}">
+                @click="selectedBdc = {{ bdc.pk }}">
                 <td class="px-4 py-3 text-sm font-medium font-mono text-accent">{{ bdc.numero_bdc }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.bailleur.code }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.adresse|truncatechars:40 }}</td>
@@ -216,11 +220,15 @@
     <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/10 text-accent mb-4">
         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
     </div>
+    {% if not filtre.form.statut.value %}
     <p class="text-[var(--color-text-muted)] text-lg mb-4">Aucun bon de commande trouvé</p>
     <a href="{% url 'bdc:upload' %}"
        class="inline-flex items-center px-5 py-2.5 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm font-medium transition-all duration-150 shadow-sm hover:shadow-md">
         Uploader un PDF
     </a>
+    {% else %}
+    <p class="text-sm text-[var(--color-text-muted)]">Aucun BDC avec ce statut</p>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -233,21 +241,9 @@
      x-transition:leave-start="translate-x-0"
      x-transition:leave-end="translate-x-full"
      class="fixed top-0 right-0 h-full w-[420px] bg-[var(--color-surface-card)] border-l border-[var(--color-border)] shadow-2xl z-50"
-     @click.outside="sidebarOpen = false; selectedBdc = null"
      @keydown.escape.window="sidebarOpen = false; selectedBdc = null">
-    <div id="sidebar-content" class="h-full"></div>
+    <div id="sidebar-content" class="h-full" @htmx:after-swap="sidebarOpen = true"></div>
 </div>
 
-{# Overlay #}
-<div x-show="sidebarOpen"
-     x-transition:enter="transition ease-out duration-200"
-     x-transition:enter-start="opacity-0"
-     x-transition:enter-end="opacity-100"
-     x-transition:leave="transition ease-in duration-150"
-     x-transition:leave-start="opacity-100"
-     x-transition:leave-end="opacity-0"
-     class="fixed inset-0 bg-black/20 dark:bg-black/40 z-40"
-     @click="sidebarOpen = false; selectedBdc = null">
-</div>
 
 </div>{# /isma-dashboard-content #}
