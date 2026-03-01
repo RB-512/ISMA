@@ -14,8 +14,9 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from apps.accounts.decorators import group_required
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
@@ -556,6 +557,87 @@ def reattribuer_bdc(request, pk: int):
         f"BDC réattribué à {bdc.sous_traitant} ({bdc.pourcentage_st} %).",
     )
     return redirect("bdc:detail", pk=pk)
+
+
+# ─── Attribution inline (HTMX partial) ──────────────────────────────────────
+
+
+def _get_repartition_st(date_du=None, date_au=None, statuts=None):
+    """
+    Retourne tous les ST actifs avec leur charge (nb BDC + montant_st total).
+
+    Args:
+        date_du/date_au: bornes de periode (filtre sur Coalesce(date_emission, created_at)).
+        statuts: liste de StatutChoices a filtrer (defaut: [EN_COURS]).
+    """
+    from django.db.models.functions import Coalesce
+
+    from apps.sous_traitants.models import SousTraitant
+
+    if statuts is None:
+        statuts = [StatutChoices.EN_COURS]
+
+    filtre = Q(bons_de_commande__statut__in=statuts)
+
+    if date_du and date_au:
+        filtre &= Q(
+            bons_de_commande__in=BonDeCommande.objects.annotate(
+                _date_ref=Coalesce("date_emission", "created_at__date")
+            ).filter(_date_ref__gte=date_du, _date_ref__lte=date_au)
+        )
+
+    return (
+        SousTraitant.objects.filter(actif=True)
+        .annotate(
+            nb_bdc=Count("bons_de_commande", filter=filtre),
+            total_montant_st=Sum("bons_de_commande__montant_st", filter=filtre),
+        )
+        .order_by("nom")
+    )
+
+
+@group_required("CDT")
+def attribution_partial(request, pk: int):
+    """Partial HTMX : tableau répartition ST + formulaire attribution/réattribution."""
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    reattribution = bdc.statut == StatutChoices.EN_COURS
+
+    if request.method == "POST":
+        form = AttributionForm(request.POST)
+        if form.is_valid():
+            st = form.cleaned_data["sous_traitant"]
+            pct = form.cleaned_data["pourcentage_st"]
+            try:
+                if reattribution:
+                    reattribuer_st(bdc, st, pct, request.user)
+                else:
+                    attribuer_st(bdc, st, pct, request.user)
+            except TransitionInvalide as e:
+                messages.error(request, str(e))
+                return redirect("bdc:detail", pk=pk)
+            notifier_st_attribution(bdc)
+            msg = "réattribué" if reattribution else "attribué"
+            messages.success(request, f"BDC n°{bdc.numero_bdc} {msg} à {st}.")
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = reverse("bdc:detail", kwargs={"pk": bdc.pk})
+            return response
+        # Form invalide : re-render avec erreurs + tableau répartition
+        repartition = _get_repartition_st()
+        return render(request, "bdc/partials/attribution_form.html", {
+            "bdc": bdc, "form": form, "reattribution": reattribution,
+            "repartition": repartition,
+        })
+
+    # GET
+    initial = {}
+    if reattribution and bdc.sous_traitant:
+        initial = {"sous_traitant": bdc.sous_traitant, "pourcentage_st": bdc.pourcentage_st}
+    form = AttributionForm(initial=initial)
+    repartition = _get_repartition_st()
+    return render(request, "bdc/partials/attribution_form.html", {
+        "bdc": bdc, "form": form, "reattribution": reattribution,
+        "repartition": repartition,
+    })
 
 
 # ─── Validation réalisation / Facturation ────────────────────────────────────
