@@ -598,9 +598,65 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
 
 @group_required("CDT")
 def attribution_partial(request, pk: int):
-    """Partial HTMX : tableau répartition ST + formulaire attribution/réattribution."""
+    """Partial HTMX : tableau repartition ST + formulaire attribution/reattribution."""
+    from apps.bdc.periode import calculer_bornes_periode
+
     bdc = get_object_or_404(BonDeCommande, pk=pk)
     reattribution = bdc.statut == StatutChoices.EN_COURS
+
+    # Parse period params
+    periode = request.GET.get("periode", "")
+    date_du_str = request.GET.get("date_du", "")
+    date_au_str = request.GET.get("date_au", "")
+    date_du = date_au = date_du_n1 = date_au_n1 = None
+    periode_active = ""
+
+    if periode and periode != "custom":
+        bornes = calculer_bornes_periode(periode)
+        if bornes:
+            date_du, date_au, date_du_n1, date_au_n1 = bornes
+            periode_active = periode
+    elif date_du_str and date_au_str:
+        date_du = _parse_date(date_du_str)
+        date_au = _parse_date(date_au_str)
+        if date_du and date_au:
+            delta = date_au - date_du
+            date_au_n1 = date_du - timedelta(days=1)
+            date_du_n1 = date_au_n1 - delta
+            periode_active = "custom"
+
+    periodes_choices = [
+        ("semaine", "Semaine"),
+        ("mois", "Mois"),
+        ("trimestre", "Trimestre"),
+        ("annee", "Année"),
+    ]
+
+    def _build_context(form):
+        repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
+        has_n1 = False
+        if date_du_n1 and date_au_n1:
+            n1_qs = _get_repartition_st(date_du=date_du_n1, date_au=date_au_n1)
+            n1_map = {s.pk: s for s in n1_qs}
+            for s in repartition:
+                s_n1 = n1_map.get(s.pk)
+                if s_n1:
+                    s.nb_bdc_n1 = s_n1.nb_bdc
+                    s.total_montant_st_n1 = s_n1.total_montant_st
+                else:
+                    s.nb_bdc_n1 = 0
+                    s.total_montant_st_n1 = None
+            has_n1 = True
+        return {
+            "bdc": bdc, "form": form, "reattribution": reattribution,
+            "repartition": repartition, "has_n1": has_n1,
+            "periodes": periodes_choices,
+            "periode_active": periode_active,
+            "date_du": date_du.isoformat() if date_du else "",
+            "date_au": date_au.isoformat() if date_au else "",
+            "hx_url": reverse("bdc:attribution_partial", kwargs={"pk": bdc.pk}),
+            "hx_target": "#attribution-zone",
+        }
 
     if request.method == "POST":
         form = AttributionForm(request.POST)
@@ -621,23 +677,14 @@ def attribution_partial(request, pk: int):
             response = HttpResponse(status=204)
             response["HX-Redirect"] = reverse("bdc:detail", kwargs={"pk": bdc.pk})
             return response
-        # Form invalide : re-render avec erreurs + tableau répartition
-        repartition = _get_repartition_st()
-        return render(request, "bdc/partials/attribution_form.html", {
-            "bdc": bdc, "form": form, "reattribution": reattribution,
-            "repartition": repartition,
-        })
+        return render(request, "bdc/partials/attribution_form.html", _build_context(form))
 
     # GET
     initial = {}
     if reattribution and bdc.sous_traitant:
         initial = {"sous_traitant": bdc.sous_traitant, "pourcentage_st": bdc.pourcentage_st}
     form = AttributionForm(initial=initial)
-    repartition = _get_repartition_st()
-    return render(request, "bdc/partials/attribution_form.html", {
-        "bdc": bdc, "form": form, "reattribution": reattribution,
-        "repartition": repartition,
-    })
+    return render(request, "bdc/partials/attribution_form.html", _build_context(form))
 
 
 # ─── Validation réalisation / Facturation ────────────────────────────────────
