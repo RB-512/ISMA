@@ -15,7 +15,7 @@ class TestModifierBDC:
         client.force_login(utilisateur_secretaire)
         response = client.post(
             reverse("bdc:modifier", kwargs={"pk": bdc_a_traiter.pk}),
-            {"occupation": "OCCUPE", "notes": "Clé chez gardien"},
+            {"occupation": "OCCUPE", "rdv_date": "2026-03-15T10:00", "notes": "Clé chez gardien"},
         )
         assert response.status_code == 302
         bdc_a_traiter.refresh_from_db()
@@ -26,7 +26,7 @@ class TestModifierBDC:
         client.force_login(utilisateur_secretaire)
         client.post(
             reverse("bdc:modifier", kwargs={"pk": bdc_a_traiter.pk}),
-            {"occupation": "VACANT"},
+            {"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": "Code 1234"},
         )
         assert HistoriqueAction.objects.filter(
             bdc=bdc_a_traiter,
@@ -38,7 +38,7 @@ class TestModifierBDC:
         client.force_login(utilisateur_secretaire)
         response = client.post(
             reverse("bdc:modifier", kwargs={"pk": bdc_a_traiter.pk}),
-            {"occupation": "VACANT"},
+            {"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": "Code 1234"},
         )
         msgs = list(get_messages(response.wsgi_request))
         assert any("mis à jour" in str(m) for m in msgs)
@@ -71,10 +71,9 @@ class TestModifierBDC:
 class TestChangerStatutBDC:
 
     def test_transition_valide(self, client, utilisateur_secretaire, bdc_a_traiter):
-        """A_TRAITER → A_FAIRE avec occupation + type_acces + modalite_acces renseignés."""
+        """A_TRAITER → A_FAIRE avec occupation + type_acces renseignés."""
         bdc_a_traiter.occupation = "OCCUPE"
         bdc_a_traiter.type_acces = "BADGE_CODE"
-        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
         client.force_login(utilisateur_secretaire)
         response = client.post(
@@ -88,7 +87,6 @@ class TestChangerStatutBDC:
     def test_transition_valide_message_succes(self, client, utilisateur_secretaire, bdc_a_traiter):
         bdc_a_traiter.occupation = "OCCUPE"
         bdc_a_traiter.type_acces = "BADGE_CODE"
-        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
         client.force_login(utilisateur_secretaire)
         response = client.post(

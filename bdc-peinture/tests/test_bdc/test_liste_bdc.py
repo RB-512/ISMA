@@ -245,7 +245,7 @@ class TestSidebarSaveAndTransition:
         client.force_login(utilisateur_secretaire)
         resp = client.post(
             reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]),
-            {"occupation": "OCCUPE", "type_acces": "BADGE_CODE", "modalite_acces": "Badge gardien", "notes": "Test"},
+            {"occupation": "OCCUPE", "type_acces": "BADGE_CODE", "rdv_date": "2026-03-15T10:00", "notes": "Test"},
         )
         assert resp.status_code == 200
         bdc_a_traiter.refresh_from_db()
@@ -265,7 +265,7 @@ class TestSidebarSaveAndTransition:
             {
                 "occupation": "VACANT",
                 "type_acces": "BADGE_CODE",
-                "modalite_acces": "Badge gardien",
+                "acces_complement": "Code 1234",
                 "nouveau_statut": "A_FAIRE",
             },
         )
@@ -281,7 +281,7 @@ class TestSidebarSaveAndTransition:
             {
                 "occupation": "VACANT",
                 "type_acces": "BADGE_CODE",
-                "modalite_acces": "Badge gardien",
+                "acces_complement": "Code 1234",
                 "nouveau_statut": "EN_COURS",  # invalid from A_TRAITER
             },
         )

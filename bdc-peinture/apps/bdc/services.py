@@ -74,10 +74,6 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             raise BDCIncomplet(
                 "Le type d'accès est obligatoire avant passage en 'À attribuer'."
             )
-        if not bdc.modalite_acces:
-            raise BDCIncomplet(
-                "La modalité d'accès est obligatoire avant passage en 'À attribuer'."
-            )
         # Checklist de contrôle : tous les items actifs doivent être cochés
         items_actifs = ChecklistItem.objects.filter(actif=True).count()
         if items_actifs > 0:

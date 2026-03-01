@@ -4,8 +4,68 @@ Tests de la page de contrôle BDC (split-screen PDF + checklist).
 import pytest
 from django.urls import reverse
 
+from apps.bdc.forms import BDCEditionForm
 from apps.bdc.models import ChecklistItem, ChecklistResultat, StatutChoices
 from apps.bdc.services import BDCIncomplet, changer_statut
+
+# ─── Tests BDCEditionForm ───────────────────────────────────────────────────
+
+
+class TestBDCEditionForm:
+    """Tests for BDCEditionForm field changes."""
+
+    def test_modalite_acces_not_in_fields(self):
+        """modalite_acces field was removed from form."""
+        assert "modalite_acces" not in BDCEditionForm.Meta.fields
+
+    def test_notes_label_is_commentaires(self, bdc_a_traiter):
+        form = BDCEditionForm(instance=bdc_a_traiter)
+        assert form.fields["notes"].label == "Commentaires"
+
+    def test_occupation_required(self, bdc_a_traiter):
+        form = BDCEditionForm(data={"occupation": ""}, instance=bdc_a_traiter)
+        assert not form.is_valid()
+        assert "occupation" in form.errors
+
+    def test_notes_not_required(self, bdc_a_traiter):
+        form = BDCEditionForm(
+            data={"occupation": "VACANT", "type_acces": "BADGE_CODE",
+                  "acces_complement": "Code 1234"},
+            instance=bdc_a_traiter,
+        )
+        assert form.is_valid()
+
+    def test_vacant_requires_type_acces(self, bdc_a_traiter):
+        form = BDCEditionForm(
+            data={"occupation": "VACANT", "type_acces": "", "acces_complement": ""},
+            instance=bdc_a_traiter,
+        )
+        assert not form.is_valid()
+        assert "type_acces" in form.errors
+
+    def test_vacant_requires_acces_complement(self, bdc_a_traiter):
+        form = BDCEditionForm(
+            data={"occupation": "VACANT", "type_acces": "BADGE_CODE",
+                  "acces_complement": ""},
+            instance=bdc_a_traiter,
+        )
+        assert not form.is_valid()
+        assert "acces_complement" in form.errors
+
+    def test_occupe_requires_rdv_date(self, bdc_a_traiter):
+        form = BDCEditionForm(
+            data={"occupation": "OCCUPE", "rdv_date": ""},
+            instance=bdc_a_traiter,
+        )
+        assert not form.is_valid()
+        assert "rdv_date" in form.errors
+
+    def test_occupe_valid_with_rdv(self, bdc_a_traiter):
+        form = BDCEditionForm(
+            data={"occupation": "OCCUPE", "rdv_date": "2026-03-15T10:00"},
+            instance=bdc_a_traiter,
+        )
+        assert form.is_valid()
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -91,7 +151,7 @@ class TestControlePost:
             "occupation": "VACANT",
             "type_acces": "BADGE_CODE",
             "acces_complement": "Code 1234",
-            "modalite_acces": "Badge gardien",
+
             "rdv_date": "",
             "notes": "RAS",
             "nouveau_statut": "",
@@ -124,7 +184,7 @@ class TestControlePost:
             # items 1 et 2 non cochés
             "occupation": "VACANT",
             "type_acces": "BADGE_CODE",
-            "modalite_acces": "Badge gardien",
+
             "rdv_date": "",
             "notes": "",
             "nouveau_statut": "A_FAIRE",
@@ -144,7 +204,7 @@ class TestControlePost:
             "occupation": "VACANT",
             "type_acces": "BADGE_CODE",
             "acces_complement": "Code 1234",
-            "modalite_acces": "Badge gardien",
+
             "rdv_date": "",
             "notes": "",
             "nouveau_statut": "A_FAIRE",
@@ -172,7 +232,6 @@ class TestChecklistValidation:
         """changer_statut refuse A_TRAITER → A_FAIRE si checklist incomplète."""
         bdc_a_traiter.occupation = "VACANT"
         bdc_a_traiter.type_acces = "BADGE_CODE"
-        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         with pytest.raises(BDCIncomplet, match="points de contrôle"):
@@ -182,7 +241,6 @@ class TestChecklistValidation:
         """changer_statut accepte A_TRAITER → A_FAIRE si tous items cochés."""
         bdc_a_traiter.occupation = "VACANT"
         bdc_a_traiter.type_acces = "BADGE_CODE"
-        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         # Cocher tous les items
@@ -196,7 +254,6 @@ class TestChecklistValidation:
         """Si aucun item de checklist actif, la transition est permise."""
         bdc_a_traiter.occupation = "VACANT"
         bdc_a_traiter.type_acces = "BADGE_CODE"
-        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
