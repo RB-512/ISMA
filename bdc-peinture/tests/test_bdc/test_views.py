@@ -198,6 +198,8 @@ class TestCreerBDC:
             "bailleur": bailleur_gdh.pk,
             "adresse": "3 Rue des Tests",
             "occupation": "VACANT",
+            "type_acces": "BADGE_CODE",
+            "modalite_acces": "Badge gardien",
         })
         assert response.status_code == 302
         bdc = BonDeCommande.objects.get(numero_bdc="NOUVEAU-002")

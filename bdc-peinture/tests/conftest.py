@@ -89,7 +89,7 @@ def bdc_a_traiter(db, bailleur_gdh, utilisateur_secretaire) -> BonDeCommande:
 
 @pytest.fixture
 def bdc_a_faire(db, bailleur_gdh, utilisateur_secretaire) -> BonDeCommande:
-    """BDC complet en statut A_FAIRE (occupation renseignée)."""
+    """BDC complet en statut A_FAIRE (occupation + type_acces + modalite_acces renseignés)."""
     return BonDeCommande.objects.create(
         numero_bdc="450057",
         bailleur=bailleur_gdh,
@@ -98,6 +98,8 @@ def bdc_a_faire(db, bailleur_gdh, utilisateur_secretaire) -> BonDeCommande:
         ville="Avignon",
         objet_travaux="Peinture complète T3",
         occupation="OCCUPE",
+        type_acces="BADGE_CODE",
+        modalite_acces="Badge gardien",
         cree_par=utilisateur_secretaire,
         statut=StatutChoices.A_FAIRE,
     )

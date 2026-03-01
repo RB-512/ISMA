@@ -125,11 +125,17 @@
                 {% if bdc.sous_traitant %}
                 <div><dt class="inline text-[var(--color-text-muted)]">Sous-traitant :</dt> <dd class="inline text-[var(--color-text)] font-medium">{{ bdc.sous_traitant }}</dd></div>
                 {% endif %}
-                {% if bdc.modalite_acces %}
-                <div><dt class="inline text-[var(--color-text-muted)]">Accès :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.modalite_acces }}</dd></div>
+                {% if bdc.type_acces %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Type d'accès :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.get_type_acces_display }}</dd></div>
                 {% endif %}
-                {% if bdc.rdv_pris %}
-                <div><dt class="inline text-[var(--color-text-muted)]">RDV :</dt> <dd class="inline text-[var(--color-text)] font-mono">{{ bdc.rdv_date|date:"d/m/Y H:i"|default:"Pris" }}</dd></div>
+                {% if bdc.acces_complement %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Détail accès :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.acces_complement }}</dd></div>
+                {% endif %}
+                {% if bdc.modalite_acces %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Modalité d'accès :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.modalite_acces }}</dd></div>
+                {% endif %}
+                {% if bdc.rdv_date %}
+                <div><dt class="inline text-[var(--color-text-muted)]">RDV :</dt> <dd class="inline text-[var(--color-text)] font-mono">{{ bdc.rdv_date|date:"d/m/Y H:i" }}</dd></div>
                 {% endif %}
                 {% if bdc.notes %}
                 <div><dt class="inline text-[var(--color-text-muted)]">Notes :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.notes }}</dd></div>
@@ -199,24 +205,39 @@
 
     {# ── Édition champs manuels (secrétaire) ── #}
     {% if is_secretaire and form_edition %}
-    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5"
+             x-data="{ occupation: '{{ bdc.occupation|default:'' }}', typeAcces: '{{ bdc.type_acces|default:'' }}' }">
         <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Compléter le BDC</h2>
         <form method="POST" action="{% url 'bdc:modifier' bdc.pk %}">
             {% csrf_token %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
                     <label for="id_occupation">Vacant / Occupé</label>
-                    {{ form_edition.occupation }}
+                    <select name="occupation" id="id_occupation" x-model="occupation"
+                            class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                        <option value="">---------</option>
+                        <option value="VACANT" {% if bdc.occupation == 'VACANT' %}selected{% endif %}>Vacant</option>
+                        <option value="OCCUPE" {% if bdc.occupation == 'OCCUPE' %}selected{% endif %}>Occupé</option>
+                    </select>
+                </div>
+                <div x-show="occupation === 'VACANT'" x-transition>
+                    <label for="id_type_acces">Type d'accès</label>
+                    <select name="type_acces" id="id_type_acces" x-model="typeAcces"
+                            class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                        <option value="">---------</option>
+                        <option value="BADGE_CODE" {% if bdc.type_acces == 'BADGE_CODE' %}selected{% endif %}>Badge / Code</option>
+                        <option value="CLE" {% if bdc.type_acces == 'CLE' %}selected{% endif %}>Clé à récupérer</option>
+                    </select>
+                </div>
+                <div x-show="occupation === 'VACANT' && typeAcces !== ''" x-transition>
+                    <label for="id_acces_complement">Détail accès</label>
+                    {{ form_edition.acces_complement }}
                 </div>
                 <div>
                     <label for="id_modalite_acces">Modalité d'accès</label>
                     {{ form_edition.modalite_acces }}
                 </div>
-                <div class="flex items-center gap-3">
-                    {{ form_edition.rdv_pris }}
-                    <label for="id_rdv_pris" class="!mb-0 text-[var(--color-text)]">RDV pris</label>
-                </div>
-                <div>
+                <div x-show="occupation === 'OCCUPE'" x-transition>
                     <label for="id_rdv_date">Date / heure du RDV</label>
                     {{ form_edition.rdv_date }}
                 </div>

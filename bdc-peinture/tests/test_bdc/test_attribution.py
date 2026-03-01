@@ -84,7 +84,7 @@ class TestReattribuerST:
         assert action.details["nouveau_st"] == str(autre_st)
 
     def test_reattribution_refuse_si_pas_en_cours(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
-        with pytest.raises(TransitionInvalide, match="À faire"):
+        with pytest.raises(TransitionInvalide, match="À attribuer"):
             reattribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
 
     def test_montant_st_recalcule(self, bdc_en_cours, autre_st, utilisateur_cdt):

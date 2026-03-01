@@ -233,3 +233,83 @@ class TestTabFiltering:
         assert resp.status_code == 200
         for bdc in resp.context["page_obj"]:
             assert bdc.statut == "A_TRAITER"
+
+
+# ─── Tests sidebar save and transition ─────────────────────────────────────
+
+
+class TestSidebarSaveAndTransition:
+
+    def test_post_saves_fields_returns_partial(self, client, utilisateur_secretaire, bdc_a_traiter):
+        """POST sidebar_action saves fields and returns partial HTML."""
+        client.force_login(utilisateur_secretaire)
+        resp = client.post(
+            reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]),
+            {"occupation": "OCCUPE", "type_acces": "BADGE_CODE", "modalite_acces": "Badge gardien", "notes": "Test"},
+        )
+        assert resp.status_code == 200
+        bdc_a_traiter.refresh_from_db()
+        assert bdc_a_traiter.occupation == "OCCUPE"
+        assert bdc_a_traiter.type_acces == "BADGE_CODE"
+        assert bdc_a_traiter.notes == "Test"
+        # Should be partial HTML
+        content = resp.content.decode()
+        assert "<html" not in content.lower()
+        assert bdc_a_traiter.numero_bdc in content
+
+    def test_post_with_transition_changes_status(self, client, utilisateur_secretaire, bdc_a_traiter):
+        """POST sidebar_action with nouveau_statut triggers transition."""
+        client.force_login(utilisateur_secretaire)
+        resp = client.post(
+            reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]),
+            {
+                "occupation": "VACANT",
+                "type_acces": "BADGE_CODE",
+                "modalite_acces": "Badge gardien",
+                "nouveau_statut": "A_FAIRE",
+            },
+        )
+        assert resp.status_code == 200
+        bdc_a_traiter.refresh_from_db()
+        assert bdc_a_traiter.statut == StatutChoices.A_FAIRE
+
+    def test_post_with_invalid_transition_returns_error(self, client, utilisateur_secretaire, bdc_a_traiter):
+        """POST sidebar_action with invalid transition returns sidebar with error."""
+        client.force_login(utilisateur_secretaire)
+        resp = client.post(
+            reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]),
+            {
+                "occupation": "VACANT",
+                "type_acces": "BADGE_CODE",
+                "modalite_acces": "Badge gardien",
+                "nouveau_statut": "EN_COURS",  # invalid from A_TRAITER
+            },
+        )
+        assert resp.status_code == 200
+        bdc_a_traiter.refresh_from_db()
+        assert bdc_a_traiter.statut == StatutChoices.A_TRAITER  # unchanged
+
+    def test_response_contains_hx_trigger(self, client, utilisateur_secretaire, bdc_a_traiter):
+        """Response contains HX-Trigger: bdc-updated header."""
+        client.force_login(utilisateur_secretaire)
+        resp = client.post(
+            reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]),
+            {"occupation": "VACANT", "notes": "test"},
+        )
+        assert resp.status_code == 200
+        assert resp["HX-Trigger"] == "bdc-updated"
+
+    def test_requires_secretaire(self, client, utilisateur_cdt, bdc_a_traiter):
+        """Only Secretaire group can access sidebar_action."""
+        client.force_login(utilisateur_cdt)
+        resp = client.post(
+            reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]),
+            {"occupation": "VACANT"},
+        )
+        assert resp.status_code == 403
+
+    def test_get_redirects(self, client, utilisateur_secretaire, bdc_a_traiter):
+        """GET sidebar_action redirects to detail."""
+        client.force_login(utilisateur_secretaire)
+        resp = client.get(reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]))
+        assert resp.status_code == 302

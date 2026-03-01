@@ -11,6 +11,8 @@ from apps.bdc.services import BDCIncomplet, TransitionInvalide, changer_statut
 class TestTransitionsValides:
     def test_a_traiter_vers_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
         bdc_a_traiter.occupation = "VACANT"
+        bdc_a_traiter.type_acces = "BADGE_CODE"
+        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
@@ -95,15 +97,41 @@ class TestEtatTerminalFacture:
 
 class TestReglesMetier:
     def test_occupation_obligatoire_avant_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
-        """Le champ occupation doit être renseigné avant passage en À faire."""
+        """Le champ occupation doit être renseigné avant passage en À attribuer."""
         assert bdc_a_traiter.occupation == ""  # pas renseigné
 
         with pytest.raises(BDCIncomplet):
             changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
 
+    def test_type_acces_obligatoire_avant_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
+        """Le type d'accès doit être renseigné avant passage en À attribuer."""
+        bdc_a_traiter.occupation = "VACANT"
+        bdc_a_traiter.modalite_acces = "Badge gardien"
+        bdc_a_traiter.save()
+
+        with pytest.raises(BDCIncomplet, match="type d'accès"):
+            changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
+
+    def test_modalite_acces_obligatoire_avant_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
+        """La modalité d'accès doit être renseignée avant passage en À attribuer."""
+        bdc_a_traiter.occupation = "VACANT"
+        bdc_a_traiter.type_acces = "BADGE_CODE"
+        bdc_a_traiter.save()
+
+        with pytest.raises(BDCIncomplet, match="modalité d'accès"):
+            changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
+
     def test_occupation_renseignee_permet_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
         bdc_a_traiter.occupation = "VACANT"
+        bdc_a_traiter.type_acces = "BADGE_CODE"
+        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
         assert bdc.statut == StatutChoices.A_FAIRE
+
+
+class TestLabelRenommage:
+    def test_a_faire_label_est_a_attribuer(self):
+        """Le label du statut A_FAIRE doit être 'À attribuer'."""
+        assert StatutChoices.A_FAIRE.label == "À attribuer"

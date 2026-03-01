@@ -64,11 +64,20 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             f"Transitions possibles depuis '{ancien_statut}' : {transitions_possibles or ['aucune (état terminal)']}"
         )
 
-    # Règle métier : occupation obligatoire avant passage en À_FAIRE
-    if nouveau_statut == StatutChoices.A_FAIRE and not bdc.occupation:
-        raise BDCIncomplet(
-            "Le champ 'Vacant / Occupé' est obligatoire avant d'enregistrer le BDC en 'À faire'."
-        )
+    # Règles métier : champs obligatoires avant passage en À_FAIRE (À attribuer)
+    if nouveau_statut == StatutChoices.A_FAIRE:
+        if not bdc.occupation:
+            raise BDCIncomplet(
+                "Le champ 'Vacant / Occupé' est obligatoire avant passage en 'À attribuer'."
+            )
+        if not bdc.type_acces:
+            raise BDCIncomplet(
+                "Le type d'accès est obligatoire avant passage en 'À attribuer'."
+            )
+        if not bdc.modalite_acces:
+            raise BDCIncomplet(
+                "La modalité d'accès est obligatoire avant passage en 'À attribuer'."
+            )
 
     # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation à null
     if ancien_statut == StatutChoices.A_FACTURER and nouveau_statut == StatutChoices.EN_COURS:
@@ -191,7 +200,7 @@ def attribuer_st(
     if bdc.statut != StatutChoices.A_FAIRE:
         raise TransitionInvalide(
             f"Attribution impossible : le BDC est en '{bdc.get_statut_display()}', "
-            f"il doit être en 'À faire'."
+            f"il doit être en 'À attribuer'."
         )
 
     bdc.sous_traitant = sous_traitant

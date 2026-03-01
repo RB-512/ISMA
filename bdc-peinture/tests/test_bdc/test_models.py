@@ -109,8 +109,10 @@ class TestHistoriqueAction:
     def test_creation_automatique_via_service(self, bdc_a_traiter, utilisateur_secretaire):
         from apps.bdc.services import changer_statut
 
-        # On remplit d'abord le champ occupation pour pouvoir passer en A_FAIRE
+        # On remplit les champs obligatoires pour pouvoir passer en A_FAIRE
         bdc_a_traiter.occupation = "VACANT"
+        bdc_a_traiter.type_acces = "BADGE_CODE"
+        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)

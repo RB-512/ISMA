@@ -27,13 +27,13 @@ class BonDeCommandeForm(forms.ModelForm):
             "occupant_nom", "occupant_telephone", "occupant_email",
             "emetteur_nom", "emetteur_telephone",
             "montant_ht", "montant_tva", "montant_ttc",
-            "occupation", "modalite_acces", "rdv_pris", "rdv_date", "notes",
+            "occupation", "modalite_acces", "type_acces", "acces_complement", "rdv_date", "notes",
             "sous_traitant", "montant_st", "pourcentage_st",
         ]
         widgets = {
             "date_emission": forms.DateInput(attrs={"type": "date"}),
             "delai_execution": forms.DateInput(attrs={"type": "date"}),
-            "rdv_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "rdv_date": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "objet_travaux": forms.Textarea(attrs={"rows": 3}),
             "modalite_acces": forms.Textarea(attrs={"rows": 2}),
             "notes": forms.Textarea(attrs={"rows": 3}),
@@ -109,15 +109,21 @@ class ExportFacturationForm(forms.Form):
 
 class BDCEditionForm(forms.ModelForm):
     """
-    Formulaire d'édition des champs manuels depuis la fiche détail.
+    Formulaire d'édition des champs manuels depuis la fiche détail / sidebar.
     Seuls les champs saisissables par la secrétaire sont inclus.
+    Inclut un champ hidden pour déclencher une transition de statut en même temps.
     """
+
+    nouveau_statut = forms.CharField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = BonDeCommande
-        fields = ["occupation", "modalite_acces", "rdv_pris", "rdv_date", "notes"]
+        fields = [
+            "occupation", "type_acces", "acces_complement",
+            "modalite_acces", "rdv_date", "notes",
+        ]
         widgets = {
-            "rdv_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "rdv_date": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "modalite_acces": forms.Textarea(attrs={"rows": 2}),
             "notes": forms.Textarea(attrs={"rows": 3}),
         }

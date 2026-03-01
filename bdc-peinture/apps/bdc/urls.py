@@ -11,6 +11,7 @@ urlpatterns = [
     path("<int:pk>/sidebar/", views.detail_sidebar, name="detail_sidebar"),
     path("<int:pk>/", views.detail_bdc, name="detail"),
     path("<int:pk>/modifier/", views.modifier_bdc, name="modifier"),
+    path("<int:pk>/sidebar-action/", views.sidebar_save_and_transition, name="sidebar_action"),
     path("<int:pk>/statut/", views.changer_statut_bdc, name="changer_statut"),
     path("<int:pk>/attribuer/", views.attribuer_bdc, name="attribuer"),
     path("<int:pk>/reattribuer/", views.reattribuer_bdc, name="reattribuer"),

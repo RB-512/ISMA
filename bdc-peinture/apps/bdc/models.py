@@ -48,7 +48,7 @@ class Bailleur(models.Model):
 
 class StatutChoices(models.TextChoices):
     A_TRAITER = "A_TRAITER", "À traiter"
-    A_FAIRE = "A_FAIRE", "À faire"
+    A_FAIRE = "A_FAIRE", "À attribuer"
     EN_COURS = "EN_COURS", "En cours"
     A_FACTURER = "A_FACTURER", "À facturer"
     FACTURE = "FACTURE", "Facturé"
@@ -57,6 +57,11 @@ class StatutChoices(models.TextChoices):
 class OccupationChoices(models.TextChoices):
     VACANT = "VACANT", "Vacant"
     OCCUPE = "OCCUPE", "Occupé"
+
+
+class TypeAccesChoices(models.TextChoices):
+    BADGE_CODE = "BADGE_CODE", "Badge / Code"
+    CLE = "CLE", "Clé à récupérer"
 
 
 class BonDeCommande(models.Model):
@@ -114,14 +119,25 @@ class BonDeCommande(models.Model):
         choices=OccupationChoices.choices,
         blank=True,
         verbose_name="Vacant / Occupé",
-        help_text="Obligatoire avant passage en statut 'À faire'",
+        help_text="Obligatoire avant passage en statut 'À attribuer'",
     )
     modalite_acces = models.TextField(
         blank=True,
         verbose_name="Modalité d'accès",
         help_text="Clés, passes, gardien, agence...",
     )
-    rdv_pris = models.BooleanField(default=False, verbose_name="RDV pris")
+    type_acces = models.CharField(
+        max_length=15,
+        choices=TypeAccesChoices.choices,
+        blank=True,
+        verbose_name="Type d'accès",
+    )
+    acces_complement = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Détail accès",
+        help_text="Code/badge ou lieu de récupération de la clé",
+    )
     rdv_date = models.DateTimeField(null=True, blank=True, verbose_name="Date / heure du RDV")
     notes = models.TextField(blank=True, verbose_name="Notes libres")
 
