@@ -1,11 +1,12 @@
-{# Selecteur de periode reutilisable.
-   Context requis :
-   - hx_target: id du target HTMX (ex: "#recoupement-table")
-   - hx_url: URL a appeler avec les params de periode
-   - periode_active: periode selectionnee ("semaine", "mois", "trimestre", "annee", "custom", ou "")
-   - date_du / date_au: bornes actuelles (format YYYY-MM-DD)
-   - periodes: liste de tuples (val, label) pour les boutons raccourcis
-#}
+{% comment %}
+Selecteur de periode reutilisable.
+Context requis :
+- hx_target: id du target HTMX (ex: "#recoupement-table")
+- hx_url: URL a appeler avec les params de periode
+- periode_active: periode selectionnee ("semaine", "mois", "trimestre", "annee", "custom", ou "")
+- date_du / date_au: bornes actuelles (format YYYY-MM-DD)
+- periodes: liste de tuples (val, label) pour les boutons raccourcis
+{% endcomment %}
 <div class="flex flex-wrap items-end gap-3">
     <div class="flex gap-1">
         {% for val, label in periodes %}
