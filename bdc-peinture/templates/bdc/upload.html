@@ -6,7 +6,7 @@
 <div class="max-w-lg mx-auto">
     <h1 class="text-2xl font-bold text-[var(--color-text)] mb-2">Importer un bon de commande</h1>
     <p class="text-sm text-[var(--color-text-muted)] mb-6">
-        Formats supportés : <strong class="text-[var(--color-text)]">GDH</strong> et <strong class="text-[var(--color-text)]">ERILIA</strong>. Le PDF sera analysé automatiquement.
+        Formats support&eacute;s : <strong class="text-[var(--color-text)]">GDH</strong> et <strong class="text-[var(--color-text)]">ERILIA</strong>. Le PDF sera analys&eacute; automatiquement.
     </p>
 
     <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6">
@@ -20,22 +20,17 @@
                           this.$refs.fileInput.files = e.dataTransfer.files;
                           this.fileName = e.dataTransfer.files[0].name;
                       }
-                  },
-                  handleSelect(e) {
-                      if (e.target.files.length) {
-                          this.fileName = e.target.files[0].name;
-                      }
                   }
               }">
             {% csrf_token %}
 
-            {# Drop zone #}
-            <div @dragover.prevent="dragging = true"
-                 @dragleave.prevent="dragging = false"
-                 @drop.prevent="handleDrop($event)"
-                 @click="$refs.fileInput.click()"
-                 :class="dragging ? 'border-accent bg-accent/5' : 'border-[var(--color-border)] hover:border-accent/50'"
-                 class="relative flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200">
+            {# Drop zone — uses native <label> for click-to-open, no JS needed #}
+            <label for="id_pdf_file"
+                   @dragover.prevent="dragging = true"
+                   @dragleave.prevent="dragging = false"
+                   @drop.prevent="handleDrop($event)"
+                   :class="dragging ? 'border-accent bg-accent/5' : 'border-[var(--color-border)] hover:border-accent/50'"
+                   class="flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200">
 
                 {# Icon #}
                 <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
@@ -51,8 +46,8 @@
                 {# Text #}
                 <template x-if="!fileName">
                     <div class="text-center">
-                        <p class="text-sm font-medium text-[var(--color-text)]">Glisser-déposer un fichier PDF</p>
-                        <p class="text-xs text-[var(--color-text-muted)] mt-1">ou cliquer pour sélectionner</p>
+                        <p class="text-sm font-medium text-[var(--color-text)]">Glisser-d&eacute;poser un fichier PDF</p>
+                        <p class="text-xs text-[var(--color-text-muted)] mt-1">ou cliquer pour s&eacute;lectionner</p>
                     </div>
                 </template>
                 <template x-if="fileName">
@@ -62,10 +57,11 @@
                     </div>
                 </template>
 
-                <input type="file" x-ref="fileInput" @change="handleSelect($event)"
+                <input type="file" id="id_pdf_file" x-ref="fileInput"
+                       @change="if($event.target.files.length) fileName = $event.target.files[0].name"
                        name="pdf_file" accept=".pdf,application/pdf" required
                        class="sr-only">
-            </div>
+            </label>
 
             <p class="text-xs text-[var(--color-text-muted)] mt-3">Taille maximale : 10 Mo</p>
 

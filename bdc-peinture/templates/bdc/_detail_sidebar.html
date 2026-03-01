@@ -22,10 +22,31 @@
             </span>
         </div>
 
-        {# CDT-only buttons (attribution) #}
+        {# CDT-only buttons (attribution + renvoi) #}
         {% if is_cdt and bdc.statut == 'A_FAIRE' and not bdc.sous_traitant %}
-        <div class="mt-3">
-            <a href="{% url 'bdc:attribuer' pk=bdc.pk %}" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">Attribuer</a>
+        <div class="mt-3" x-data="{ showRenvoi: false }">
+            <div class="flex items-center gap-2">
+                <a href="{% url 'bdc:attribution_split' pk=bdc.pk %}"
+                   class="inline-block px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
+                    Attribuer
+                </a>
+                <button type="button" @click="showRenvoi = !showRenvoi"
+                        class="inline-block px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors">
+                    Renvoyer au contr&ocirc;le
+                </button>
+            </div>
+            <form x-show="showRenvoi" x-transition
+                  method="POST" action="{% url 'bdc:renvoyer_controle' pk=bdc.pk %}"
+                  class="mt-2 space-y-2">
+                {% csrf_token %}
+                <textarea name="commentaire" rows="2" required
+                          placeholder="Motif du renvoi..."
+                          class="w-full rounded-lg border px-3 py-2 text-xs border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]"></textarea>
+                <button type="submit"
+                        class="w-full px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors">
+                    Confirmer le renvoi
+                </button>
+            </form>
         </div>
         {% endif %}
     </div>
@@ -84,8 +105,17 @@
         </div>
         {% endif %}
 
-        {# Edition form (secretaire only) #}
-        {% if form_edition %}
+        {# Contrôle button for A_TRAITER (secretaire) — replaces edition form #}
+        {% if is_secretaire and bdc.statut == 'A_TRAITER' %}
+        <div>
+            <a href="{% url 'bdc:controle' pk=bdc.pk %}"
+               class="w-full block text-center px-3 py-2.5 text-sm font-medium rounded-lg bg-accent hover:bg-accent-dark text-white transition-colors">
+                Contr&ocirc;ler ce BDC
+            </a>
+        </div>
+
+        {# Edition form (secretaire only, other statuses) #}
+        {% elif form_edition %}
         <div x-data="{
             occupation: '{{ bdc.occupation|default:'' }}',
             typeAcces: '{{ bdc.type_acces|default:'' }}'
@@ -99,7 +129,7 @@
 
                 {# Occupation #}
                 <div>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.occupation.label }}</label>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.occupation.label }} <span class="text-red-500">*</span></label>
                     <select name="occupation" x-model="occupation"
                             class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
                         <option value="">---------</option>
@@ -110,7 +140,7 @@
 
                 {# Vacant : type d'accès (badge/clé) #}
                 <div x-show="occupation === 'VACANT'" x-transition>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.type_acces.label }}</label>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.type_acces.label }} <span class="text-red-500">*</span></label>
                     <select name="type_acces" x-model="typeAcces"
                             class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
                         <option value="">---------</option>
@@ -121,19 +151,13 @@
 
                 {# Vacant : détail accès (code/badge ou lieu clé) #}
                 <div x-show="occupation === 'VACANT' && typeAcces !== ''" x-transition>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.acces_complement.label }}</label>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.acces_complement.label }} <span class="text-red-500">*</span></label>
                     {{ form_edition.acces_complement }}
-                </div>
-
-                {# Modalité d'accès (toujours visible) #}
-                <div>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.modalite_acces.label }}</label>
-                    {{ form_edition.modalite_acces }}
                 </div>
 
                 {# Occupé : prise de RDV avec le locataire #}
                 <div x-show="occupation === 'OCCUPE'" x-transition>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.rdv_date.label }}</label>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.rdv_date.label }} <span class="text-red-500">*</span></label>
                     {{ form_edition.rdv_date }}
                 </div>
 
@@ -163,6 +187,29 @@
                     Enregistrer
                 </button>
             </form>
+        </div>
+
+        {# Read-only info for completed contrôle #}
+        {% elif bdc.statut != 'A_TRAITER' %}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Informations</h3>
+            <dl class="space-y-2 text-sm">
+                {% if bdc.occupation %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Occupation :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.get_occupation_display }}</dd></div>
+                {% endif %}
+                {% if bdc.type_acces %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Type d'acc&egrave;s :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.get_type_acces_display }}</dd></div>
+                {% endif %}
+                {% if bdc.acces_complement %}
+                <div><dt class="inline text-[var(--color-text-muted)]">D&eacute;tail acc&egrave;s :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.acces_complement }}</dd></div>
+                {% endif %}
+                {% if bdc.rdv_date %}
+                <div><dt class="inline text-[var(--color-text-muted)]">RDV :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.rdv_date|date:"d/m/Y H:i" }}</dd></div>
+                {% endif %}
+                {% if bdc.notes %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Commentaires :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.notes }}</dd></div>
+                {% endif %}
+            </dl>
         </div>
         {% endif %}
 

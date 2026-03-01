@@ -47,7 +47,7 @@ class Bailleur(models.Model):
 # ─── BonDeCommande ────────────────────────────────────────────────────────────
 
 class StatutChoices(models.TextChoices):
-    A_TRAITER = "A_TRAITER", "À traiter"
+    A_TRAITER = "A_TRAITER", "À contrôler"
     A_FAIRE = "A_FAIRE", "À attribuer"
     EN_COURS = "EN_COURS", "En cours"
     A_FACTURER = "A_FACTURER", "À facturer"
@@ -258,6 +258,44 @@ class LignePrestation(models.Model):
         return f"{self.designation} — {self.quantite} {self.unite} — {self.montant} €"
 
 
+# ─── ChecklistItem / ChecklistResultat ────────────────────────────────────────
+
+
+class ChecklistItem(models.Model):
+    """
+    Item de checklist de contrôle configurable.
+    La secrétaire doit cocher tous les items actifs avant de valider un BDC.
+    """
+
+    libelle = models.CharField(max_length=200)
+    ordre = models.PositiveSmallIntegerField(default=0)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["ordre"]
+        verbose_name = "Item de checklist"
+        verbose_name_plural = "Items de checklist"
+
+    def __str__(self):
+        return self.libelle
+
+
+class ChecklistResultat(models.Model):
+    """Résultat d'un item de checklist pour un BDC donné."""
+
+    bdc = models.ForeignKey(BonDeCommande, on_delete=models.CASCADE, related_name="checklist_resultats")
+    item = models.ForeignKey(ChecklistItem, on_delete=models.CASCADE)
+    coche = models.BooleanField(default=False)
+    note = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ("bdc", "item")
+        verbose_name = "Résultat checklist"
+
+    def __str__(self):
+        return f"{self.item.libelle} — {'Oui' if self.coche else 'Non'}"
+
+
 # ─── HistoriqueAction ─────────────────────────────────────────────────────────
 
 class ActionChoices(models.TextChoices):
@@ -269,6 +307,7 @@ class ActionChoices(models.TextChoices):
     NOTIFICATION_SMS = "NOTIFICATION_SMS", "SMS envoyé"
     VALIDATION = "VALIDATION", "Validation réalisation"
     FACTURATION = "FACTURATION", "Passage en facturation"
+    RENVOI = "RENVOI", "Renvoi au contrôle"
 
 
 class HistoriqueAction(models.Model):

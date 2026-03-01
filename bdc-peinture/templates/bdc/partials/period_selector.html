@@ -1,0 +1,51 @@
+{% comment %}
+Selecteur de periode reutilisable.
+Context requis :
+- hx_target: id du target HTMX (ex: "#recoupement-table")
+- hx_url: URL a appeler avec les params de periode
+- periode_active: periode selectionnee ("semaine", "mois", "trimestre", "annee", "custom", ou "")
+- date_du / date_au: bornes actuelles (format YYYY-MM-DD)
+- periodes: liste de tuples (val, label) pour les boutons raccourcis
+{% endcomment %}
+<div class="flex flex-wrap items-end gap-3">
+    <div class="flex gap-1">
+        {% for val, label in periodes %}
+        <button hx-get="{{ hx_url }}?periode={{ val }}"
+                hx-target="{{ hx_target }}" hx-swap="innerHTML"
+                class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                    {% if periode_active == val %}bg-primary text-white dark:bg-white dark:text-primary
+                    {% else %}bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-accent/10{% endif %}">
+            {{ label }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <div class="flex items-end gap-2">
+        <div>
+            <label class="block text-xs text-[var(--color-text-muted)] mb-0.5">Du</label>
+            <input type="date" name="date_du" value="{{ date_du|default:'' }}"
+                   class="px-2 py-1.5 text-xs border border-[var(--color-border)] rounded-lg bg-[var(--color-surface-card)] text-[var(--color-text)]"
+                   id="period-du{{ hx_target|slugify }}">
+        </div>
+        <div>
+            <label class="block text-xs text-[var(--color-text-muted)] mb-0.5">Au</label>
+            <input type="date" name="date_au" value="{{ date_au|default:'' }}"
+                   class="px-2 py-1.5 text-xs border border-[var(--color-border)] rounded-lg bg-[var(--color-surface-card)] text-[var(--color-text)]"
+                   id="period-au{{ hx_target|slugify }}">
+        </div>
+        <button hx-get="{{ hx_url }}"
+                hx-target="{{ hx_target }}" hx-swap="innerHTML"
+                hx-include="#period-du{{ hx_target|slugify }}, #period-au{{ hx_target|slugify }}"
+                class="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent hover:bg-accent-dark text-white transition-colors">
+            Appliquer
+        </button>
+        {% if periode_active or date_du %}
+        <a href="{{ hx_url }}"
+           hx-get="{{ hx_url }}"
+           hx-target="{{ hx_target }}" hx-swap="innerHTML"
+           class="px-3 py-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+            Reinitialiser
+        </a>
+        {% endif %}
+    </div>
+</div>

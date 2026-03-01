@@ -27,7 +27,7 @@ class BonDeCommandeForm(forms.ModelForm):
             "occupant_nom", "occupant_telephone", "occupant_email",
             "emetteur_nom", "emetteur_telephone",
             "montant_ht", "montant_tva", "montant_ttc",
-            "occupation", "modalite_acces", "type_acces", "acces_complement", "rdv_date", "notes",
+            "occupation", "type_acces", "acces_complement", "rdv_date", "notes",
             "sous_traitant", "montant_st", "pourcentage_st",
         ]
         widgets = {
@@ -35,7 +35,6 @@ class BonDeCommandeForm(forms.ModelForm):
             "delai_execution": forms.DateInput(attrs={"type": "date"}),
             "rdv_date": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "objet_travaux": forms.Textarea(attrs={"rows": 3}),
-            "modalite_acces": forms.Textarea(attrs={"rows": 2}),
             "notes": forms.Textarea(attrs={"rows": 3}),
         }
 
@@ -120,10 +119,32 @@ class BDCEditionForm(forms.ModelForm):
         model = BonDeCommande
         fields = [
             "occupation", "type_acces", "acces_complement",
-            "modalite_acces", "rdv_date", "notes",
+            "rdv_date", "notes",
         ]
         widgets = {
             "rdv_date": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
-            "modalite_acces": forms.Textarea(attrs={"rows": 2}),
             "notes": forms.Textarea(attrs={"rows": 3}),
         }
+        labels = {
+            "notes": "Commentaires",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["occupation"].required = True
+        self.fields["notes"].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        occupation = cleaned.get("occupation")
+
+        if occupation == "VACANT":
+            if not cleaned.get("type_acces"):
+                self.add_error("type_acces", "Ce champ est obligatoire pour un logement vacant.")
+            if not cleaned.get("acces_complement"):
+                self.add_error("acces_complement", "Ce champ est obligatoire pour un logement vacant.")
+        elif occupation == "OCCUPE":
+            if not cleaned.get("rdv_date"):
+                self.add_error("rdv_date", "La date de RDV est obligatoire pour un logement occupé.")
+
+        return cleaned

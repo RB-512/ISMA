@@ -136,32 +136,31 @@ class TestUploadPDF:
 
 class TestCreerBDC:
 
-    def _post_data_minimal(self, bailleur_gdh) -> dict:
-        return {
-            "numero_bdc": "NOUVEAU-001",
-            "bailleur": bailleur_gdh.pk,
-            "adresse": "2 Rue des Tests",
-        }
-
-    def test_get_affiche_formulaire_vide_sans_session(self, client, utilisateur_secretaire):
-        client.force_login(utilisateur_secretaire)
-        response = client.get(reverse("bdc:nouveau"))
-        assert response.status_code == 200
-        assert b"Enregistrer" in response.content
-
-    def test_get_prefill_depuis_session(self, client, utilisateur_secretaire, bailleur_gdh):
-        client.force_login(utilisateur_secretaire)
+    def _set_session(self, client, numero_bdc="NOUVEAU-001", bailleur_code="GDH", **extra):
+        """Met les données extraites en session pour simuler un import PDF."""
         session = client.session
         session["bdc_extrait"] = {
-            "bailleur_code": "GDH",
-            "numero_bdc": "450099",
-            "adresse": "1 Rue du Test",
+            "bailleur_code": bailleur_code,
+            "numero_bdc": numero_bdc,
+            "adresse": "2 Rue des Tests",
             "lignes_prestation": [],
+            **extra,
         }
         session.save()
 
+    def test_get_sans_session_redirige_vers_upload(self, client, utilisateur_secretaire):
+        client.force_login(utilisateur_secretaire)
+        response = client.get(reverse("bdc:nouveau"))
+        assert response.status_code == 302
+        assert response.url == reverse("bdc:upload")
+
+    def test_get_avec_session_affiche_donnees(self, client, utilisateur_secretaire, bailleur_gdh):
+        client.force_login(utilisateur_secretaire)
+        self._set_session(client, numero_bdc="450099", adresse="1 Rue du Test")
         response = client.get(reverse("bdc:nouveau"))
         assert response.status_code == 200
+        assert "450099" in response.content.decode()
+        assert "Enregistrer" in response.content.decode()
 
     def test_acces_cdt_interdit(self, client, utilisateur_cdt):
         client.force_login(utilisateur_cdt)
@@ -170,48 +169,25 @@ class TestCreerBDC:
 
     def test_post_doublon_affiche_erreur(self, client, utilisateur_secretaire, bdc_a_traiter, bailleur_gdh):
         client.force_login(utilisateur_secretaire)
-        response = client.post(reverse("bdc:nouveau"), {
-            "numero_bdc": bdc_a_traiter.numero_bdc,  # doublon
-            "bailleur": bailleur_gdh.pk,
-            "adresse": "2 Rue Doublon",
-        })
+        self._set_session(client, numero_bdc=bdc_a_traiter.numero_bdc)
+        response = client.post(reverse("bdc:nouveau"))
         assert response.status_code == 200
         assert BonDeCommande.objects.filter(numero_bdc=bdc_a_traiter.numero_bdc).count() == 1
         assert "existe déjà" in response.content.decode()
 
-    def test_post_cree_bdc_a_traiter_sans_occupation(self, client, utilisateur_secretaire, bailleur_gdh):
+    def test_post_cree_bdc_a_traiter(self, client, utilisateur_secretaire, bailleur_gdh):
         client.force_login(utilisateur_secretaire)
-        response = client.post(reverse("bdc:nouveau"), {
-            "numero_bdc": "NOUVEAU-001",
-            "bailleur": bailleur_gdh.pk,
-            "adresse": "2 Rue des Tests",
-        })
+        self._set_session(client)
+        response = client.post(reverse("bdc:nouveau"))
         assert response.status_code == 302
         bdc = BonDeCommande.objects.get(numero_bdc="NOUVEAU-001")
         assert bdc.statut == StatutChoices.A_TRAITER
         assert bdc.cree_par == utilisateur_secretaire
 
-    def test_post_cree_bdc_a_faire_avec_occupation(self, client, utilisateur_secretaire, bailleur_gdh):
-        client.force_login(utilisateur_secretaire)
-        response = client.post(reverse("bdc:nouveau"), {
-            "numero_bdc": "NOUVEAU-002",
-            "bailleur": bailleur_gdh.pk,
-            "adresse": "3 Rue des Tests",
-            "occupation": "VACANT",
-            "type_acces": "BADGE_CODE",
-            "modalite_acces": "Badge gardien",
-        })
-        assert response.status_code == 302
-        bdc = BonDeCommande.objects.get(numero_bdc="NOUVEAU-002")
-        assert bdc.statut == StatutChoices.A_FAIRE
-
     def test_post_cree_historique_creation(self, client, utilisateur_secretaire, bailleur_gdh):
         client.force_login(utilisateur_secretaire)
-        client.post(reverse("bdc:nouveau"), {
-            "numero_bdc": "NOUVEAU-003",
-            "bailleur": bailleur_gdh.pk,
-            "adresse": "4 Rue des Tests",
-        })
+        self._set_session(client, numero_bdc="NOUVEAU-003")
+        client.post(reverse("bdc:nouveau"))
         bdc = BonDeCommande.objects.get(numero_bdc="NOUVEAU-003")
         assert HistoriqueAction.objects.filter(
             bdc=bdc,
@@ -227,17 +203,15 @@ class TestCreerBDC:
         session = client.session
         session["bdc_extrait"] = {
             "bailleur_code": "GDH",
+            "numero_bdc": "NOUVEAU-004",
+            "adresse": "5 Rue des Tests",
             "lignes_prestation": [
                 {"designation": "Peinture murs", "quantite": "20.00", "unite": "m²", "prix_unitaire": "10.00", "montant": "200.00"},
             ],
         }
         session.save()
 
-        client.post(reverse("bdc:nouveau"), {
-            "numero_bdc": "NOUVEAU-004",
-            "bailleur": bailleur_gdh.pk,
-            "adresse": "5 Rue des Tests",
-        })
+        client.post(reverse("bdc:nouveau"))
         bdc = BonDeCommande.objects.get(numero_bdc="NOUVEAU-004")
         lignes = LignePrestation.objects.filter(bdc=bdc)
         assert lignes.count() == 1
@@ -245,14 +219,17 @@ class TestCreerBDC:
 
     def test_post_redirige_vers_detail(self, client, utilisateur_secretaire, bailleur_gdh):
         client.force_login(utilisateur_secretaire)
-        response = client.post(reverse("bdc:nouveau"), {
-            "numero_bdc": "NOUVEAU-005",
-            "bailleur": bailleur_gdh.pk,
-            "adresse": "6 Rue des Tests",
-        })
+        self._set_session(client, numero_bdc="NOUVEAU-005")
+        response = client.post(reverse("bdc:nouveau"))
         assert response.status_code == 302
         bdc = BonDeCommande.objects.get(numero_bdc="NOUVEAU-005")
         assert response.url == reverse("bdc:detail", kwargs={"pk": bdc.pk})
+
+    def test_post_sans_session_redirige_vers_upload(self, client, utilisateur_secretaire):
+        client.force_login(utilisateur_secretaire)
+        response = client.post(reverse("bdc:nouveau"))
+        assert response.status_code == 302
+        assert response.url == reverse("bdc:upload")
 
 
 # ─── Tests detail_bdc ─────────────────────────────────────────────────────────

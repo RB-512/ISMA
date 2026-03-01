@@ -4,7 +4,7 @@ Vues du workflow BDC Peinture.
 import os
 import tempfile
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
@@ -14,15 +14,25 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
-from django.http import FileResponse, Http404
+from django.db.models.functions import Coalesce
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from apps.accounts.decorators import group_required
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
 
 from .filters import BonDeCommandeFilter
-from .forms import AttributionForm, BDCEditionForm, BonDeCommandeForm
-from .models import ActionChoices, Bailleur, BonDeCommande, LignePrestation, StatutChoices
+from .forms import AttributionForm, BDCEditionForm
+from .models import (
+    ActionChoices,
+    Bailleur,
+    BonDeCommande,
+    ChecklistItem,
+    ChecklistResultat,
+    LignePrestation,
+    StatutChoices,
+)
 from .notifications import notifier_st_attribution
 from .services import (
     BDCIncomplet,
@@ -31,15 +41,103 @@ from .services import (
     changer_statut,
     enregistrer_action,
     reattribuer_st,
+    renvoyer_controle,
     valider_facturation,
     valider_realisation,
 )
 
+
+def _parse_date(value):
+    """Convertit une chaîne date (session) en objet date ou None."""
+    if not value:
+        return None
+    if isinstance(value, date):
+        return value
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            from datetime import datetime
+            return datetime.strptime(value, fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
+PERIODES_CHOICES = [
+    ("semaine", "Semaine"),
+    ("mois", "Mois"),
+    ("trimestre", "Trimestre"),
+    ("annee", "Année"),
+]
+
+
+def _parse_periode_params(request):
+    """Parse les query params de periode et retourne les bornes.
+
+    Returns:
+        (date_du, date_au, date_du_n1, date_au_n1, periode_active)
+    """
+    from apps.bdc.periode import calculer_bornes_periode
+
+    periode = request.GET.get("periode", "")
+    date_du_str = request.GET.get("date_du", "")
+    date_au_str = request.GET.get("date_au", "")
+    date_du = date_au = date_du_n1 = date_au_n1 = None
+    periode_active = ""
+
+    if periode and periode != "custom":
+        date_ref_str = request.GET.get("date", "")
+        date_ref = _parse_date(date_ref_str) if date_ref_str else None
+        bornes = calculer_bornes_periode(periode, date_ref)
+        if bornes:
+            date_du, date_au, date_du_n1, date_au_n1 = bornes
+            periode_active = periode
+    elif date_du_str and date_au_str:
+        date_du = _parse_date(date_du_str)
+        date_au = _parse_date(date_au_str)
+        if date_du and date_au:
+            delta = date_au - date_du
+            date_au_n1 = date_du - timedelta(days=1)
+            date_du_n1 = date_au_n1 - delta
+            periode_active = "custom"
+
+    return date_du, date_au, date_du_n1, date_au_n1, periode_active
+
+
+def _attach_n1_data(sous_traitants, date_du_n1, date_au_n1, statuts=None, with_delta=False):
+    """Attache les donnees N-1 sur chaque ST annote.
+
+    Modifie la liste en place. Retourne True si N-1 est present.
+    """
+    if not (date_du_n1 and date_au_n1):
+        return False
+    n1_qs = _get_repartition_st(date_du=date_du_n1, date_au=date_au_n1, statuts=statuts)
+    n1_map = {st.pk: st for st in n1_qs}
+    for st in sous_traitants:
+        st_n1 = n1_map.get(st.pk)
+        if st_n1:
+            st.nb_bdc_n1 = st_n1.nb_bdc
+            st.total_montant_st_n1 = st_n1.total_montant_st
+        else:
+            st.nb_bdc_n1 = 0
+            st.total_montant_st_n1 = None
+        if with_delta:
+            st.delta_bdc = st.nb_bdc - (st.nb_bdc_n1 or 0)
+    return True
+
+
+def _parse_decimal(value):
+    """Convertit une valeur session en Decimal ou None."""
+    if value is None or value == "":
+        return None
+    try:
+        return Decimal(str(value))
+    except Exception:
+        return None
+
+
 # Transitions "avant" que la Secrétaire peut déclencher depuis la sidebar.
 # Seul A_TRAITER → A_FAIRE est pertinent ; les autres avancements passent par le CDT.
-SIDEBAR_TRANSITIONS: dict[str, list[str]] = {
-    StatutChoices.A_TRAITER: [StatutChoices.A_FAIRE],
-}
+SIDEBAR_TRANSITIONS: dict[str, list[str]] = {}
 
 # ─── Dashboard / Liste BDC ───────────────────────────────────────────────────
 
@@ -91,6 +189,13 @@ def liste_bdc(request):
         alertes_retard = get_bdc_en_retard()
         alertes_proches = get_bdc_delai_proche()
 
+    nb_filtres = sum([
+        bool(request.GET.get("bailleur")),
+        bool(request.GET.get("ville")),
+        bool(request.GET.get("date_du")),
+        bool(request.GET.get("date_au")),
+    ])
+
     context = {
         "page_obj": page_obj,
         "filtre": filtre,
@@ -101,6 +206,7 @@ def liste_bdc(request):
         "is_cdt": is_cdt,
         "alertes_retard": alertes_retard,
         "alertes_proches": alertes_proches,
+        "nb_filtres": nb_filtres,
     }
 
     # HTMX: return only the dashboard fragment, not the full layout
@@ -173,47 +279,83 @@ def upload_pdf(request):
 @group_required("Secretaire")
 def creer_bdc(request):
     """
-    GET  → Formulaire pré-rempli depuis la session (données extraites du PDF).
-    POST → Valide, crée le BDC, crée les lignes, trace l'historique, redirige.
+    GET  → Affiche les données extraites du PDF en lecture seule pour confirmation.
+    POST → Crée le BDC depuis les données en session, crée les lignes, trace l'historique, redirige.
     """
-    donnees_session = request.session.get("bdc_extrait", {})
-    lignes_session = donnees_session.pop("lignes_prestation", [])
+    donnees_session = request.session.get("bdc_extrait")
+    if not donnees_session:
+        messages.error(request, "Aucun PDF importé. Veuillez d'abord importer un bon de commande.")
+        return redirect("bdc:upload")
 
-    # Pré-remplissage : lookup du bailleur par son code
-    initial = dict(donnees_session)
-    bailleur_code = initial.pop("bailleur_code", None)
-    if bailleur_code:
-        try:
-            initial["bailleur"] = Bailleur.objects.get(code=bailleur_code)
-        except Bailleur.DoesNotExist:
-            pass
+    donnees = dict(donnees_session)
+    lignes_session = donnees.pop("lignes_prestation", [])
 
     if request.method == "GET":
-        form = BonDeCommandeForm(initial=initial)
         return render(request, "bdc/creer_bdc.html", {
-            "form": form,
+            "donnees": donnees,
             "lignes_session": lignes_session,
         })
 
-    # POST : création du BDC
-    form = BonDeCommandeForm(request.POST)
-    if not form.is_valid():
-        return render(request, "bdc/creer_bdc.html", {
-            "form": form,
-            "lignes_session": lignes_session,
-        })
-
-    bdc = form.save(commit=False)
-    bdc.cree_par = request.user
-    bdc.statut = StatutChoices.A_TRAITER
-    bdc.save()
-
-    # Statut conditionnel : A_FAIRE si occupation renseignée
-    if bdc.occupation:
+    # POST : création du BDC depuis les données session
+    bailleur_code = donnees.pop("bailleur_code", None)
+    bailleur = None
+    if bailleur_code:
         try:
-            changer_statut(bdc, StatutChoices.A_FAIRE, request.user)
-        except BDCIncomplet:
-            pass  # Ne devrait pas arriver (occupation déjà renseignée)
+            bailleur = Bailleur.objects.get(code=bailleur_code)
+        except Bailleur.DoesNotExist:
+            messages.error(request, f"Bailleur « {bailleur_code} » introuvable.")
+            return render(request, "bdc/creer_bdc.html", {
+                "donnees": donnees_session,
+                "lignes_session": lignes_session,
+                "error_message": f"Bailleur « {bailleur_code} » introuvable en base.",
+            })
+
+    numero_bdc = donnees.get("numero_bdc", "").strip()
+    if not numero_bdc:
+        return render(request, "bdc/creer_bdc.html", {
+            "donnees": donnees_session,
+            "lignes_session": lignes_session,
+            "error_message": "Le numéro BDC n'a pas pu être extrait du PDF.",
+        })
+
+    if BonDeCommande.objects.filter(numero_bdc=numero_bdc).exists():
+        return render(request, "bdc/creer_bdc.html", {
+            "donnees": donnees_session,
+            "lignes_session": lignes_session,
+            "error_message": f"Le BDC n°{numero_bdc} existe déjà dans le système.",
+        })
+
+    # Conversion des dates (chaînes → objets date)
+    date_emission = _parse_date(donnees.get("date_emission"))
+    delai_execution = _parse_date(donnees.get("delai_execution"))
+
+    bdc = BonDeCommande(
+        numero_bdc=numero_bdc,
+        numero_marche=donnees.get("numero_marche", ""),
+        bailleur=bailleur,
+        date_emission=date_emission,
+        programme_residence=donnees.get("programme_residence", ""),
+        adresse=donnees.get("adresse", ""),
+        code_postal=donnees.get("code_postal", ""),
+        ville=donnees.get("ville", ""),
+        logement_numero=donnees.get("logement_numero", ""),
+        logement_type=donnees.get("logement_type", ""),
+        logement_etage=donnees.get("logement_etage", ""),
+        logement_porte=donnees.get("logement_porte", ""),
+        objet_travaux=donnees.get("objet_travaux", ""),
+        delai_execution=delai_execution,
+        occupant_nom=donnees.get("occupant_nom", ""),
+        occupant_telephone=donnees.get("occupant_telephone", ""),
+        occupant_email=donnees.get("occupant_email", ""),
+        emetteur_nom=donnees.get("emetteur_nom", ""),
+        emetteur_telephone=donnees.get("emetteur_telephone", ""),
+        montant_ht=_parse_decimal(donnees.get("montant_ht")),
+        montant_tva=_parse_decimal(donnees.get("montant_tva")),
+        montant_ttc=_parse_decimal(donnees.get("montant_ttc")),
+        cree_par=request.user,
+        statut=StatutChoices.A_TRAITER,
+    )
+    bdc.save()
 
     # Lignes de prestation depuis la session
     for i, ligne_data in enumerate(lignes_session):
@@ -223,7 +365,7 @@ def creer_bdc(request):
             quantite=Decimal(str(ligne_data.get("quantite", "0"))),
             unite=ligne_data.get("unite", ""),
             prix_unitaire=Decimal(str(ligne_data.get("prix_unitaire", "0"))),
-            montant=Decimal(str(ligne_data.get("montant", "0"))),
+            montant=Decimal(str(ligne_data.get("montant_ht") or ligne_data.get("montant") or "0")),
             ordre=i,
         )
 
@@ -268,7 +410,7 @@ def detail_sidebar(request, pk: int):
             for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])
         ]
 
-    form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
+    form_edition = BDCEditionForm(instance=bdc) if (is_secretaire and bdc.statut == StatutChoices.A_TRAITER) else None
 
     return render(request, "bdc/_detail_sidebar.html", {
         "bdc": bdc,
@@ -293,7 +435,7 @@ def detail_bdc(request, pk: int):
 
     is_secretaire = request.user.groups.filter(name="Secretaire").exists()
     is_cdt = request.user.groups.filter(name="CDT").exists()
-    form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
+    form_edition = BDCEditionForm(instance=bdc) if (is_secretaire and bdc.statut == StatutChoices.A_TRAITER) else None
 
     transitions = [
         (statut, StatutChoices(statut).label)
@@ -369,7 +511,7 @@ def sidebar_save_and_transition(request, pk: int):
             for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])
         ]
 
-    form_edition = BDCEditionForm(instance=bdc)
+    form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
     response = render(request, "bdc/_detail_sidebar.html", {
         "bdc": bdc,
@@ -490,6 +632,156 @@ def reattribuer_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
+# ─── Attribution inline (HTMX partial) ──────────────────────────────────────
+
+
+def _get_repartition_st(date_du=None, date_au=None, statuts=None):
+    """
+    Retourne tous les ST actifs avec leur charge (nb BDC + montant_st total).
+
+    Args:
+        date_du/date_au: bornes de periode (filtre sur Coalesce(date_emission, created_at)).
+        statuts: liste de StatutChoices a filtrer (defaut: [EN_COURS]).
+    """
+    from apps.sous_traitants.models import SousTraitant
+
+    if statuts is None:
+        statuts = [StatutChoices.EN_COURS]
+
+    filtre = Q(bons_de_commande__statut__in=statuts)
+
+    if date_du and date_au:
+        filtre &= Q(
+            bons_de_commande__in=BonDeCommande.objects.annotate(
+                _date_ref=Coalesce("date_emission", "created_at__date")
+            ).filter(_date_ref__gte=date_du, _date_ref__lte=date_au)
+        )
+
+    return (
+        SousTraitant.objects.filter(actif=True)
+        .annotate(
+            nb_bdc=Count("bons_de_commande", filter=filtre),
+            total_montant_st=Sum("bons_de_commande__montant_st", filter=filtre),
+        )
+        .order_by("nom")
+    )
+
+
+@group_required("CDT")
+def attribution_split(request, pk: int):
+    """Page split-screen d'attribution : PDF a gauche, panneau d'action a droite."""
+    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
+    reattribution = bdc.statut == StatutChoices.EN_COURS
+
+    if bdc.statut not in (StatutChoices.A_FAIRE, StatutChoices.EN_COURS):
+        messages.error(request, "Ce BDC ne peut pas être attribué dans son statut actuel.")
+        return redirect("bdc:detail", pk=pk)
+
+    date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
+
+    def _panel_context(form):
+        repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
+        has_n1 = _attach_n1_data(repartition, date_du_n1, date_au_n1)
+        return {
+            "bdc": bdc, "form": form, "reattribution": reattribution,
+            "repartition": repartition, "has_n1": has_n1,
+            "periodes": PERIODES_CHOICES,
+            "periode_active": periode_active,
+            "date_du": date_du.isoformat() if date_du else "",
+            "date_au": date_au.isoformat() if date_au else "",
+            "hx_url": reverse("bdc:attribution_split", kwargs={"pk": bdc.pk}),
+            "hx_target": "#attribution-panel",
+        }
+
+    if request.method == "POST":
+        form = AttributionForm(request.POST)
+        if form.is_valid():
+            st = form.cleaned_data["sous_traitant"]
+            pct = form.cleaned_data["pourcentage_st"]
+            try:
+                if reattribution:
+                    reattribuer_st(bdc, st, pct, request.user)
+                else:
+                    attribuer_st(bdc, st, pct, request.user)
+            except TransitionInvalide as e:
+                messages.error(request, str(e))
+                return redirect("bdc:detail", pk=pk)
+            notifier_st_attribution(bdc)
+            msg = "réattribué" if reattribution else "attribué"
+            messages.success(request, f"BDC n°{bdc.numero_bdc} {msg} à {st}.")
+            return redirect("bdc:detail", pk=bdc.pk)
+        ctx = _panel_context(form)
+        if request.headers.get("HX-Request"):
+            return render(request, "bdc/partials/_attribution_panel.html", ctx)
+        return render(request, "bdc/attribution_split.html", ctx)
+
+    # GET
+    initial = {}
+    if reattribution and bdc.sous_traitant:
+        initial = {"sous_traitant": bdc.sous_traitant, "pourcentage_st": bdc.pourcentage_st}
+    form = AttributionForm(initial=initial)
+    ctx = _panel_context(form)
+
+    if request.headers.get("HX-Request"):
+        return render(request, "bdc/partials/_attribution_panel.html", ctx)
+    return render(request, "bdc/attribution_split.html", ctx)
+
+
+@group_required("CDT")
+def attribution_partial(request, pk: int):
+    """Partial HTMX : tableau repartition ST + formulaire attribution/reattribution."""
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    reattribution = bdc.statut == StatutChoices.EN_COURS
+
+    # Detecter le contexte d'appel via le header HX-Target
+    hx_target_id = request.headers.get("HX-Target", "attribution-zone")
+    hx_target = f"#{hx_target_id}"
+
+    date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
+
+    def _build_context(form):
+        repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
+        has_n1 = _attach_n1_data(repartition, date_du_n1, date_au_n1)
+        return {
+            "bdc": bdc, "form": form, "reattribution": reattribution,
+            "repartition": repartition, "has_n1": has_n1,
+            "periodes": PERIODES_CHOICES,
+            "periode_active": periode_active,
+            "date_du": date_du.isoformat() if date_du else "",
+            "date_au": date_au.isoformat() if date_au else "",
+            "hx_url": reverse("bdc:attribution_partial", kwargs={"pk": bdc.pk}),
+            "hx_target": hx_target,
+        }
+
+    if request.method == "POST":
+        form = AttributionForm(request.POST)
+        if form.is_valid():
+            st = form.cleaned_data["sous_traitant"]
+            pct = form.cleaned_data["pourcentage_st"]
+            try:
+                if reattribution:
+                    reattribuer_st(bdc, st, pct, request.user)
+                else:
+                    attribuer_st(bdc, st, pct, request.user)
+            except TransitionInvalide as e:
+                messages.error(request, str(e))
+                return redirect("bdc:detail", pk=pk)
+            notifier_st_attribution(bdc)
+            msg = "réattribué" if reattribution else "attribué"
+            messages.success(request, f"BDC n°{bdc.numero_bdc} {msg} à {st}.")
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = reverse("bdc:detail", kwargs={"pk": bdc.pk})
+            return response
+        return render(request, "bdc/partials/attribution_form.html", _build_context(form))
+
+    # GET
+    initial = {}
+    if reattribution and bdc.sous_traitant:
+        initial = {"sous_traitant": bdc.sous_traitant, "pourcentage_st": bdc.pourcentage_st}
+    form = AttributionForm(initial=initial)
+    return render(request, "bdc/partials/attribution_form.html", _build_context(form))
+
+
 # ─── Validation réalisation / Facturation ────────────────────────────────────
 
 @group_required("CDT")
@@ -526,27 +818,60 @@ def valider_facturation_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
+# ─── Renvoi CDT → Secrétaire ────────────────────────────────────────────────
+
+@group_required("CDT")
+def renvoyer_controle_bdc(request, pk: int):
+    """POST: CDT renvoie un BDC A_FAIRE au contrôle avec un commentaire."""
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    commentaire = request.POST.get("commentaire", "").strip()
+
+    if not commentaire:
+        messages.error(request, "Le commentaire est obligatoire pour renvoyer un BDC.")
+        return redirect("bdc:detail", pk=pk)
+
+    try:
+        renvoyer_controle(bdc, commentaire, request.user)
+        messages.success(request, f"BDC n°{bdc.numero_bdc} renvoyé au contrôle.")
+    except TransitionInvalide as e:
+        messages.error(request, str(e))
+
+    return redirect("bdc:detail", pk=pk)
+
+
 # ─── Recoupement par sous-traitant ────────────────────────────────────────────
 
 @group_required("CDT")
 def recoupement_st_liste(request):
-    """Liste des sous-traitants avec compteurs BDC par statut."""
-    from apps.sous_traitants.models import SousTraitant
+    """Liste des sous-traitants avec compteurs BDC par statut, filtrable par periode."""
+    statuts = [StatutChoices.EN_COURS, StatutChoices.A_FACTURER, StatutChoices.FACTURE]
 
-    sous_traitants = (
-        SousTraitant.objects.filter(actif=True, bons_de_commande__isnull=False)
-        .distinct()
-        .annotate(
-            nb_en_cours=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.EN_COURS)),
-            nb_a_facturer=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.A_FACTURER)),
-            nb_facture=Count("bons_de_commande", filter=Q(bons_de_commande__statut=StatutChoices.FACTURE)),
-        )
-        .order_by("nom")
+    date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
+
+    sous_traitants = list(
+        _get_repartition_st(date_du=date_du, date_au=date_au, statuts=statuts).filter(nb_bdc__gt=0)
     )
 
-    return render(request, "bdc/recoupement_liste.html", {
+    has_n1 = _attach_n1_data(sous_traitants, date_du_n1, date_au_n1, statuts=statuts, with_delta=True)
+
+    context = {
         "sous_traitants": sous_traitants,
-    })
+        "has_n1": has_n1,
+        "periodes": PERIODES_CHOICES,
+        "periode_active": periode_active,
+        "date_du": date_du.isoformat() if date_du else "",
+        "date_au": date_au.isoformat() if date_au else "",
+        "hx_url": reverse("bdc:recoupement_liste"),
+        "hx_target": "#recoupement-content",
+    }
+
+    if request.headers.get("HX-Request"):
+        return render(request, "bdc/_recoupement_content.html", context)
+
+    return render(request, "bdc/recoupement_liste.html", context)
 
 
 @group_required("CDT")
@@ -603,6 +928,77 @@ def export_facturation(request):
     return render(request, "bdc/export_facturation.html", {
         "form": form,
         "count": count,
+    })
+
+
+# ─── Contrôle BDC (split-screen PDF + checklist) ─────────────────────────────
+
+
+@login_required
+def controle_bdc(request, pk: int):
+    """Page de contrôle BDC : split-screen PDF + checklist + formulaire d'édition."""
+    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
+    est_editable = is_secretaire and bdc.statut == StatutChoices.A_TRAITER
+
+    items = ChecklistItem.objects.filter(actif=True)
+
+    if request.method == "POST" and est_editable:
+        # Sauver le formulaire d'édition
+        form = BDCEditionForm(request.POST, instance=bdc)
+        form_valid = form.is_valid()
+        if form_valid:
+            form.save()
+            enregistrer_action(bdc, request.user, ActionChoices.MODIFICATION)
+
+        # Sauver les coches checklist
+        for item in items:
+            coche = request.POST.get(f"check_{item.pk}") == "on"
+            note = request.POST.get(f"note_{item.pk}", "").strip()
+            ChecklistResultat.objects.update_or_create(
+                bdc=bdc,
+                item=item,
+                defaults={"coche": coche, "note": note},
+            )
+
+        # Transition si demandée ET formulaire valide
+        nouveau_statut = request.POST.get("nouveau_statut")
+        if nouveau_statut and form_valid:
+            try:
+                changer_statut(bdc, nouveau_statut, request.user)
+                messages.success(
+                    request,
+                    f"BDC n°{bdc.numero_bdc} validé — statut : À attribuer.",
+                )
+                return redirect("bdc:index")
+            except (TransitionInvalide, BDCIncomplet) as e:
+                messages.error(request, str(e))
+
+        bdc.refresh_from_db()
+        # form conservé avec ses erreurs (pas remplacé par un formulaire vierge)
+    else:
+        form = BDCEditionForm(instance=bdc) if est_editable else None
+
+    # Build combined checklist data for template
+    resultats = {r.item_id: r for r in bdc.checklist_resultats.filter(item__actif=True)}
+    checklist_items = []
+    for item in items:
+        res = resultats.get(item.pk)
+        checklist_items.append({
+            "item": item,
+            "coche": res.coche if res else False,
+            "note": res.note if res else "",
+        })
+
+    # Check for recent renvoi (CDT comment)
+    dernier_renvoi = bdc.historique.filter(action=ActionChoices.RENVOI).order_by("-created_at").first()
+
+    return render(request, "bdc/controle.html", {
+        "bdc": bdc,
+        "form_edition": form,
+        "checklist_items": checklist_items,
+        "est_editable": est_editable,
+        "dernier_renvoi": dernier_renvoi,
     })
 
 

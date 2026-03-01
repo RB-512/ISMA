@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 
 from apps.sous_traitants.models import SousTraitant
 
-from .models import ActionChoices, BonDeCommande, HistoriqueAction, StatutChoices
+from .models import ActionChoices, BonDeCommande, ChecklistItem, HistoriqueAction, StatutChoices
 
 logger = logging.getLogger(__name__)
 
@@ -70,14 +70,22 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             raise BDCIncomplet(
                 "Le champ 'Vacant / Occupé' est obligatoire avant passage en 'À attribuer'."
             )
-        if not bdc.type_acces:
+        if bdc.occupation == "VACANT" and not bdc.type_acces:
             raise BDCIncomplet(
                 "Le type d'accès est obligatoire avant passage en 'À attribuer'."
             )
-        if not bdc.modalite_acces:
+        if bdc.occupation == "OCCUPE" and not bdc.rdv_date:
             raise BDCIncomplet(
-                "La modalité d'accès est obligatoire avant passage en 'À attribuer'."
+                "La date de RDV est obligatoire pour un logement occupé avant passage en 'À attribuer'."
             )
+        # Checklist de contrôle : tous les items actifs doivent être cochés
+        items_actifs = ChecklistItem.objects.filter(actif=True).count()
+        if items_actifs > 0:
+            items_coches = bdc.checklist_resultats.filter(item__actif=True, coche=True).count()
+            if items_coches < items_actifs:
+                raise BDCIncomplet(
+                    "Tous les points de contrôle doivent être cochés avant de passer en « À attribuer »."
+                )
 
     # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation à null
     if ancien_statut == StatutChoices.A_FACTURER and nouveau_statut == StatutChoices.EN_COURS:
@@ -173,6 +181,29 @@ def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
         bdc=bdc,
         utilisateur=utilisateur,
         action=ActionChoices.FACTURATION,
+    )
+
+    return bdc
+
+
+def renvoyer_controle(bdc: BonDeCommande, commentaire: str, utilisateur: User) -> BonDeCommande:
+    """
+    Renvoie un BDC A_FAIRE au contrôle (A_TRAITER) avec un commentaire du CDT.
+    """
+    if bdc.statut != StatutChoices.A_FAIRE:
+        raise TransitionInvalide(
+            f"Renvoi impossible : le BDC est en '{bdc.get_statut_display()}', "
+            f"il doit être en 'À attribuer'."
+        )
+
+    bdc.statut = StatutChoices.A_TRAITER
+    bdc.save(update_fields=["statut", "updated_at"])
+
+    HistoriqueAction.objects.create(
+        bdc=bdc,
+        utilisateur=utilisateur,
+        action=ActionChoices.RENVOI,
+        details={"commentaire": commentaire},
     )
 
     return bdc

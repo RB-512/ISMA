@@ -6,7 +6,6 @@ import logging
 from decimal import Decimal
 
 import pytest
-from django.test import Client
 from django.urls import reverse
 
 from apps.bdc.models import HistoriqueAction, StatutChoices
@@ -50,7 +49,7 @@ class TestAttribuerST:
         assert action.details["pourcentage"] == "65"
 
     def test_attribution_refuse_si_pas_a_faire(self, bdc_a_traiter, sous_traitant, utilisateur_cdt):
-        with pytest.raises(TransitionInvalide, match="À traiter"):
+        with pytest.raises(TransitionInvalide, match="À contrôler"):
             attribuer_st(bdc_a_traiter, sous_traitant, Decimal("65"), utilisateur_cdt)
 
 
@@ -140,20 +139,6 @@ class TestNotifierSTAttribution:
 
 
 # ─── 7.3 Tests vues attribuer_bdc / reattribuer_bdc ──────────────────────────
-
-
-@pytest.fixture
-def client_cdt(utilisateur_cdt) -> Client:
-    client = Client()
-    client.login(username="cdt_test", password="testpass123")
-    return client
-
-
-@pytest.fixture
-def client_secretaire(utilisateur_secretaire) -> Client:
-    client = Client()
-    client.login(username="secretaire_test", password="testpass123")
-    return client
 
 
 class TestAttribuerBDCView:
@@ -261,3 +246,118 @@ class TestDetailBDCBoutonsAttribution:
         content = resp.content.decode()
         # Le bouton « En cours » ne doit pas apparaître comme bouton de transition
         assert 'value="EN_COURS"' not in content
+
+
+# ─── Tests vue attribution_partial (HTMX inline) ────────────────────────────
+
+
+class TestAttributionPartial:
+    """Tests de la vue attribution_partial (HTMX inline)."""
+
+    @pytest.fixture
+    def bdc_en_cours(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
+        return attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+
+    def test_get_retourne_formulaire(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.get(url)
+        assert resp.status_code == 200
+        assert "id_sous_traitant" in resp.content.decode()
+
+    def test_get_contient_tableau_repartition(self, client_cdt, bdc_a_faire, sous_traitant):
+        url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.get(url)
+        assert sous_traitant.nom in resp.content.decode()
+
+    def test_post_valide_attribue_et_redirige(self, client_cdt, bdc_a_faire, sous_traitant):
+        url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.post(url, {"sous_traitant": sous_traitant.pk, "pourcentage_st": "65.00"})
+        assert resp.status_code == 204
+        assert "HX-Redirect" in resp.headers
+        bdc_a_faire.refresh_from_db()
+        assert bdc_a_faire.statut == StatutChoices.EN_COURS
+
+    def test_post_invalide_reaffiche_formulaire(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.post(url, {})
+        assert resp.status_code == 200
+        assert "id_sous_traitant" in resp.content.decode()
+
+    def test_reattribution_pre_rempli(self, client_cdt, bdc_en_cours):
+        url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_en_cours.pk})
+        resp = client_cdt.get(url)
+        content = resp.content.decode()
+        assert "selected" in content  # ST pré-sélectionné
+
+    def test_get_avec_periode_filtre_repartition(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.get(url + "?periode=mois")
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "Semaine" in content  # period selector present
+        assert "Mois" in content
+
+    def test_acces_secretaire_interdit(self, client_secretaire, bdc_a_faire):
+        url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_secretaire.get(url)
+        assert resp.status_code == 403
+
+
+# ─── Tests vue attribution_split (page split-screen) ────────────────────────
+
+
+class TestAttributionSplit:
+    """Tests de la page split-screen d'attribution."""
+
+    @pytest.fixture
+    def bdc_en_cours(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
+        return attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+
+    def test_get_affiche_split_screen(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "id_sous_traitant" in content
+        assert bdc_a_faire.numero_bdc in content
+
+    def test_post_valide_attribue_et_redirige(self, client_cdt, bdc_a_faire, sous_traitant):
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.post(url, {"sous_traitant": sous_traitant.pk, "pourcentage_st": "65.00"})
+        assert resp.status_code == 302
+        bdc_a_faire.refresh_from_db()
+        assert bdc_a_faire.statut == StatutChoices.EN_COURS
+
+    def test_post_invalide_reaffiche(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.post(url, {})
+        assert resp.status_code == 200
+        assert "id_sous_traitant" in resp.content.decode()
+
+    def test_reattribution_pre_rempli(self, client_cdt, bdc_en_cours):
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_en_cours.pk})
+        resp = client_cdt.get(url)
+        assert "selected" in resp.content.decode()
+
+    def test_htmx_retourne_partial(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.get(url, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "<html" not in content.lower()
+
+    def test_acces_secretaire_interdit(self, client_secretaire, bdc_a_faire):
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_secretaire.get(url)
+        assert resp.status_code == 403
+
+    def test_repartition_st_presente(self, client_cdt, bdc_a_faire, sous_traitant):
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.get(url)
+        assert sous_traitant.nom in resp.content.decode()
+
+    def test_statut_incorrect_redirige(self, client_cdt, bdc_a_traiter):
+        """Un BDC A_TRAITER ne peut pas etre attribue."""
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_traiter.pk})
+        resp = client_cdt.get(url)
+        assert resp.status_code == 302

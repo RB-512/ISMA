@@ -12,7 +12,6 @@ class TestTransitionsValides:
     def test_a_traiter_vers_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
         bdc_a_traiter.occupation = "VACANT"
         bdc_a_traiter.type_acces = "BADGE_CODE"
-        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
@@ -106,25 +105,14 @@ class TestReglesMetier:
     def test_type_acces_obligatoire_avant_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
         """Le type d'accès doit être renseigné avant passage en À attribuer."""
         bdc_a_traiter.occupation = "VACANT"
-        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         with pytest.raises(BDCIncomplet, match="type d'accès"):
             changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
 
-    def test_modalite_acces_obligatoire_avant_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
-        """La modalité d'accès doit être renseignée avant passage en À attribuer."""
-        bdc_a_traiter.occupation = "VACANT"
-        bdc_a_traiter.type_acces = "BADGE_CODE"
-        bdc_a_traiter.save()
-
-        with pytest.raises(BDCIncomplet, match="modalité d'accès"):
-            changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
-
     def test_occupation_renseignee_permet_a_faire(self, bdc_a_traiter, utilisateur_secretaire):
         bdc_a_traiter.occupation = "VACANT"
         bdc_a_traiter.type_acces = "BADGE_CODE"
-        bdc_a_traiter.modalite_acces = "Badge gardien"
         bdc_a_traiter.save()
 
         bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
