@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Contrôle BDC {{ bdc.numero_bdc }} — ISMA{% endblock %}
+
+{% block content %}
+<div x-data="{
+    occupation: '{{ bdc.occupation|default:'' }}',
+    typeAcces: '{{ bdc.type_acces|default:'' }}'
+}">
+    {# ── Header ── #}
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'bdc:detail' pk=bdc.pk %}"
+               class="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]/50 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            </a>
+            <h1 class="text-xl font-bold font-mono text-[var(--color-text)]">BDC {{ bdc.numero_bdc }}</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                {% if bdc.statut == 'A_TRAITER' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300
+                {% elif bdc.statut == 'A_FAIRE' %}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300
+                {% elif bdc.statut == 'EN_COURS' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300
+                {% elif bdc.statut == 'A_FACTURER' %}bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300
+                {% elif bdc.statut == 'FACTURE' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300
+                {% endif %}">
+                {{ bdc.get_statut_display }}
+            </span>
+            <span class="text-sm text-[var(--color-text-muted)]">{{ bdc.bailleur.code }}</span>
+        </div>
+    </div>
+
+    {# ── Split-screen layout ── #}
+    <div class="flex gap-4" style="height: calc(100vh - 140px);">
+
+        {# ── Left panel: PDF viewer (60%) ── #}
+        <div class="w-3/5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)] overflow-hidden">
+            {% if bdc.pdf_original %}
+            <iframe src="{{ bdc.pdf_original.url }}" class="w-full h-full" title="PDF du BDC {{ bdc.numero_bdc }}"></iframe>
+            {% else %}
+            <div class="flex items-center justify-center h-full text-[var(--color-text-muted)]">
+                <div class="text-center">
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <p class="text-sm">Aucun PDF disponible</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Right panel: Checklist + Form (40%) ── #}
+        <div class="w-2/5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)] overflow-hidden flex flex-col">
+            {% if est_editable %}
+            <form method="post" class="h-full flex flex-col">
+                {% csrf_token %}
+                <input type="hidden" name="nouveau_statut" value="">
+
+                <div class="flex-1 overflow-y-auto p-5 space-y-5">
+                    {# ── Checklist ── #}
+                    {% if checklist_items %}
+                    <div>
+                        <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Points de contr&ocirc;le</h3>
+                        <div class="space-y-3">
+                            {% for entry in checklist_items %}
+                            <div class="flex items-start gap-3 p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+                                <input type="checkbox"
+                                       name="check_{{ entry.item.pk }}"
+                                       id="check_{{ entry.item.pk }}"
+                                       {% if entry.coche %}checked{% endif %}
+                                       class="mt-0.5">
+                                <div class="flex-1 min-w-0">
+                                    <label for="check_{{ entry.item.pk }}" class="text-sm font-medium text-[var(--color-text)] cursor-pointer !mb-0">
+                                        {{ entry.item.libelle }}
+                                    </label>
+                                    <input type="text"
+                                           name="note_{{ entry.item.pk }}"
+                                           value="{{ entry.note }}"
+                                           placeholder="Note (optionnel)"
+                                           class="mt-1 text-xs !py-1">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {# ── Edition form fields ── #}
+                    <div>
+                        <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Informations compl&eacute;mentaires</h3>
+                        <div class="space-y-3">
+                            {# Occupation #}
+                            <div>
+                                <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.occupation.label }}</label>
+                                <select name="occupation" x-model="occupation"
+                                        class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                                    <option value="">---------</option>
+                                    <option value="VACANT" {% if bdc.occupation == 'VACANT' %}selected{% endif %}>Vacant</option>
+                                    <option value="OCCUPE" {% if bdc.occupation == 'OCCUPE' %}selected{% endif %}>Occupé</option>
+                                </select>
+                            </div>
+
+                            {# Vacant : type d'accès #}
+                            <div x-show="occupation === 'VACANT'" x-transition>
+                                <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.type_acces.label }}</label>
+                                <select name="type_acces" x-model="typeAcces"
+                                        class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                                    <option value="">---------</option>
+                                    <option value="BADGE_CODE" {% if bdc.type_acces == 'BADGE_CODE' %}selected{% endif %}>Badge / Code</option>
+                                    <option value="CLE" {% if bdc.type_acces == 'CLE' %}selected{% endif %}>Clé à récupérer</option>
+                                </select>
+                            </div>
+
+                            {# Vacant : détail accès #}
+                            <div x-show="occupation === 'VACANT' && typeAcces !== ''" x-transition>
+                                <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.acces_complement.label }}</label>
+                                {{ form_edition.acces_complement }}
+                            </div>
+
+                            {# Modalité d'accès #}
+                            <div>
+                                <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.modalite_acces.label }}</label>
+                                {{ form_edition.modalite_acces }}
+                            </div>
+
+                            {# Occupé : RDV #}
+                            <div x-show="occupation === 'OCCUPE'" x-transition>
+                                <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.rdv_date.label }}</label>
+                                {{ form_edition.rdv_date }}
+                            </div>
+
+                            {# Notes #}
+                            <div>
+                                <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.notes.label }}</label>
+                                {{ form_edition.notes }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# ── Action buttons (sticky bottom) ── #}
+                <div class="border-t border-[var(--color-border)] p-4 space-y-2">
+                    <button type="submit"
+                            onclick="this.form.querySelector('input[name=nouveau_statut]').value='A_FAIRE'"
+                            class="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-accent hover:bg-accent-dark text-white transition-colors">
+                        Valider &rarr; &laquo; &Agrave; attribuer &raquo;
+                    </button>
+                    <button type="submit"
+                            class="w-full px-4 py-2 text-sm font-medium rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-accent/10 transition-colors">
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+
+            {% else %}
+            {# ── Read-only mode ── #}
+            <div class="flex-1 overflow-y-auto p-5 space-y-5">
+                {% if checklist_items %}
+                <div>
+                    <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Points de contr&ocirc;le</h3>
+                    <div class="space-y-3">
+                        {% for entry in checklist_items %}
+                        <div class="flex items-start gap-3 p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+                            <input type="checkbox"
+                                   {% if entry.coche %}checked{% endif %}
+                                   disabled
+                                   class="mt-0.5 opacity-60">
+                            <div class="flex-1 min-w-0">
+                                <span class="text-sm text-[var(--color-text)]">{{ entry.item.libelle }}</span>
+                                {% if entry.note %}
+                                <p class="text-xs text-[var(--color-text-muted)] mt-1">{{ entry.note }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# ── Read-only info summary ── #}
+                <div>
+                    <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Informations</h3>
+                    <div class="space-y-2 text-sm">
+                        {% if bdc.occupation %}
+                        <div class="flex justify-between">
+                            <span class="text-[var(--color-text-muted)]">Occupation</span>
+                            <span class="text-[var(--color-text)]">{{ bdc.get_occupation_display }}</span>
+                        </div>
+                        {% endif %}
+                        {% if bdc.type_acces %}
+                        <div class="flex justify-between">
+                            <span class="text-[var(--color-text-muted)]">Type d'acc&egrave;s</span>
+                            <span class="text-[var(--color-text)]">{{ bdc.get_type_acces_display }}</span>
+                        </div>
+                        {% endif %}
+                        {% if bdc.modalite_acces %}
+                        <div class="flex justify-between">
+                            <span class="text-[var(--color-text-muted)]">Modalit&eacute; d'acc&egrave;s</span>
+                            <span class="text-[var(--color-text)]">{{ bdc.modalite_acces }}</span>
+                        </div>
+                        {% endif %}
+                        {% if bdc.notes %}
+                        <div>
+                            <span class="text-[var(--color-text-muted)]">Notes</span>
+                            <p class="text-[var(--color-text)] mt-1">{{ bdc.notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -50,7 +50,7 @@ class TestAttribuerST:
         assert action.details["pourcentage"] == "65"
 
     def test_attribution_refuse_si_pas_a_faire(self, bdc_a_traiter, sous_traitant, utilisateur_cdt):
-        with pytest.raises(TransitionInvalide, match="À traiter"):
+        with pytest.raises(TransitionInvalide, match="À contrôler"):
             attribuer_st(bdc_a_traiter, sous_traitant, Decimal("65"), utilisateur_cdt)
 
 

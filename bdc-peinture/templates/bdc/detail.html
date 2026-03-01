@@ -27,7 +27,7 @@
         </div>
 
         {# Action buttons #}
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-2">
             {% if is_secretaire and transitions %}
                 {% for statut_val, statut_label in transitions %}
                 <form method="POST" action="{% url 'bdc:changer_statut' bdc.pk %}">
@@ -70,6 +70,16 @@
                 </button>
             </form>
             {% endif %}
+            {% if is_secretaire and bdc.statut == "A_TRAITER" %}
+            <a href="{% url 'bdc:controle' pk=bdc.pk %}"
+               class="px-3 py-1.5 bg-accent hover:bg-accent-dark text-white text-xs font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                Contr&ocirc;ler
+            </a>
+            <a href="{% url 'bdc:upload' %}"
+               class="px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-medium rounded-lg hover:bg-accent/10 transition-colors">
+                Nouveau BDC
+            </a>
+            {% endif %}
             {% if bdc.pdf_terrain %}
             <a href="{% url 'bdc:terrain' bdc.pk %}"
                class="px-4 py-2 bg-primary/10 dark:bg-white/10 text-primary dark:text-white text-sm font-medium rounded-lg hover:bg-primary/20 dark:hover:bg-white/20 transition-colors">
@@ -78,7 +88,7 @@
             {% endif %}
             {% if bdc.pdf_original %}
             <a href="{{ bdc.pdf_original.url }}" target="_blank"
-               class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium rounded-lg hover:bg-accent/10 transition-colors">
+               class="px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-medium rounded-lg hover:bg-accent/10 transition-colors">
                 Voir le PDF
             </a>
             {% endif %}
@@ -188,6 +198,8 @@
                     <th class="text-left px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Désignation</th>
                     <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Qté</th>
                     <th class="px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Unité</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">P.U. HT</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Montant HT</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-[var(--color-border)]">
@@ -196,6 +208,8 @@
                     <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ ligne.designation }}</td>
                     <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.quantite }}</td>
                     <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ ligne.unite }}</td>
+                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.prix_unitaire|floatformat:2 }} &euro;</td>
+                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.montant|floatformat:2 }} &euro;</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -203,57 +217,6 @@
     </section>
     {% endif %}
 
-    {# ── Édition champs manuels (secrétaire) ── #}
-    {% if is_secretaire and form_edition %}
-    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5"
-             x-data="{ occupation: '{{ bdc.occupation|default:'' }}', typeAcces: '{{ bdc.type_acces|default:'' }}' }">
-        <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Compléter le BDC</h2>
-        <form method="POST" action="{% url 'bdc:modifier' bdc.pk %}">
-            {% csrf_token %}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                    <label for="id_occupation">Vacant / Occupé</label>
-                    <select name="occupation" id="id_occupation" x-model="occupation"
-                            class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
-                        <option value="">---------</option>
-                        <option value="VACANT" {% if bdc.occupation == 'VACANT' %}selected{% endif %}>Vacant</option>
-                        <option value="OCCUPE" {% if bdc.occupation == 'OCCUPE' %}selected{% endif %}>Occupé</option>
-                    </select>
-                </div>
-                <div x-show="occupation === 'VACANT'" x-transition>
-                    <label for="id_type_acces">Type d'accès</label>
-                    <select name="type_acces" id="id_type_acces" x-model="typeAcces"
-                            class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
-                        <option value="">---------</option>
-                        <option value="BADGE_CODE" {% if bdc.type_acces == 'BADGE_CODE' %}selected{% endif %}>Badge / Code</option>
-                        <option value="CLE" {% if bdc.type_acces == 'CLE' %}selected{% endif %}>Clé à récupérer</option>
-                    </select>
-                </div>
-                <div x-show="occupation === 'VACANT' && typeAcces !== ''" x-transition>
-                    <label for="id_acces_complement">Détail accès</label>
-                    {{ form_edition.acces_complement }}
-                </div>
-                <div>
-                    <label for="id_modalite_acces">Modalité d'accès</label>
-                    {{ form_edition.modalite_acces }}
-                </div>
-                <div x-show="occupation === 'OCCUPE'" x-transition>
-                    <label for="id_rdv_date">Date / heure du RDV</label>
-                    {{ form_edition.rdv_date }}
-                </div>
-                <div class="md:col-span-2">
-                    <label for="id_notes">Notes</label>
-                    {{ form_edition.notes }}
-                </div>
-            </div>
-            <div class="mt-4">
-                <button type="submit" class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
-                    Enregistrer
-                </button>
-            </div>
-        </form>
-    </section>
-    {% endif %}
 
     {# ── Historique ── #}
     {% if historique %}

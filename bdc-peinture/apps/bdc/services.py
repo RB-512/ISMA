@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 
 from apps.sous_traitants.models import SousTraitant
 
-from .models import ActionChoices, BonDeCommande, HistoriqueAction, StatutChoices
+from .models import ActionChoices, BonDeCommande, ChecklistItem, HistoriqueAction, StatutChoices
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,14 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             raise BDCIncomplet(
                 "La modalité d'accès est obligatoire avant passage en 'À attribuer'."
             )
+        # Checklist de contrôle : tous les items actifs doivent être cochés
+        items_actifs = ChecklistItem.objects.filter(actif=True).count()
+        if items_actifs > 0:
+            items_coches = bdc.checklist_resultats.filter(item__actif=True, coche=True).count()
+            if items_coches < items_actifs:
+                raise BDCIncomplet(
+                    "Tous les points de contrôle doivent être cochés avant de passer en « À attribuer »."
+                )
 
     # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation à null
     if ancien_statut == StatutChoices.A_FACTURER and nouveau_statut == StatutChoices.EN_COURS:
