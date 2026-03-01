@@ -35,6 +35,12 @@ from .services import (
     valider_realisation,
 )
 
+# Transitions "avant" que la Secrétaire peut déclencher depuis la sidebar.
+# Seul A_TRAITER → A_FAIRE est pertinent ; les autres avancements passent par le CDT.
+SIDEBAR_TRANSITIONS: dict[str, list[str]] = {
+    StatutChoices.A_TRAITER: [StatutChoices.A_FAIRE],
+}
+
 # ─── Dashboard / Liste BDC ───────────────────────────────────────────────────
 
 @login_required
@@ -245,7 +251,6 @@ def creer_bdc(request):
 @login_required
 def detail_sidebar(request, pk: int):
     """Partial HTML for the HTMX sidebar — no base layout."""
-    from .services import TRANSITIONS
 
     bdc = get_object_or_404(
         BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk
@@ -258,12 +263,9 @@ def detail_sidebar(request, pk: int):
 
     transitions = []
     if is_secretaire:
-        transitions_possibles = TRANSITIONS.get(bdc.statut, [])
-        if bdc.statut == StatutChoices.A_FAIRE:
-            transitions_possibles = [s for s in transitions_possibles if s != StatutChoices.EN_COURS]
         transitions = [
             (statut, StatutChoices(statut).label)
-            for statut in transitions_possibles
+            for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])
         ]
 
     form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
@@ -282,7 +284,6 @@ def detail_sidebar(request, pk: int):
 @login_required
 def detail_bdc(request, pk: int):
     """Fiche de détail d'un BDC — accessible à tous les utilisateurs authentifiés."""
-    from .services import TRANSITIONS
 
     bdc = get_object_or_404(
         BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk
@@ -294,14 +295,9 @@ def detail_bdc(request, pk: int):
     is_cdt = request.user.groups.filter(name="CDT").exists()
     form_edition = BDCEditionForm(instance=bdc) if is_secretaire else None
 
-    # Transitions de statut pour la secrétaire
-    # Masquer A_FAIRE → EN_COURS (cette transition passe par l'attribution CDT)
-    transitions_possibles = TRANSITIONS.get(bdc.statut, [])
-    if bdc.statut == StatutChoices.A_FAIRE:
-        transitions_possibles = [s for s in transitions_possibles if s != StatutChoices.EN_COURS]
     transitions = [
         (statut, StatutChoices(statut).label)
-        for statut in transitions_possibles
+        for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])
     ] if is_secretaire else []
 
     return render(request, "bdc/detail.html", {
@@ -335,6 +331,61 @@ def modifier_bdc(request, pk: int):
 
 
 @group_required("Secretaire")
+def sidebar_save_and_transition(request, pk: int):
+    """POST: save edition form + optional status transition, return updated sidebar partial."""
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    bdc = get_object_or_404(
+        BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk
+    )
+    form = BDCEditionForm(request.POST, instance=bdc)
+    error_message = None
+
+    if form.is_valid():
+        form.save()
+        enregistrer_action(bdc, request.user, ActionChoices.MODIFICATION)
+
+        nouveau_statut = form.cleaned_data.get("nouveau_statut")
+        if nouveau_statut:
+            try:
+                changer_statut(bdc, nouveau_statut, request.user)
+            except (TransitionInvalide, BDCIncomplet) as e:
+                error_message = str(e)
+
+    # Rebuild sidebar context
+
+    bdc.refresh_from_db()
+    lignes = bdc.lignes_prestation.all()
+    historique = bdc.historique.all()[:10]
+
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
+    is_cdt = request.user.groups.filter(name="CDT").exists()
+
+    transitions = []
+    if is_secretaire:
+        transitions = [
+            (statut, StatutChoices(statut).label)
+            for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])
+        ]
+
+    form_edition = BDCEditionForm(instance=bdc)
+
+    response = render(request, "bdc/_detail_sidebar.html", {
+        "bdc": bdc,
+        "lignes": lignes,
+        "historique": historique,
+        "transitions": transitions,
+        "form_edition": form_edition,
+        "is_secretaire": is_secretaire,
+        "is_cdt": is_cdt,
+        "error_message": error_message,
+    })
+    response["HX-Trigger"] = "bdc-updated"
+    return response
+
+
+@group_required("Secretaire")
 def changer_statut_bdc(request, pk: int):
     """POST-only : applique une transition de statut sur le BDC."""
     if request.method != "POST":
@@ -364,7 +415,7 @@ def attribuer_bdc(request, pk: int):
     )
 
     if bdc.statut != StatutChoices.A_FAIRE:
-        messages.error(request, "Ce BDC n'est pas en statut « À faire ».")
+        messages.error(request, "Ce BDC n'est pas en statut « À attribuer ».")
         return redirect("bdc:detail", pk=pk)
 
     if request.method == "GET":
