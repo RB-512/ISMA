@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "feat/*" ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: bdc_test
+          POSTGRES_USER: bdc_user
+          POSTGRES_PASSWORD: bdc_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        working-directory: bdc-peinture
+        run: uv sync
+
+      - name: Lint with Ruff
+        working-directory: bdc-peinture
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Run tests
+        working-directory: bdc-peinture
+        env:
+          DB_NAME: bdc_test
+          DB_USER: bdc_user
+          DB_PASSWORD: bdc_password
+          DB_HOST: localhost
+          DB_PORT: 5432
+          SECRET_KEY: test-secret-key-not-for-production
+        run: uv run pytest -v --tb=short
