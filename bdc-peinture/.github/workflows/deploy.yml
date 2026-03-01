@@ -1,12 +1,17 @@
 name: CD
 
 on:
-  push:
+  # Se déclenche uniquement après que le workflow CI est terminé avec succès sur main
+  workflow_run:
+    workflows: ["CI"]
     branches: [ main ]
+    types: [ completed ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Ne déploie que si la CI a réussi
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Deploy to VPS via SSH

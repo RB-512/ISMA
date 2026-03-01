@@ -17,6 +17,17 @@ git pull origin main
 echo ">>> 2. Build et redémarrage des conteneurs..."
 docker compose -f docker-compose.prod.yml up -d --build
 
+echo ">>> 2b. Attente que le nouveau conteneur web soit prêt..."
+for i in {1..12}; do
+    if docker compose -f docker-compose.prod.yml exec web true 2>/dev/null; then
+        break
+    fi
+    echo "  Attente... ($i/12)"
+    sleep 5
+done
+docker compose -f docker-compose.prod.yml exec web true \
+    || { echo "ERREUR: le conteneur web n'a pas démarré correctement"; exit 1; }
+
 echo ">>> 3. Migrations..."
 docker compose -f docker-compose.prod.yml exec web uv run manage.py migrate --noinput
 

@@ -27,7 +27,7 @@ RUN uv sync --frozen --no-dev
 
 COPY . .
 
-RUN uv run manage.py collectstatic --noinput --settings=config.settings.prod || true
+# collectstatic est exécuté au runtime par deploy.sh (nécessite SECRET_KEY)
 
 EXPOSE 8000
 

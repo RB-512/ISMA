@@ -9,21 +9,7 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: bdc_test
-          POSTGRES_USER: bdc_user
-          POSTGRES_PASSWORD: bdc_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Les tests utilisent SQLite en mémoire (config/settings/test.py) — pas besoin de PostgreSQL en CI
 
     steps:
       - uses: actions/checkout@v4
@@ -47,10 +33,5 @@ jobs:
       - name: Run tests
         working-directory: bdc-peinture
         env:
-          DB_NAME: bdc_test
-          DB_USER: bdc_user
-          DB_PASSWORD: bdc_password
-          DB_HOST: localhost
-          DB_PORT: 5432
           SECRET_KEY: test-secret-key-not-for-production
         run: uv run pytest -v --tb=short

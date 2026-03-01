@@ -34,8 +34,17 @@ echo ">>> Commande : nano $APP_DIR/bdc-peinture/.env"
 echo ">>> Appuyez sur Entrée quand c'est fait..."
 read -r
 
-echo "=== 5. Démarrer les services (sans SSL d'abord) ==="
-docker compose -f docker-compose.prod.yml up -d db web nginx
+echo "=== 5. Démarrer les services avec config Nginx bootstrap (HTTP seul) ==="
+# La config nginx.conf référence des certificats SSL qui n'existent pas encore.
+# On utilise nginx-bootstrap.conf (HTTP seul) pour obtenir d'abord le certificat.
+cp nginx/nginx-bootstrap.conf nginx/active.conf
+# Monter active.conf au lieu de nginx.conf pour cette étape
+docker compose -f docker-compose.prod.yml up -d db web
+docker run -d --name nginx-bootstrap \
+    -p 80:80 \
+    -v "$APP_DIR/bdc-peinture/nginx/nginx-bootstrap.conf:/etc/nginx/conf.d/default.conf:ro" \
+    -v certbot-webroot:/var/www/certbot \
+    nginx:1.27-alpine
 
 echo "=== 6. Obtenir le certificat SSL ==="
 docker compose -f docker-compose.prod.yml run --rm certbot certonly \
@@ -47,8 +56,9 @@ docker compose -f docker-compose.prod.yml run --rm certbot certonly \
     -d "$DOMAIN" \
     -d www."$DOMAIN"
 
-echo "=== 7. Redémarrer Nginx avec SSL ==="
-docker compose -f docker-compose.prod.yml restart nginx
+echo "=== 7. Arrêter le Nginx bootstrap et démarrer Nginx complet avec SSL ==="
+docker stop nginx-bootstrap && docker rm nginx-bootstrap
+docker compose -f docker-compose.prod.yml up -d nginx
 
 echo "=== 8. Migrations et données initiales ==="
 docker compose -f docker-compose.prod.yml exec web uv run manage.py migrate

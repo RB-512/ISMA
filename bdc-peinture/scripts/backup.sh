@@ -14,10 +14,11 @@ echo "$(date): Début backup"
 
 # 1. Backup base de données
 cd "$APP_DIR"
-DB_USER=$(grep DB_USER .env | cut -d= -f2)
-DB_NAME=$(grep DB_NAME .env | cut -d= -f2)
+DB_USER=$(grep -E "^DB_USER=" .env | cut -d= -f2 | tr -d '"')
+DB_NAME=$(grep -E "^DB_NAME=" .env | cut -d= -f2 | tr -d '"')
+DB_PASSWORD=$(grep -E "^DB_PASSWORD=" .env | cut -d= -f2 | tr -d '"')
 
-docker compose -f docker-compose.prod.yml exec -T db \
+PGPASSWORD="$DB_PASSWORD" docker compose -f docker-compose.prod.yml exec -T db \
     pg_dump -U "$DB_USER" "$DB_NAME" \
     > "$BACKUP_DIR/db/${DATE}.sql"
 
