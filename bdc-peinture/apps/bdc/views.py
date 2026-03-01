@@ -946,7 +946,8 @@ def controle_bdc(request, pk: int):
     if request.method == "POST" and est_editable:
         # Sauver le formulaire d'édition
         form = BDCEditionForm(request.POST, instance=bdc)
-        if form.is_valid():
+        form_valid = form.is_valid()
+        if form_valid:
             form.save()
             enregistrer_action(bdc, request.user, ActionChoices.MODIFICATION)
 
@@ -960,9 +961,9 @@ def controle_bdc(request, pk: int):
                 defaults={"coche": coche, "note": note},
             )
 
-        # Transition si demandée
+        # Transition si demandée ET formulaire valide
         nouveau_statut = request.POST.get("nouveau_statut")
-        if nouveau_statut:
+        if nouveau_statut and form_valid:
             try:
                 changer_statut(bdc, nouveau_statut, request.user)
                 messages.success(
@@ -974,8 +975,9 @@ def controle_bdc(request, pk: int):
                 messages.error(request, str(e))
 
         bdc.refresh_from_db()
-
-    form = BDCEditionForm(instance=bdc) if est_editable else None
+        # form conservé avec ses erreurs (pas remplacé par un formulaire vierge)
+    else:
+        form = BDCEditionForm(instance=bdc) if est_editable else None
 
     # Build combined checklist data for template
     resultats = {r.item_id: r for r in bdc.checklist_resultats.filter(item__actif=True)}

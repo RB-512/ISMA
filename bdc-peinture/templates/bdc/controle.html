@@ -108,6 +108,7 @@
                                     <option value="VACANT" {% if bdc.occupation == 'VACANT' %}selected{% endif %}>Vacant</option>
                                     <option value="OCCUPE" {% if bdc.occupation == 'OCCUPE' %}selected{% endif %}>Occupé</option>
                                 </select>
+                                {% if form_edition.occupation.errors %}<p class="mt-1 text-xs text-red-500">{{ form_edition.occupation.errors|join:", " }}</p>{% endif %}
                             </div>
 
                             {# Vacant : type d'accès #}
@@ -119,18 +120,21 @@
                                     <option value="BADGE_CODE" {% if bdc.type_acces == 'BADGE_CODE' %}selected{% endif %}>Badge / Code</option>
                                     <option value="CLE" {% if bdc.type_acces == 'CLE' %}selected{% endif %}>Clé à récupérer</option>
                                 </select>
+                                {% if form_edition.type_acces.errors %}<p class="mt-1 text-xs text-red-500">{{ form_edition.type_acces.errors|join:", " }}</p>{% endif %}
                             </div>
 
                             {# Vacant : détail accès #}
                             <div x-show="occupation === 'VACANT' && typeAcces !== ''" x-transition>
                                 <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.acces_complement.label }} <span class="text-red-500">*</span></label>
                                 {{ form_edition.acces_complement }}
+                                {% if form_edition.acces_complement.errors %}<p class="mt-1 text-xs text-red-500">{{ form_edition.acces_complement.errors|join:", " }}</p>{% endif %}
                             </div>
 
                             {# Occupé : RDV #}
                             <div x-show="occupation === 'OCCUPE'" x-transition>
                                 <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.rdv_date.label }} <span class="text-red-500">*</span></label>
                                 {{ form_edition.rdv_date }}
+                                {% if form_edition.rdv_date.errors %}<p class="mt-1 text-xs text-red-500">{{ form_edition.rdv_date.errors|join:", " }}</p>{% endif %}
                             </div>
 
                             {# Notes #}

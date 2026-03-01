@@ -223,6 +223,39 @@ class TestControlePost:
         bdc_a_traiter.refresh_from_db()
         assert bdc_a_traiter.statut == StatutChoices.A_FAIRE
 
+    def test_transition_bloquee_si_occupation_manquante(self, client_secretaire, bdc_a_traiter):
+        """POST transition sans occupation → formulaire invalide, transition bloquée, statut inchangé."""
+        url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
+        data = {"occupation": "", "notes": "", "nouveau_statut": "A_FAIRE"}
+        response = client_secretaire.post(url, data)
+
+        assert response.status_code == 200
+        bdc_a_traiter.refresh_from_db()
+        assert bdc_a_traiter.statut == StatutChoices.A_TRAITER
+        assert "occupation" in response.context["form_edition"].errors
+
+    def test_transition_bloquee_si_rdv_date_manquante_occupe(self, client_secretaire, bdc_a_traiter):
+        """POST avec occupation=OCCUPE sans rdv_date → formulaire invalide, transition bloquée."""
+        url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
+        data = {"occupation": "OCCUPE", "rdv_date": "", "notes": "", "nouveau_statut": "A_FAIRE"}
+        response = client_secretaire.post(url, data)
+
+        assert response.status_code == 200
+        bdc_a_traiter.refresh_from_db()
+        assert bdc_a_traiter.statut == StatutChoices.A_TRAITER
+        assert "rdv_date" in response.context["form_edition"].errors
+
+    def test_transition_bloquee_si_type_acces_manquant_vacant(self, client_secretaire, bdc_a_traiter):
+        """POST avec occupation=VACANT sans type_acces → formulaire invalide, transition bloquée."""
+        url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
+        data = {"occupation": "VACANT", "type_acces": "", "acces_complement": "", "notes": "", "nouveau_statut": "A_FAIRE"}
+        response = client_secretaire.post(url, data)
+
+        assert response.status_code == 200
+        bdc_a_traiter.refresh_from_db()
+        assert bdc_a_traiter.statut == StatutChoices.A_TRAITER
+        assert "type_acces" in response.context["form_edition"].errors
+
 
 # ─── Tests service-level checklist validation ────────────────────────────────
 

@@ -71,8 +71,8 @@ class TestModifierBDC:
 class TestChangerStatutBDC:
 
     def test_transition_valide(self, client, utilisateur_secretaire, bdc_a_traiter):
-        """A_TRAITER → A_FAIRE avec occupation + type_acces renseignés."""
-        bdc_a_traiter.occupation = "OCCUPE"
+        """A_TRAITER → A_FAIRE avec occupation VACANT + type_acces renseignés."""
+        bdc_a_traiter.occupation = "VACANT"
         bdc_a_traiter.type_acces = "BADGE_CODE"
         bdc_a_traiter.save()
         client.force_login(utilisateur_secretaire)
@@ -85,7 +85,7 @@ class TestChangerStatutBDC:
         assert bdc_a_traiter.statut == StatutChoices.A_FAIRE
 
     def test_transition_valide_message_succes(self, client, utilisateur_secretaire, bdc_a_traiter):
-        bdc_a_traiter.occupation = "OCCUPE"
+        bdc_a_traiter.occupation = "VACANT"
         bdc_a_traiter.type_acces = "BADGE_CODE"
         bdc_a_traiter.save()
         client.force_login(utilisateur_secretaire)
