@@ -3,19 +3,11 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from django.test import Client
 
 from apps.bdc.models import BonDeCommande, StatutChoices
 from apps.bdc.services import attribuer_st
 from apps.bdc.views import _get_repartition_st
 from apps.sous_traitants.models import SousTraitant
-
-
-@pytest.fixture
-def client_cdt(utilisateur_cdt) -> Client:
-    client = Client()
-    client.login(username="cdt_test", password="testpass123")
-    return client
 
 
 @pytest.fixture

@@ -14,6 +14,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -58,6 +59,69 @@ def _parse_date(value):
         except (ValueError, TypeError):
             continue
     return None
+
+
+PERIODES_CHOICES = [
+    ("semaine", "Semaine"),
+    ("mois", "Mois"),
+    ("trimestre", "Trimestre"),
+    ("annee", "Année"),
+]
+
+
+def _parse_periode_params(request):
+    """Parse les query params de periode et retourne les bornes.
+
+    Returns:
+        (date_du, date_au, date_du_n1, date_au_n1, periode_active)
+    """
+    from apps.bdc.periode import calculer_bornes_periode
+
+    periode = request.GET.get("periode", "")
+    date_du_str = request.GET.get("date_du", "")
+    date_au_str = request.GET.get("date_au", "")
+    date_du = date_au = date_du_n1 = date_au_n1 = None
+    periode_active = ""
+
+    if periode and periode != "custom":
+        date_ref_str = request.GET.get("date", "")
+        date_ref = _parse_date(date_ref_str) if date_ref_str else None
+        bornes = calculer_bornes_periode(periode, date_ref)
+        if bornes:
+            date_du, date_au, date_du_n1, date_au_n1 = bornes
+            periode_active = periode
+    elif date_du_str and date_au_str:
+        date_du = _parse_date(date_du_str)
+        date_au = _parse_date(date_au_str)
+        if date_du and date_au:
+            delta = date_au - date_du
+            date_au_n1 = date_du - timedelta(days=1)
+            date_du_n1 = date_au_n1 - delta
+            periode_active = "custom"
+
+    return date_du, date_au, date_du_n1, date_au_n1, periode_active
+
+
+def _attach_n1_data(sous_traitants, date_du_n1, date_au_n1, statuts=None, with_delta=False):
+    """Attache les donnees N-1 sur chaque ST annote.
+
+    Modifie la liste en place. Retourne True si N-1 est present.
+    """
+    if not (date_du_n1 and date_au_n1):
+        return False
+    n1_qs = _get_repartition_st(date_du=date_du_n1, date_au=date_au_n1, statuts=statuts)
+    n1_map = {st.pk: st for st in n1_qs}
+    for st in sous_traitants:
+        st_n1 = n1_map.get(st.pk)
+        if st_n1:
+            st.nb_bdc_n1 = st_n1.nb_bdc
+            st.total_montant_st_n1 = st_n1.total_montant_st
+        else:
+            st.nb_bdc_n1 = 0
+            st.total_montant_st_n1 = None
+        if with_delta:
+            st.delta_bdc = st.nb_bdc - (st.nb_bdc_n1 or 0)
+    return True
 
 
 def _parse_decimal(value):
@@ -570,8 +634,6 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
         date_du/date_au: bornes de periode (filtre sur Coalesce(date_emission, created_at)).
         statuts: liste de StatutChoices a filtrer (defaut: [EN_COURS]).
     """
-    from django.db.models.functions import Coalesce
-
     from apps.sous_traitants.models import SousTraitant
 
     if statuts is None:
@@ -599,58 +661,18 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
 @group_required("CDT")
 def attribution_partial(request, pk: int):
     """Partial HTMX : tableau repartition ST + formulaire attribution/reattribution."""
-    from apps.bdc.periode import calculer_bornes_periode
-
     bdc = get_object_or_404(BonDeCommande, pk=pk)
     reattribution = bdc.statut == StatutChoices.EN_COURS
 
-    # Parse period params
-    periode = request.GET.get("periode", "")
-    date_du_str = request.GET.get("date_du", "")
-    date_au_str = request.GET.get("date_au", "")
-    date_du = date_au = date_du_n1 = date_au_n1 = None
-    periode_active = ""
-
-    if periode and periode != "custom":
-        bornes = calculer_bornes_periode(periode)
-        if bornes:
-            date_du, date_au, date_du_n1, date_au_n1 = bornes
-            periode_active = periode
-    elif date_du_str and date_au_str:
-        date_du = _parse_date(date_du_str)
-        date_au = _parse_date(date_au_str)
-        if date_du and date_au:
-            delta = date_au - date_du
-            date_au_n1 = date_du - timedelta(days=1)
-            date_du_n1 = date_au_n1 - delta
-            periode_active = "custom"
-
-    periodes_choices = [
-        ("semaine", "Semaine"),
-        ("mois", "Mois"),
-        ("trimestre", "Trimestre"),
-        ("annee", "Année"),
-    ]
+    date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
 
     def _build_context(form):
         repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
-        has_n1 = False
-        if date_du_n1 and date_au_n1:
-            n1_qs = _get_repartition_st(date_du=date_du_n1, date_au=date_au_n1)
-            n1_map = {s.pk: s for s in n1_qs}
-            for s in repartition:
-                s_n1 = n1_map.get(s.pk)
-                if s_n1:
-                    s.nb_bdc_n1 = s_n1.nb_bdc
-                    s.total_montant_st_n1 = s_n1.total_montant_st
-                else:
-                    s.nb_bdc_n1 = 0
-                    s.total_montant_st_n1 = None
-            has_n1 = True
+        has_n1 = _attach_n1_data(repartition, date_du_n1, date_au_n1)
         return {
             "bdc": bdc, "form": form, "reattribution": reattribution,
             "repartition": repartition, "has_n1": has_n1,
-            "periodes": periodes_choices,
+            "periodes": PERIODES_CHOICES,
             "periode_active": periode_active,
             "date_du": date_du.isoformat() if date_du else "",
             "date_au": date_au.isoformat() if date_au else "",
@@ -728,64 +750,20 @@ def valider_facturation_bdc(request, pk: int):
 @group_required("CDT")
 def recoupement_st_liste(request):
     """Liste des sous-traitants avec compteurs BDC par statut, filtrable par periode."""
-    from apps.bdc.periode import calculer_bornes_periode
-
     statuts = [StatutChoices.EN_COURS, StatutChoices.A_FACTURER, StatutChoices.FACTURE]
 
-    # Parse period params
-    periode = request.GET.get("periode", "")
-    date_du_str = request.GET.get("date_du", "")
-    date_au_str = request.GET.get("date_au", "")
-    date_du = date_au = date_du_n1 = date_au_n1 = None
-    periode_active = ""
-
-    if periode and periode != "custom":
-        date_ref_str = request.GET.get("date", "")
-        date_ref = _parse_date(date_ref_str) if date_ref_str else None
-        bornes = calculer_bornes_periode(periode, date_ref)
-        if bornes:
-            date_du, date_au, date_du_n1, date_au_n1 = bornes
-            periode_active = periode
-    elif date_du_str and date_au_str:
-        date_du = _parse_date(date_du_str)
-        date_au = _parse_date(date_au_str)
-        if date_du and date_au:
-            delta = date_au - date_du
-            date_au_n1 = date_du - timedelta(days=1)
-            date_du_n1 = date_au_n1 - delta
-            periode_active = "custom"
+    date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
 
     sous_traitants = list(
         _get_repartition_st(date_du=date_du, date_au=date_au, statuts=statuts).filter(nb_bdc__gt=0)
     )
 
-    # Periode N-1
-    has_n1 = False
-    if date_du_n1 and date_au_n1:
-        sous_traitants_n1_qs = _get_repartition_st(date_du=date_du_n1, date_au=date_au_n1, statuts=statuts)
-        n1_map = {st.pk: st for st in sous_traitants_n1_qs}
-        for st in sous_traitants:
-            st_n1 = n1_map.get(st.pk)
-            if st_n1:
-                st.nb_bdc_n1 = st_n1.nb_bdc
-                st.total_montant_st_n1 = st_n1.total_montant_st
-            else:
-                st.nb_bdc_n1 = 0
-                st.total_montant_st_n1 = None
-            st.delta_bdc = st.nb_bdc - (st.nb_bdc_n1 or 0)
-        has_n1 = True
-
-    periodes_choices = [
-        ("semaine", "Semaine"),
-        ("mois", "Mois"),
-        ("trimestre", "Trimestre"),
-        ("annee", "Année"),
-    ]
+    has_n1 = _attach_n1_data(sous_traitants, date_du_n1, date_au_n1, statuts=statuts, with_delta=True)
 
     context = {
         "sous_traitants": sous_traitants,
         "has_n1": has_n1,
-        "periodes": periodes_choices,
+        "periodes": PERIODES_CHOICES,
         "periode_active": periode_active,
         "date_du": date_du.isoformat() if date_du else "",
         "date_au": date_au.isoformat() if date_au else "",

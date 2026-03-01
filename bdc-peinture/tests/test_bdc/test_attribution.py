@@ -6,7 +6,6 @@ import logging
 from decimal import Decimal
 
 import pytest
-from django.test import Client
 from django.urls import reverse
 
 from apps.bdc.models import HistoriqueAction, StatutChoices
@@ -140,20 +139,6 @@ class TestNotifierSTAttribution:
 
 
 # ─── 7.3 Tests vues attribuer_bdc / reattribuer_bdc ──────────────────────────
-
-
-@pytest.fixture
-def client_cdt(utilisateur_cdt) -> Client:
-    client = Client()
-    client.login(username="cdt_test", password="testpass123")
-    return client
-
-
-@pytest.fixture
-def client_secretaire(utilisateur_secretaire) -> Client:
-    client = Client()
-    client.login(username="secretaire_test", password="testpass123")
-    return client
 
 
 class TestAttribuerBDCView:

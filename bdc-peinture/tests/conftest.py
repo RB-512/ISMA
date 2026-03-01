@@ -3,6 +3,7 @@ Fixtures pytest partagées entre tous les tests.
 """
 import pytest
 from django.contrib.auth.models import Group, User
+from django.test import Client
 
 from apps.bdc.models import Bailleur, BonDeCommande, StatutChoices
 from apps.sous_traitants.models import SousTraitant
@@ -45,6 +46,22 @@ def utilisateur_cdt(db, groupe_cdt) -> User:
     )
     user.groups.add(groupe_cdt)
     return user
+
+
+# ─── Clients authentifies ────────────────────────────────────────────────────
+
+@pytest.fixture
+def client_cdt(utilisateur_cdt) -> Client:
+    client = Client()
+    client.login(username="cdt_test", password="testpass123")
+    return client
+
+
+@pytest.fixture
+def client_secretaire(utilisateur_secretaire) -> Client:
+    client = Client()
+    client.login(username="secretaire_test", password="testpass123")
+    return client
 
 
 # ─── Bailleurs ────────────────────────────────────────────────────────────────

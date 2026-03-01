@@ -25,17 +25,17 @@ Context requis :
             <label class="block text-xs text-[var(--color-text-muted)] mb-0.5">Du</label>
             <input type="date" name="date_du" value="{{ date_du|default:'' }}"
                    class="px-2 py-1.5 text-xs border border-[var(--color-border)] rounded-lg bg-[var(--color-surface-card)] text-[var(--color-text)]"
-                   id="period-du">
+                   id="period-du{{ hx_target|slugify }}">
         </div>
         <div>
             <label class="block text-xs text-[var(--color-text-muted)] mb-0.5">Au</label>
             <input type="date" name="date_au" value="{{ date_au|default:'' }}"
                    class="px-2 py-1.5 text-xs border border-[var(--color-border)] rounded-lg bg-[var(--color-surface-card)] text-[var(--color-text)]"
-                   id="period-au">
+                   id="period-au{{ hx_target|slugify }}">
         </div>
         <button hx-get="{{ hx_url }}"
                 hx-target="{{ hx_target }}" hx-swap="innerHTML"
-                hx-include="#period-du, #period-au"
+                hx-include="#period-du{{ hx_target|slugify }}, #period-au{{ hx_target|slugify }}"
                 class="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent hover:bg-accent-dark text-white transition-colors">
             Appliquer
         </button>
