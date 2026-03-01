@@ -111,7 +111,7 @@
 
                 {# Occupation #}
                 <div>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.occupation.label }}</label>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.occupation.label }} <span class="text-red-500">*</span></label>
                     <select name="occupation" x-model="occupation"
                             class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
                         <option value="">---------</option>
@@ -122,7 +122,7 @@
 
                 {# Vacant : type d'accès (badge/clé) #}
                 <div x-show="occupation === 'VACANT'" x-transition>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.type_acces.label }}</label>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.type_acces.label }} <span class="text-red-500">*</span></label>
                     <select name="type_acces" x-model="typeAcces"
                             class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
                         <option value="">---------</option>
@@ -133,19 +133,13 @@
 
                 {# Vacant : détail accès (code/badge ou lieu clé) #}
                 <div x-show="occupation === 'VACANT' && typeAcces !== ''" x-transition>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.acces_complement.label }}</label>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.acces_complement.label }} <span class="text-red-500">*</span></label>
                     {{ form_edition.acces_complement }}
-                </div>
-
-                {# Modalité d'accès (toujours visible) #}
-                <div>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.modalite_acces.label }}</label>
-                    {{ form_edition.modalite_acces }}
                 </div>
 
                 {# Occupé : prise de RDV avec le locataire #}
                 <div x-show="occupation === 'OCCUPE'" x-transition>
-                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.rdv_date.label }}</label>
+                    <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.rdv_date.label }} <span class="text-red-500">*</span></label>
                     {{ form_edition.rdv_date }}
                 </div>
 

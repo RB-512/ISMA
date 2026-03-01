@@ -143,9 +143,6 @@
                 {% if bdc.acces_complement %}
                 <div><dt class="inline text-[var(--color-text-muted)]">Détail accès :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.acces_complement }}</dd></div>
                 {% endif %}
-                {% if bdc.modalite_acces %}
-                <div><dt class="inline text-[var(--color-text-muted)]">Modalité d'accès :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.modalite_acces }}</dd></div>
-                {% endif %}
                 {% if bdc.rdv_date %}
                 <div><dt class="inline text-[var(--color-text-muted)]">RDV :</dt> <dd class="inline text-[var(--color-text)] font-mono">{{ bdc.rdv_date|date:"d/m/Y H:i" }}</dd></div>
                 {% endif %}
