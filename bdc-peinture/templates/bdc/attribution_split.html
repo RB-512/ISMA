@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{% if reattribution %}Réattribuer{% else %}Attribuer{% endif %} BDC {{ bdc.numero_bdc }} — ISMA{% endblock %}
+
+{% block content %}
+<div>
+    {# ── Header ── #}
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'bdc:detail' pk=bdc.pk %}"
+               class="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]/50 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            </a>
+            <h1 class="text-xl font-bold font-mono text-[var(--color-text)]">BDC {{ bdc.numero_bdc }}</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                {% if bdc.statut == 'A_FAIRE' %}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300
+                {% elif bdc.statut == 'EN_COURS' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300
+                {% endif %}">
+                {{ bdc.get_statut_display }}
+            </span>
+            <span class="text-sm text-[var(--color-text-muted)]">{{ bdc.bailleur.code }}</span>
+        </div>
+    </div>
+
+    {# ── Split-screen layout ── #}
+    <div class="flex gap-4" style="height: calc(100vh - 140px);">
+
+        {# ── Left panel: PDF viewer (60%) ── #}
+        <div class="w-3/5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)] overflow-hidden">
+            {% if bdc.pdf_original %}
+            <iframe src="{{ bdc.pdf_original.url }}" class="w-full h-full" title="PDF du BDC {{ bdc.numero_bdc }}"></iframe>
+            {% else %}
+            <div class="flex items-center justify-center h-full text-[var(--color-text-muted)]">
+                <div class="text-center">
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <p class="text-sm">Aucun PDF disponible</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Right panel: Attribution (40%) ── #}
+        <div class="w-2/5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)] overflow-hidden flex flex-col">
+            <form method="POST" class="h-full flex flex-col">
+                {% csrf_token %}
+
+                {# ── Scrollable panel content (HTMX reloadable) ── #}
+                <div id="attribution-panel">
+                    {% include "bdc/partials/_attribution_panel.html" %}
+                </div>
+
+                {# ── Action buttons (sticky bottom) ── #}
+                <div class="border-t border-[var(--color-border)] p-4 space-y-2">
+                    <button type="submit"
+                            class="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-success hover:bg-success-dark text-white transition-colors">
+                        {% if reattribution %}Réattribuer{% else %}Attribuer{% endif %}
+                    </button>
+                    <a href="{% url 'bdc:detail' pk=bdc.pk %}"
+                       class="w-full block text-center px-4 py-2 text-sm font-medium rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-accent/10 transition-colors">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

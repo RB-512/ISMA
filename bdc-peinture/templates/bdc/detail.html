@@ -40,18 +40,16 @@
                 {% endfor %}
             {% endif %}
             {% if is_cdt and bdc.statut == "A_FAIRE" %}
-            <button hx-get="{% url 'bdc:attribution_partial' bdc.pk %}"
-                    hx-target="#attribution-zone" hx-swap="innerHTML"
-                    class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+            <a href="{% url 'bdc:attribution_split' bdc.pk %}"
+               class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
                 Attribuer
-            </button>
+            </a>
             {% endif %}
             {% if is_cdt and bdc.statut == "EN_COURS" %}
-            <button hx-get="{% url 'bdc:attribution_partial' bdc.pk %}"
-                    hx-target="#attribution-zone" hx-swap="innerHTML"
-                    class="px-4 py-2 bg-warning hover:bg-warning-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+            <a href="{% url 'bdc:attribution_split' bdc.pk %}"
+               class="px-4 py-2 bg-warning hover:bg-warning-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
                 Réattribuer
-            </button>
+            </a>
             <form method="POST" action="{% url 'bdc:valider_realisation' bdc.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">

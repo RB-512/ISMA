@@ -659,6 +659,66 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
 
 
 @group_required("CDT")
+def attribution_split(request, pk: int):
+    """Page split-screen d'attribution : PDF a gauche, panneau d'action a droite."""
+    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
+    reattribution = bdc.statut == StatutChoices.EN_COURS
+
+    if bdc.statut not in (StatutChoices.A_FAIRE, StatutChoices.EN_COURS):
+        messages.error(request, "Ce BDC ne peut pas être attribué dans son statut actuel.")
+        return redirect("bdc:detail", pk=pk)
+
+    date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
+
+    def _panel_context(form):
+        repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
+        has_n1 = _attach_n1_data(repartition, date_du_n1, date_au_n1)
+        return {
+            "bdc": bdc, "form": form, "reattribution": reattribution,
+            "repartition": repartition, "has_n1": has_n1,
+            "periodes": PERIODES_CHOICES,
+            "periode_active": periode_active,
+            "date_du": date_du.isoformat() if date_du else "",
+            "date_au": date_au.isoformat() if date_au else "",
+            "hx_url": reverse("bdc:attribution_split", kwargs={"pk": bdc.pk}),
+            "hx_target": "#attribution-panel",
+        }
+
+    if request.method == "POST":
+        form = AttributionForm(request.POST)
+        if form.is_valid():
+            st = form.cleaned_data["sous_traitant"]
+            pct = form.cleaned_data["pourcentage_st"]
+            try:
+                if reattribution:
+                    reattribuer_st(bdc, st, pct, request.user)
+                else:
+                    attribuer_st(bdc, st, pct, request.user)
+            except TransitionInvalide as e:
+                messages.error(request, str(e))
+                return redirect("bdc:detail", pk=pk)
+            notifier_st_attribution(bdc)
+            msg = "réattribué" if reattribution else "attribué"
+            messages.success(request, f"BDC n°{bdc.numero_bdc} {msg} à {st}.")
+            return redirect("bdc:detail", pk=bdc.pk)
+        ctx = _panel_context(form)
+        if request.headers.get("HX-Request"):
+            return render(request, "bdc/partials/_attribution_panel.html", ctx)
+        return render(request, "bdc/attribution_split.html", ctx)
+
+    # GET
+    initial = {}
+    if reattribution and bdc.sous_traitant:
+        initial = {"sous_traitant": bdc.sous_traitant, "pourcentage_st": bdc.pourcentage_st}
+    form = AttributionForm(initial=initial)
+    ctx = _panel_context(form)
+
+    if request.headers.get("HX-Request"):
+        return render(request, "bdc/partials/_attribution_panel.html", ctx)
+    return render(request, "bdc/attribution_split.html", ctx)
+
+
+@group_required("CDT")
 def attribution_partial(request, pk: int):
     """Partial HTMX : tableau repartition ST + formulaire attribution/reattribution."""
     bdc = get_object_or_404(BonDeCommande, pk=pk)
