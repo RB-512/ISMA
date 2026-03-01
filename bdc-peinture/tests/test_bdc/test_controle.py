@@ -347,3 +347,29 @@ class TestSidebarReadOnly:
         resp = client_secretaire.get(url)
         content = resp.content.decode()
         assert "Contr" in content  # "Contrôler ce BDC"
+
+
+# ─── Tests Toast après contrôle ──────────────────────────────────────────────
+
+
+class TestControleToast:
+    """Toast message after contrôle validation."""
+
+    def test_validation_shows_success_toast(self, client_secretaire, bdc_a_traiter, checklist_items):
+        url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
+        data = {
+            "occupation": "VACANT",
+            "type_acces": "BADGE_CODE",
+            "acces_complement": "Code 1234",
+            "rdv_date": "",
+            "notes": "",
+            "nouveau_statut": "A_FAIRE",
+        }
+        # Cocher tous les items de checklist
+        for item in checklist_items:
+            data[f"check_{item.pk}"] = "on"
+            data[f"note_{item.pk}"] = ""
+
+        resp = client_secretaire.post(url, data, follow=True)
+        messages_list = list(resp.context["messages"])
+        assert any("valid" in str(m) and "attribuer" in str(m) for m in messages_list)

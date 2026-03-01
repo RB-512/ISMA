@@ -957,6 +957,10 @@ def controle_bdc(request, pk: int):
         if nouveau_statut:
             try:
                 changer_statut(bdc, nouveau_statut, request.user)
+                messages.success(
+                    request,
+                    f"BDC n°{bdc.numero_bdc} validé — statut : À attribuer.",
+                )
                 return redirect("bdc:index")
             except (TransitionInvalide, BDCIncomplet) as e:
                 messages.error(request, str(e))
