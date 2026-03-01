@@ -62,7 +62,7 @@
                     </div>
                 </template>
 
-                <input type="file" x-ref="fileInput" @change="handleSelect($event)"
+                <input type="file" x-ref="fileInput" @click.stop @change="handleSelect($event)"
                        name="pdf_file" accept=".pdf,application/pdf" required
                        class="sr-only">
             </div>

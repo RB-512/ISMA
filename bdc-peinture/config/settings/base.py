@@ -110,6 +110,9 @@ MEDIA_ROOT = config("MEDIA_ROOT", default=str(BASE_DIR / "media"))
 # Default primary key
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Autoriser l'affichage des PDFs dans un iframe (même origine)
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 # Email (notifications)
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@bdc-peinture.fr")

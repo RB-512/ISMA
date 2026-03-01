@@ -21,8 +21,16 @@ from apps.accounts.decorators import group_required
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
 
 from .filters import BonDeCommandeFilter
-from .forms import AttributionForm, BDCEditionForm, BonDeCommandeForm
-from .models import ActionChoices, Bailleur, BonDeCommande, LignePrestation, StatutChoices
+from .forms import AttributionForm, BDCEditionForm
+from .models import (
+    ActionChoices,
+    Bailleur,
+    BonDeCommande,
+    ChecklistItem,
+    ChecklistResultat,
+    LignePrestation,
+    StatutChoices,
+)
 from .notifications import notifier_st_attribution
 from .services import (
     BDCIncomplet,
@@ -34,6 +42,32 @@ from .services import (
     valider_facturation,
     valider_realisation,
 )
+
+
+def _parse_date(value):
+    """Convertit une chaîne date (session) en objet date ou None."""
+    if not value:
+        return None
+    if isinstance(value, date):
+        return value
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            from datetime import datetime
+            return datetime.strptime(value, fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
+def _parse_decimal(value):
+    """Convertit une valeur session en Decimal ou None."""
+    if value is None or value == "":
+        return None
+    try:
+        return Decimal(str(value))
+    except Exception:
+        return None
+
 
 # Transitions "avant" que la Secrétaire peut déclencher depuis la sidebar.
 # Seul A_TRAITER → A_FAIRE est pertinent ; les autres avancements passent par le CDT.
@@ -173,47 +207,83 @@ def upload_pdf(request):
 @group_required("Secretaire")
 def creer_bdc(request):
     """
-    GET  → Formulaire pré-rempli depuis la session (données extraites du PDF).
-    POST → Valide, crée le BDC, crée les lignes, trace l'historique, redirige.
+    GET  → Affiche les données extraites du PDF en lecture seule pour confirmation.
+    POST → Crée le BDC depuis les données en session, crée les lignes, trace l'historique, redirige.
     """
-    donnees_session = request.session.get("bdc_extrait", {})
-    lignes_session = donnees_session.pop("lignes_prestation", [])
+    donnees_session = request.session.get("bdc_extrait")
+    if not donnees_session:
+        messages.error(request, "Aucun PDF importé. Veuillez d'abord importer un bon de commande.")
+        return redirect("bdc:upload")
 
-    # Pré-remplissage : lookup du bailleur par son code
-    initial = dict(donnees_session)
-    bailleur_code = initial.pop("bailleur_code", None)
-    if bailleur_code:
-        try:
-            initial["bailleur"] = Bailleur.objects.get(code=bailleur_code)
-        except Bailleur.DoesNotExist:
-            pass
+    donnees = dict(donnees_session)
+    lignes_session = donnees.pop("lignes_prestation", [])
 
     if request.method == "GET":
-        form = BonDeCommandeForm(initial=initial)
         return render(request, "bdc/creer_bdc.html", {
-            "form": form,
+            "donnees": donnees,
             "lignes_session": lignes_session,
         })
 
-    # POST : création du BDC
-    form = BonDeCommandeForm(request.POST)
-    if not form.is_valid():
-        return render(request, "bdc/creer_bdc.html", {
-            "form": form,
-            "lignes_session": lignes_session,
-        })
-
-    bdc = form.save(commit=False)
-    bdc.cree_par = request.user
-    bdc.statut = StatutChoices.A_TRAITER
-    bdc.save()
-
-    # Statut conditionnel : A_FAIRE si occupation renseignée
-    if bdc.occupation:
+    # POST : création du BDC depuis les données session
+    bailleur_code = donnees.pop("bailleur_code", None)
+    bailleur = None
+    if bailleur_code:
         try:
-            changer_statut(bdc, StatutChoices.A_FAIRE, request.user)
-        except BDCIncomplet:
-            pass  # Ne devrait pas arriver (occupation déjà renseignée)
+            bailleur = Bailleur.objects.get(code=bailleur_code)
+        except Bailleur.DoesNotExist:
+            messages.error(request, f"Bailleur « {bailleur_code} » introuvable.")
+            return render(request, "bdc/creer_bdc.html", {
+                "donnees": donnees_session,
+                "lignes_session": lignes_session,
+                "error_message": f"Bailleur « {bailleur_code} » introuvable en base.",
+            })
+
+    numero_bdc = donnees.get("numero_bdc", "").strip()
+    if not numero_bdc:
+        return render(request, "bdc/creer_bdc.html", {
+            "donnees": donnees_session,
+            "lignes_session": lignes_session,
+            "error_message": "Le numéro BDC n'a pas pu être extrait du PDF.",
+        })
+
+    if BonDeCommande.objects.filter(numero_bdc=numero_bdc).exists():
+        return render(request, "bdc/creer_bdc.html", {
+            "donnees": donnees_session,
+            "lignes_session": lignes_session,
+            "error_message": f"Le BDC n°{numero_bdc} existe déjà dans le système.",
+        })
+
+    # Conversion des dates (chaînes → objets date)
+    date_emission = _parse_date(donnees.get("date_emission"))
+    delai_execution = _parse_date(donnees.get("delai_execution"))
+
+    bdc = BonDeCommande(
+        numero_bdc=numero_bdc,
+        numero_marche=donnees.get("numero_marche", ""),
+        bailleur=bailleur,
+        date_emission=date_emission,
+        programme_residence=donnees.get("programme_residence", ""),
+        adresse=donnees.get("adresse", ""),
+        code_postal=donnees.get("code_postal", ""),
+        ville=donnees.get("ville", ""),
+        logement_numero=donnees.get("logement_numero", ""),
+        logement_type=donnees.get("logement_type", ""),
+        logement_etage=donnees.get("logement_etage", ""),
+        logement_porte=donnees.get("logement_porte", ""),
+        objet_travaux=donnees.get("objet_travaux", ""),
+        delai_execution=delai_execution,
+        occupant_nom=donnees.get("occupant_nom", ""),
+        occupant_telephone=donnees.get("occupant_telephone", ""),
+        occupant_email=donnees.get("occupant_email", ""),
+        emetteur_nom=donnees.get("emetteur_nom", ""),
+        emetteur_telephone=donnees.get("emetteur_telephone", ""),
+        montant_ht=_parse_decimal(donnees.get("montant_ht")),
+        montant_tva=_parse_decimal(donnees.get("montant_tva")),
+        montant_ttc=_parse_decimal(donnees.get("montant_ttc")),
+        cree_par=request.user,
+        statut=StatutChoices.A_TRAITER,
+    )
+    bdc.save()
 
     # Lignes de prestation depuis la session
     for i, ligne_data in enumerate(lignes_session):
@@ -223,7 +293,7 @@ def creer_bdc(request):
             quantite=Decimal(str(ligne_data.get("quantite", "0"))),
             unite=ligne_data.get("unite", ""),
             prix_unitaire=Decimal(str(ligne_data.get("prix_unitaire", "0"))),
-            montant=Decimal(str(ligne_data.get("montant", "0"))),
+            montant=Decimal(str(ligne_data.get("montant_ht") or ligne_data.get("montant") or "0")),
             ordre=i,
         )
 
@@ -603,6 +673,67 @@ def export_facturation(request):
     return render(request, "bdc/export_facturation.html", {
         "form": form,
         "count": count,
+    })
+
+
+# ─── Contrôle BDC (split-screen PDF + checklist) ─────────────────────────────
+
+
+@login_required
+def controle_bdc(request, pk: int):
+    """Page de contrôle BDC : split-screen PDF + checklist + formulaire d'édition."""
+    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
+    est_editable = is_secretaire and bdc.statut == StatutChoices.A_TRAITER
+
+    items = ChecklistItem.objects.filter(actif=True)
+
+    if request.method == "POST" and est_editable:
+        # Sauver le formulaire d'édition
+        form = BDCEditionForm(request.POST, instance=bdc)
+        if form.is_valid():
+            form.save()
+            enregistrer_action(bdc, request.user, ActionChoices.MODIFICATION)
+
+        # Sauver les coches checklist
+        for item in items:
+            coche = request.POST.get(f"check_{item.pk}") == "on"
+            note = request.POST.get(f"note_{item.pk}", "").strip()
+            ChecklistResultat.objects.update_or_create(
+                bdc=bdc,
+                item=item,
+                defaults={"coche": coche, "note": note},
+            )
+
+        # Transition si demandée
+        nouveau_statut = request.POST.get("nouveau_statut")
+        if nouveau_statut:
+            try:
+                changer_statut(bdc, nouveau_statut, request.user)
+                return redirect("bdc:index")
+            except (TransitionInvalide, BDCIncomplet) as e:
+                messages.error(request, str(e))
+
+        bdc.refresh_from_db()
+
+    form = BDCEditionForm(instance=bdc) if est_editable else None
+
+    # Build combined checklist data for template
+    resultats = {r.item_id: r for r in bdc.checklist_resultats.filter(item__actif=True)}
+    checklist_items = []
+    for item in items:
+        res = resultats.get(item.pk)
+        checklist_items.append({
+            "item": item,
+            "coche": res.coche if res else False,
+            "note": res.note if res else "",
+        })
+
+    return render(request, "bdc/controle.html", {
+        "bdc": bdc,
+        "form_edition": form,
+        "checklist_items": checklist_items,
+        "est_editable": est_editable,
     })
 
 

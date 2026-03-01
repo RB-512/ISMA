@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Bailleur, BonDeCommande, HistoriqueAction, LignePrestation
+from .models import Bailleur, BonDeCommande, ChecklistItem, HistoriqueAction, LignePrestation
 
 
 @admin.register(Bailleur)
@@ -20,6 +20,12 @@ class BonDeCommandeAdmin(admin.ModelAdmin):
 @admin.register(LignePrestation)
 class LignePrestationAdmin(admin.ModelAdmin):
     list_display = ("bdc", "designation", "quantite", "unite", "prix_unitaire", "montant")
+
+
+@admin.register(ChecklistItem)
+class ChecklistItemAdmin(admin.ModelAdmin):
+    list_display = ("libelle", "ordre", "actif")
+    list_editable = ("ordre", "actif")
 
 
 @admin.register(HistoriqueAction)

@@ -3,7 +3,6 @@ import pytest
 
 from apps.bdc.forms import BDCEditionForm
 
-
 pytestmark = pytest.mark.django_db
 
 

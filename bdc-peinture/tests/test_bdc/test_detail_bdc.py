@@ -170,18 +170,13 @@ class TestDetailBDCEnrichi:
         content = response.content.decode()
         assert "Contacts" not in content
 
-    def test_formulaire_edition_affiche_pour_secretaire(self, client, utilisateur_secretaire, bdc_a_traiter):
+    def test_formulaire_edition_absent_de_la_page_detail(self, client, utilisateur_secretaire, bdc_a_traiter):
+        """Le formulaire d'édition terrain est dans la page contrôle, pas dans le détail."""
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:detail", kwargs={"pk": bdc_a_traiter.pk}))
         content = response.content.decode()
-        assert "Compléter le BDC" in content
-        assert "id_occupation" in content
-
-    def test_formulaire_edition_masque_pour_cdt(self, client, utilisateur_cdt, bdc_a_traiter):
-        client.force_login(utilisateur_cdt)
-        response = client.get(reverse("bdc:detail", kwargs={"pk": bdc_a_traiter.pk}))
-        content = response.content.decode()
         assert "Compléter le BDC" not in content
+        assert "id_occupation" not in content
 
     def test_boutons_transition_affiches_pour_secretaire(self, client, utilisateur_secretaire, bdc_a_traiter):
         client.force_login(utilisateur_secretaire)

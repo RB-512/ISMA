@@ -84,8 +84,17 @@
         </div>
         {% endif %}
 
-        {# Edition form (secretaire only) #}
-        {% if form_edition %}
+        {# Contrôle button for A_TRAITER (secretaire) — replaces edition form #}
+        {% if is_secretaire and bdc.statut == 'A_TRAITER' %}
+        <div>
+            <a href="{% url 'bdc:controle' pk=bdc.pk %}"
+               class="w-full block text-center px-3 py-2.5 text-sm font-medium rounded-lg bg-accent hover:bg-accent-dark text-white transition-colors">
+                Contr&ocirc;ler ce BDC
+            </a>
+        </div>
+
+        {# Edition form (secretaire only, other statuses) #}
+        {% elif form_edition %}
         <div x-data="{
             occupation: '{{ bdc.occupation|default:'' }}',
             typeAcces: '{{ bdc.type_acces|default:'' }}'
