@@ -259,6 +259,17 @@ class TestChecklistValidation:
         bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
         assert bdc.statut == StatutChoices.A_FAIRE
 
+    def test_occupe_sans_type_acces_transition_ok(self, bdc_a_traiter, utilisateur_secretaire):
+        """Logement occupé : type_acces non requis pour passer en A_FAIRE."""
+        from datetime import datetime
+        bdc_a_traiter.occupation = "OCCUPE"
+        bdc_a_traiter.type_acces = ""
+        bdc_a_traiter.rdv_date = datetime(2026, 3, 15, 10, 0)
+        bdc_a_traiter.save()
+
+        bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
+        assert bdc.statut == StatutChoices.A_FAIRE
+
 
 # ─── Test sidebar button ────────────────────────────────────────────────────
 

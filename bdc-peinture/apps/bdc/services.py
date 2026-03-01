@@ -70,7 +70,7 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             raise BDCIncomplet(
                 "Le champ 'Vacant / Occupé' est obligatoire avant passage en 'À attribuer'."
             )
-        if not bdc.type_acces:
+        if bdc.occupation == "VACANT" and not bdc.type_acces:
             raise BDCIncomplet(
                 "Le type d'accès est obligatoire avant passage en 'À attribuer'."
             )
