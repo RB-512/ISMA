@@ -18,3 +18,19 @@ venv/
 # OS
 Thumbs.db
 .DS_Store
+
+# Screenshots & images (artefacts de test/debug)
+*.png
+*.jpg
+*.jpeg
+
+# Playwright MCP logs
+.playwright-mcp/
+
+# Test PDFs (générés localement)
+docs/test_pdfs/
+docs/generate_test_pdfs.py
+bdc-peinture/test_gdh.pdf
+
+# Claude Code local settings (per-user)
+docs/.claude/
