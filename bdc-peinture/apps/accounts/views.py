@@ -132,3 +132,16 @@ def reactiver_utilisateur(request, pk):
         utilisateur.save()
         messages.success(request, f"Compte de {utilisateur.get_full_name() or utilisateur.username} réactivé.")
     return redirect("gestion:liste")
+
+
+@group_required("CDT")
+def supprimer_utilisateur(request, pk):
+    utilisateur = get_object_or_404(User, pk=pk)
+    if utilisateur == request.user:
+        messages.error(request, "Vous ne pouvez pas supprimer votre propre compte.")
+        return redirect("gestion:liste")
+    if request.method == "POST":
+        nom = utilisateur.get_full_name() or utilisateur.username
+        utilisateur.delete()
+        messages.success(request, f"Compte de {nom} supprimé.")
+    return redirect("gestion:liste")

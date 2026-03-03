@@ -234,6 +234,17 @@
                             Desactiver
                         </button>
                     </form>
+
+                    {# ── Supprimer (sauf soi-meme) ── #}
+                    <form method="post" action="{% url 'gestion:supprimer' u.pk %}"
+                        x-data
+                        @submit.prevent="if(confirm('SUPPRIMER definitivement le compte de {{ u.get_full_name|default:u.username }} ? Cette action est irreversible.')) $el.submit()">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium text-danger/70 border border-danger/10 hover:bg-danger/10 hover:text-danger transition-colors">
+                            Supprimer
+                        </button>
+                    </form>
                     {% endif %}
 
                     {% else %}
@@ -247,6 +258,19 @@
                             Reactiver
                         </button>
                     </form>
+
+                    {# ── Supprimer (compte inactif, sauf soi-meme) ── #}
+                    {% if u != request.user %}
+                    <form method="post" action="{% url 'gestion:supprimer' u.pk %}"
+                        x-data
+                        @submit.prevent="if(confirm('SUPPRIMER definitivement le compte de {{ u.get_full_name|default:u.username }} ? Cette action est irreversible.')) $el.submit()">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium text-danger/70 border border-danger/10 hover:bg-danger/10 hover:text-danger transition-colors">
+                            Supprimer
+                        </button>
+                    </form>
+                    {% endif %}
                     {% endif %}
 
                 </div>

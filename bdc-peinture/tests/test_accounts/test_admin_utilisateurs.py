@@ -268,3 +268,18 @@ class TestVuesGestion:
         )
         utilisateur_cdt.refresh_from_db()
         assert utilisateur_cdt.is_active is True
+
+    def test_supprimer_utilisateur(self, client_cdt, utilisateur_secretaire):
+        pk = utilisateur_secretaire.pk
+        resp = client_cdt.post(
+            reverse("gestion:supprimer", kwargs={"pk": pk})
+        )
+        assert resp.status_code == 302
+        assert not User.objects.filter(pk=pk).exists()
+
+    def test_supprimer_self_protection(self, client_cdt, utilisateur_cdt):
+        resp = client_cdt.post(
+            reverse("gestion:supprimer", kwargs={"pk": utilisateur_cdt.pk})
+        )
+        assert resp.status_code == 302
+        assert User.objects.filter(pk=utilisateur_cdt.pk).exists()
