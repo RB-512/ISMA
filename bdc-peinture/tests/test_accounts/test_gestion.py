@@ -29,21 +29,23 @@ class TestListeUtilisateurs:
 
     def test_liste_affiche_utilisateurs(self, client_cdt, utilisateur_secretaire):
         resp = client_cdt.get(reverse("gestion:liste"))
-        assert utilisateur_secretaire.username in resp.content.decode()
+        content = resp.content.decode()
+        assert utilisateur_secretaire.get_full_name() in content or utilisateur_secretaire.email in content
 
 
 class TestCreerUtilisateur:
     def test_creer_compte_valide(self, client_cdt):
-        Group.objects.get_or_create(name="Secrétaire")
+        Group.objects.get_or_create(name="Secretaire")
         resp = client_cdt.post(
             reverse("gestion:creer"),
             {
                 "username": "nouveau.user",
                 "first_name": "Nouveau",
                 "last_name": "User",
+                "email": "nouveau@test.fr",
                 "password1": "motdepasse123!",
                 "password2": "motdepasse123!",
-                "role": "Secrétaire",
+                "role": "Secretaire",
             },
         )
         assert resp.status_code == 302
@@ -57,6 +59,7 @@ class TestCreerUtilisateur:
                 "username": "cdt.user",
                 "first_name": "Chef",
                 "last_name": "Travaux",
+                "email": "chef@test.fr",
                 "password1": "motdepasse123!",
                 "password2": "motdepasse123!",
                 "role": "CDT",

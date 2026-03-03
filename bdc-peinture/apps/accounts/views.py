@@ -8,10 +8,11 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.crypto import get_random_string
 from django.views.generic import TemplateView
 
 from apps.accounts.decorators import group_required
-from apps.accounts.forms import CreerUtilisateurForm, ModifierRoleForm
+from apps.accounts.forms import CreerUtilisateurForm, ModifierRoleForm, ModifierUtilisateurForm
 
 User = get_user_model()
 
@@ -83,4 +84,51 @@ def desactiver_utilisateur(request, pk):
         utilisateur.is_active = False
         utilisateur.save()
         messages.success(request, f"Compte de {utilisateur.get_full_name() or utilisateur.username} désactivé.")
+    return redirect("gestion:liste")
+
+
+@group_required("CDT")
+def modifier_utilisateur(request, pk):
+    utilisateur = get_object_or_404(User, pk=pk)
+    if request.method == "POST":
+        form = ModifierUtilisateurForm(request.POST, instance=utilisateur)
+        # Empecher le CDT de modifier son propre role
+        if utilisateur == request.user:
+            form.fields["role"].disabled = True
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Profil mis à jour pour {utilisateur.get_full_name() or utilisateur.username}.")
+            return redirect("gestion:liste")
+    else:
+        form = ModifierUtilisateurForm(instance=utilisateur)
+        if utilisateur == request.user:
+            form.fields["role"].disabled = True
+    return render(request, "accounts/partials/_modifier_utilisateur.html", {"form": form, "utilisateur": utilisateur})
+
+
+@group_required("CDT")
+def reset_password_utilisateur(request, pk):
+    utilisateur = get_object_or_404(User, pk=pk)
+    if utilisateur == request.user:
+        messages.error(request, "Vous ne pouvez pas réinitialiser votre propre mot de passe ici.")
+        return redirect("gestion:liste")
+    if request.method == "POST":
+        new_password = get_random_string(length=10)
+        utilisateur.set_password(new_password)
+        utilisateur.save()
+        return render(
+            request,
+            "accounts/partials/_reset_password_result.html",
+            {"utilisateur": utilisateur, "new_password": new_password},
+        )
+    return redirect("gestion:liste")
+
+
+@group_required("CDT")
+def reactiver_utilisateur(request, pk):
+    utilisateur = get_object_or_404(User, pk=pk)
+    if request.method == "POST":
+        utilisateur.is_active = True
+        utilisateur.save()
+        messages.success(request, f"Compte de {utilisateur.get_full_name() or utilisateur.username} réactivé.")
     return redirect("gestion:liste")

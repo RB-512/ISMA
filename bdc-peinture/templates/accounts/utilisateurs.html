@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Gestion des accès — ISMA{% endblock %}
+{% block title %}Gestion des acces — ISMA{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6">
 
-    {# ── En-tête ── #}
+    {# ── En-tete ── #}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-[var(--color-text)]">Gestion des accès</h1>
-            <p class="text-sm text-[var(--color-text-muted)] mt-1">Créer et gérer les comptes utilisateurs</p>
+            <h1 class="text-2xl font-bold text-[var(--color-text)]">Gestion des acces</h1>
+            <p class="text-sm text-[var(--color-text-muted)] mt-1">Creer et gerer les comptes utilisateurs</p>
         </div>
         <button
             x-data
@@ -19,13 +19,13 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            Créer un utilisateur
+            Creer un utilisateur
         </button>
     </div>
 
-    {# ── Formulaire de création (collapsible Alpine) ── #}
+    {# ── Formulaire de creation (collapsible Alpine) ── #}
     <div
-        x-data="{ open: false }"
+        x-data="{ open: {% if form_creer.errors %}true{% else %}false{% endif %} }"
         @toggle-form.window="open = !open"
         x-show="open"
         x-transition:enter="transition ease-out duration-200"
@@ -48,7 +48,7 @@
             {% endif %}
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {# Prénom #}
+                {# Prenom #}
                 <div>
                     <label for="{{ form_creer.first_name.id_for_label }}">{{ form_creer.first_name.label }}</label>
                     {{ form_creer.first_name }}
@@ -72,7 +72,15 @@
                     <p class="mt-1 text-xs text-danger">{{ form_creer.username.errors|join:", " }}</p>
                     {% endif %}
                 </div>
-                {# Rôle #}
+                {# Email #}
+                <div>
+                    <label for="{{ form_creer.email.id_for_label }}">{{ form_creer.email.label }}</label>
+                    {{ form_creer.email }}
+                    {% if form_creer.email.errors %}
+                    <p class="mt-1 text-xs text-danger">{{ form_creer.email.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                {# Role #}
                 <div>
                     <label for="{{ form_creer.role.id_for_label }}">{{ form_creer.role.label }}</label>
                     {{ form_creer.role }}
@@ -101,7 +109,7 @@
             <div class="flex items-center gap-3 pt-2">
                 <button type="submit"
                     class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
-                    Créer le compte
+                    Creer le compte
                 </button>
                 <button type="button" @click="open = false"
                     class="px-4 py-2 rounded-lg text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
@@ -110,6 +118,12 @@
             </div>
         </form>
     </div>
+
+    {# ── Conteneur pour le modal de modification (HTMX) ── #}
+    <div id="modal-modifier"></div>
+
+    {# ── Conteneur pour le resultat de reset password (HTMX) ── #}
+    <div id="reset-password-result"></div>
 
     {# ── Liste des utilisateurs ── #}
     <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
@@ -132,10 +146,10 @@
                     <p class="text-sm font-medium text-[var(--color-text)] truncate">
                         {{ u.get_full_name|default:u.username }}
                     </p>
-                    <p class="text-xs text-[var(--color-text-muted)]">{{ u.username }}</p>
+                    <p class="text-xs text-[var(--color-text-muted)]">{{ u.email|default:u.username }}</p>
                 </div>
 
-                {# Rôle actuel #}
+                {# Role actuel #}
                 <div class="flex-shrink-0 w-36 text-sm text-[var(--color-text-muted)]">
                     {% if u.groups.all %}
                         {{ u.groups.first.name }}
@@ -151,21 +165,39 @@
                         Actif
                     </span>
                     {% else %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted/10 text-[var(--color-text-muted)]">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger/10 text-danger">
                         Inactif
                     </span>
                     {% endif %}
                 </div>
 
-                {# Actions (uniquement si actif) #}
-                {% if u.is_active %}
-                <div class="flex items-center gap-2 flex-shrink-0" x-data="{ open: false }">
+                {# Actions #}
+                <div class="flex items-center gap-2 flex-shrink-0">
 
-                    {# Changer de rôle #}
-                    <div class="relative">
+                    {% if u.is_active %}
+                    {# ── Modifier ── #}
+                    <button hx-get="{% url 'gestion:modifier' u.pk %}"
+                            hx-target="#modal-modifier" hx-swap="innerHTML"
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-accent hover:border-accent transition-colors">
+                        Modifier
+                    </button>
+
+                    {# ── Reset MDP ── #}
+                    {% if u != request.user %}
+                    <button hx-post="{% url 'gestion:reset_password' u.pk %}"
+                            hx-target="#reset-password-result" hx-swap="innerHTML"
+                            hx-confirm="Reinitialiser le mot de passe de {{ u.get_full_name|default:u.username }} ?"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium border border-warning/30 text-warning hover:bg-warning/10 transition-colors">
+                        Reset MDP
+                    </button>
+                    {% endif %}
+
+                    {# ── Changer de role ── #}
+                    <div x-data="{ open: false }" class="relative">
                         <button @click="open = !open"
                             class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-accent transition-colors">
-                            Rôle
+                            Role
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
@@ -174,10 +206,10 @@
                             class="absolute right-0 mt-1 w-44 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg shadow-lg z-10 py-1">
                             <form method="post" action="{% url 'gestion:modifier_role' u.pk %}">
                                 {% csrf_token %}
-                                <input type="hidden" name="role" value="Secrétaire">
+                                <input type="hidden" name="role" value="Secretaire">
                                 <button type="submit"
                                     class="w-full text-left px-4 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-border)]/50 transition-colors">
-                                    Secrétaire
+                                    Secretaire
                                 </button>
                             </form>
                             <form method="post" action="{% url 'gestion:modifier_role' u.pk %}">
@@ -191,27 +223,40 @@
                         </div>
                     </div>
 
-                    {# Désactiver — sauf pour soi-même #}
+                    {# ── Desactiver (sauf soi-meme) ── #}
                     {% if u != request.user %}
                     <form method="post" action="{% url 'gestion:desactiver' u.pk %}"
                         x-data
-                        @submit.prevent="if(confirm('Désactiver le compte de {{ u.get_full_name|default:u.username }} ?')) $el.submit()">
+                        @submit.prevent="if(confirm('Desactiver le compte de {{ u.get_full_name|default:u.username }} ?')) $el.submit()">
                         {% csrf_token %}
                         <button type="submit"
                             class="px-3 py-1.5 rounded-lg text-xs font-medium text-danger border border-danger/20 hover:bg-danger/10 transition-colors">
-                            Désactiver
+                            Desactiver
                         </button>
                     </form>
                     {% endif %}
+
+                    {% else %}
+                    {# ── Reactiver (compte inactif) ── #}
+                    <form method="post" action="{% url 'gestion:reactiver' u.pk %}"
+                        x-data
+                        @submit.prevent="if(confirm('Reactiver le compte de {{ u.get_full_name|default:u.username }} ?')) $el.submit()">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium text-success border border-success/20 hover:bg-success/10 transition-colors">
+                            Reactiver
+                        </button>
+                    </form>
+                    {% endif %}
+
                 </div>
-                {% endif %}
 
             </div>
             {% endfor %}
         </div>
         {% else %}
         <div class="px-6 py-12 text-center text-sm text-[var(--color-text-muted)]">
-            Aucun utilisateur trouvé.
+            Aucun utilisateur trouve.
         </div>
         {% endif %}
     </div>
