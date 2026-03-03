@@ -11,6 +11,7 @@ from django.contrib.auth.models import Group
 from django.urls import reverse
 
 from apps.accounts.forms import CreerUtilisateurForm, ModifierUtilisateurForm
+from apps.bdc.models import Bailleur, BonDeCommande
 
 User = get_user_model()
 
@@ -283,3 +284,21 @@ class TestVuesGestion:
         )
         assert resp.status_code == 302
         assert User.objects.filter(pk=utilisateur_cdt.pk).exists()
+
+    def test_supprimer_protected_user_shows_error(self, client_cdt, utilisateur_secretaire):
+        """Un utilisateur lié à des BDC ne peut pas être supprimé (ProtectedError)."""
+        bailleur = Bailleur.objects.create(nom="Test Bailleur", code="TST")
+        BonDeCommande.objects.create(
+            numero_bdc="DEL-TEST-001",
+            bailleur=bailleur,
+            adresse="1 Rue Test",
+            cree_par=utilisateur_secretaire,
+        )
+        pk = utilisateur_secretaire.pk
+        resp = client_cdt.post(
+            reverse("gestion:supprimer", kwargs={"pk": pk}),
+            follow=True,
+        )
+        assert resp.status_code == 200
+        assert User.objects.filter(pk=pk).exists()
+        assert "Impossible de supprimer" in resp.content.decode()

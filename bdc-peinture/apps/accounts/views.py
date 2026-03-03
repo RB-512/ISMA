@@ -7,6 +7,7 @@ des vues custom pour styler avec Tailwind.
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.crypto import get_random_string
 from django.views.generic import TemplateView
@@ -142,6 +143,13 @@ def supprimer_utilisateur(request, pk):
         return redirect("gestion:liste")
     if request.method == "POST":
         nom = utilisateur.get_full_name() or utilisateur.username
-        utilisateur.delete()
-        messages.success(request, f"Compte de {nom} supprimé.")
+        try:
+            utilisateur.delete()
+            messages.success(request, f"Compte de {nom} supprimé.")
+        except ProtectedError:
+            messages.error(
+                request,
+                f"Impossible de supprimer {nom} car ce compte est lié à des bons de commande. "
+                "Désactivez le compte à la place.",
+            )
     return redirect("gestion:liste")
