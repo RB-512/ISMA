@@ -10,4 +10,5 @@ urlpatterns = [
     path("<int:pk>/modifier/", views.modifier_sous_traitant, name="modifier"),
     path("<int:pk>/desactiver/", views.desactiver_sous_traitant, name="desactiver"),
     path("<int:pk>/reactiver/", views.reactiver_sous_traitant, name="reactiver"),
+    path("<int:pk>/supprimer/", views.supprimer_sous_traitant, name="supprimer"),
 ]

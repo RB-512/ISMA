@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.decorators import group_required
@@ -89,4 +90,21 @@ def reactiver_sous_traitant(request, pk):
         sous_traitant.actif = True
         sous_traitant.save()
         messages.success(request, f"Sous-traitant « {sous_traitant.nom} » réactivé.")
+    return redirect("sous_traitants:list")
+
+
+@group_required("CDT")
+def supprimer_sous_traitant(request, pk):
+    sous_traitant = get_object_or_404(SousTraitant, pk=pk)
+    if request.method == "POST":
+        nom = sous_traitant.nom
+        try:
+            sous_traitant.delete()
+            messages.success(request, f"Sous-traitant « {nom} » supprimé.")
+        except ProtectedError:
+            messages.error(
+                request,
+                f"Impossible de supprimer « {nom} » car il est lié à des bons de commande. "
+                "Désactivez-le à la place.",
+            )
     return redirect("sous_traitants:list")

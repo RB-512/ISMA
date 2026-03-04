@@ -1,5 +1,86 @@
-<form method="post" action="{% url 'sous_traitants:modifier' pk=sous_traitant.pk %}">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Enregistrer</button>
-</form>
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6 max-w-lg mx-auto">
+    <h2 class="text-base font-semibold text-[var(--color-text)] mb-4">
+        Modifier {{ sous_traitant.nom }}
+    </h2>
+    <form method="post" action="{% url 'sous_traitants:modifier' pk=sous_traitant.pk %}">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="p-3 rounded-lg bg-danger/10 border border-danger/20 text-sm text-danger mb-4">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {# Nom #}
+                <div class="sm:col-span-2">
+                    <label for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
+                    {{ form.nom }}
+                    {% if form.nom.errors %}
+                    <p class="mt-1 text-xs text-danger">{{ form.nom.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                {# SIRET #}
+                <div>
+                    <label for="{{ form.siret.id_for_label }}">{{ form.siret.label }}</label>
+                    {{ form.siret }}
+                    {% if form.siret.errors %}
+                    <p class="mt-1 text-xs text-danger">{{ form.siret.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                {# Telephone #}
+                <div>
+                    <label for="{{ form.telephone.id_for_label }}">{{ form.telephone.label }}</label>
+                    {{ form.telephone }}
+                    {% if form.telephone.errors %}
+                    <p class="mt-1 text-xs text-danger">{{ form.telephone.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                {# Email #}
+                <div class="sm:col-span-2">
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <p class="mt-1 text-xs text-danger">{{ form.email.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                {# Adresse #}
+                <div class="sm:col-span-2">
+                    <label for="{{ form.adresse.id_for_label }}">{{ form.adresse.label }}</label>
+                    {{ form.adresse }}
+                    {% if form.adresse.errors %}
+                    <p class="mt-1 text-xs text-danger">{{ form.adresse.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                {# Code postal #}
+                <div>
+                    <label for="{{ form.code_postal.id_for_label }}">{{ form.code_postal.label }}</label>
+                    {{ form.code_postal }}
+                    {% if form.code_postal.errors %}
+                    <p class="mt-1 text-xs text-danger">{{ form.code_postal.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                {# Ville #}
+                <div>
+                    <label for="{{ form.ville.id_for_label }}">{{ form.ville.label }}</label>
+                    {{ form.ville }}
+                    {% if form.ville.errors %}
+                    <p class="mt-1 text-xs text-danger">{{ form.ville.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-4">
+            <button type="submit"
+                class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
+                Enregistrer
+            </button>
+            <a href="{% url 'sous_traitants:list' %}"
+                class="px-4 py-2 rounded-lg text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+                Annuler
+            </a>
+        </div>
+    </form>
+</div>
