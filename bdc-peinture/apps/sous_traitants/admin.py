@@ -5,6 +5,6 @@ from .models import SousTraitant
 
 @admin.register(SousTraitant)
 class SousTraitantAdmin(admin.ModelAdmin):
-    list_display = ("nom", "telephone", "email", "actif")
-    list_filter = ("actif",)
-    search_fields = ("nom", "telephone", "email")
+    list_display = ("nom", "siret", "telephone", "email", "ville", "actif")
+    list_filter = ("actif", "ville")
+    search_fields = ("nom", "siret", "telephone", "email", "ville")

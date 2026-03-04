@@ -1,0 +1,5 @@
+<form method="post" action="{% url 'sous_traitants:modifier' pk=sous_traitant.pk %}">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Enregistrer</button>
+</form>
