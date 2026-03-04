@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Déconnexion — ISMA</title>
+
+    <script>
+      if (localStorage.getItem('isma-theme') === 'dark' ||
+          (!localStorage.getItem('isma-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              primary:   { DEFAULT: '#1B2B3A', light: '#2A3F52', dark: '#131A22' },
+              accent:    { DEFAULT: '#3B82F6', light: '#60A5FA', dark: '#2563EB' },
+              danger:    { DEFAULT: '#C4423C', light: '#D45550' },
+              surface:   { DEFAULT: '#F7F5F2', card: '#FFFFFF', dark: '#131A22', 'dark-card': '#1B2B3A' },
+            },
+          },
+        },
+      }
+    </script>
+</head>
+<body class="min-h-screen font-sans antialiased bg-surface dark:bg-surface-dark flex items-center justify-center">
+
+    {# Background pattern #}
+    <div class="fixed inset-0 opacity-[0.03] dark:opacity-[0.05]"
+         style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cg fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;%3E%3Cg fill=&quot;%231B2B3A&quot;%3E%3Cpath d=&quot;M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z&quot;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+
+    <div class="relative w-full max-w-md px-4">
+
+        {# Logout card #}
+        <div class="bg-surface-card dark:bg-surface-dark-card rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/30 p-8 border border-black/5 dark:border-white/5">
+
+            {# Logo #}
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-accent text-white font-bold text-2xl mb-4 shadow-lg shadow-accent/30">
+                    I
+                </div>
+                <h1 class="text-2xl font-bold text-primary dark:text-white">ISMA</h1>
+                <p class="text-sm text-primary/50 dark:text-white/50 mt-1">Gestion des bons de commande</p>
+            </div>
+
+            <p class="text-center text-sm text-primary/70 dark:text-white/70 mb-6">
+                Êtes-vous sûr de vouloir vous déconnecter ?
+            </p>
+
+            <form method="post" action="{% url 'account_logout' %}" class="space-y-3">
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    class="w-full py-2.5 px-4 bg-danger hover:bg-danger-light text-white font-semibold
+                           rounded-lg text-sm transition-all duration-150
+                           focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2
+                           dark:focus:ring-offset-surface-dark-card">
+                    Se déconnecter
+                </button>
+
+                <a href="/"
+                   class="w-full block text-center py-2.5 px-4 border border-black/10 dark:border-white/10
+                          rounded-lg text-sm font-medium text-primary/70 dark:text-white/70
+                          hover:bg-primary/5 dark:hover:bg-white/5 transition-colors">
+                    Annuler
+                </a>
+            </form>
+        </div>
+
+        <p class="text-center text-xs text-primary/30 dark:text-white/30 mt-6">
+            Accès réservé au personnel. Contacter votre administrateur pour un compte.
+        </p>
+    </div>
+
+</body>
+</html>

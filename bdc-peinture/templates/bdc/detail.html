@@ -22,32 +22,32 @@
                     {% endif %}">
                     {{ bdc.get_statut_display }}
                 </span>
-                &mdash; créé le <span class="font-mono">{{ bdc.created_at|date:"d/m/Y" }}</span> par {{ bdc.cree_par }}
+                &mdash; créé le <span class="font-mono">{{ bdc.created_at|date:"d/m/Y" }}</span> par {{ bdc.cree_par.first_name|default:bdc.cree_par.username }}
             </p>
         </div>
 
         {# Action buttons #}
-        <div class="flex items-center gap-2">
-            {% if is_secretaire and transitions %}
+        <div class="flex items-center gap-2 flex-wrap">
+            {% if transitions %}
                 {% for statut_val, statut_label in transitions %}
                 <form method="POST" action="{% url 'bdc:changer_statut' bdc.pk %}">
                     {% csrf_token %}
                     <input type="hidden" name="nouveau_statut" value="{{ statut_val }}">
-                    <button type="submit" class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                    <button type="submit" class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                         {{ statut_label }}
                     </button>
                 </form>
                 {% endfor %}
             {% endif %}
-            {% if is_cdt and bdc.statut == "A_FAIRE" %}
+            {% if bdc.statut == "A_FAIRE" %}
             <div x-data="{ showRenvoi: false }">
                 <div class="flex items-center gap-2">
                     <a href="{% url 'bdc:attribution_split' bdc.pk %}"
-                       class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                       class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                         Attribuer
                     </a>
                     <button type="button" @click="showRenvoi = !showRenvoi"
-                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                         Renvoyer au contr&ocirc;le
                     </button>
                 </div>
@@ -62,52 +62,52 @@
                 </form>
             </div>
             {% endif %}
-            {% if is_cdt and bdc.statut == "EN_COURS" %}
+            {% if bdc.statut == "EN_COURS" %}
             <a href="{% url 'bdc:attribution_split' bdc.pk %}"
-               class="px-4 py-2 bg-warning hover:bg-warning-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+               class="px-4 py-2 bg-warning hover:bg-warning-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                 Réattribuer
             </a>
             <form method="POST" action="{% url 'bdc:valider_realisation' bdc.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                <button type="submit" class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                     Valider réalisation
                 </button>
             </form>
             {% endif %}
-            {% if is_cdt and bdc.statut == "A_FACTURER" %}
+            {% if bdc.statut == "A_FACTURER" %}
             <form method="POST" action="{% url 'bdc:valider_facturation' bdc.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+                <button type="submit" class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                     Passer en facturation
                 </button>
             </form>
             <form method="POST" action="{% url 'bdc:changer_statut' bdc.pk %}">
                 {% csrf_token %}
                 <input type="hidden" name="nouveau_statut" value="EN_COURS">
-                <button type="submit" class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-sm font-medium rounded-lg hover:bg-accent/10 transition-colors">
+                <button type="submit" class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-sm font-medium rounded-lg whitespace-nowrap hover:bg-accent/10 transition-colors">
                     Annuler validation
                 </button>
             </form>
             {% endif %}
-            {% if is_secretaire and bdc.statut == "A_TRAITER" %}
+            {% if bdc.statut == "A_TRAITER" %}
             <a href="{% url 'bdc:controle' pk=bdc.pk %}"
-               class="px-3 py-1.5 bg-accent hover:bg-accent-dark text-white text-xs font-medium rounded-lg transition-all duration-150 shadow-sm hover:shadow-md">
+               class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                 Contr&ocirc;ler
             </a>
             <a href="{% url 'bdc:upload' %}"
-               class="px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-medium rounded-lg hover:bg-accent/10 transition-colors">
+               class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium rounded-lg whitespace-nowrap hover:bg-accent/10 transition-colors">
                 Nouveau BDC
             </a>
             {% endif %}
             {% if bdc.pdf_terrain %}
             <a href="{% url 'bdc:terrain' bdc.pk %}"
-               class="px-4 py-2 bg-primary/10 dark:bg-white/10 text-primary dark:text-white text-sm font-medium rounded-lg hover:bg-primary/20 dark:hover:bg-white/20 transition-colors">
+               class="px-4 py-2 bg-primary/10 dark:bg-white/10 text-primary dark:text-white text-sm font-medium rounded-lg whitespace-nowrap hover:bg-primary/20 dark:hover:bg-white/20 transition-colors">
                 BDC terrain
             </a>
             {% endif %}
             {% if bdc.pdf_original %}
             <a href="{{ bdc.pdf_original.url }}" target="_blank"
-               class="px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-medium rounded-lg hover:bg-accent/10 transition-colors">
+               class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium rounded-lg whitespace-nowrap hover:bg-accent/10 transition-colors">
                 Voir le PDF
             </a>
             {% endif %}
@@ -246,7 +246,7 @@
             <li class="flex gap-3 items-start">
                 <span class="text-[var(--color-text-muted)] font-mono text-xs whitespace-nowrap mt-0.5">{{ action.created_at|date:"d/m H:i" }}</span>
                 <span class="text-[var(--color-text)]">
-                    {{ action.get_action_display }} par <span class="font-medium">{{ action.utilisateur }}</span>
+                    {{ action.get_action_display }} par <span class="font-medium">{{ action.utilisateur.first_name|default:action.utilisateur.username }}</span>
                     {% if action.action == "STATUT_CHANGE" and action.details %}
                         : {{ action.details.ancien_statut }} &rarr; {{ action.details.nouveau_statut }}
                     {% endif %}

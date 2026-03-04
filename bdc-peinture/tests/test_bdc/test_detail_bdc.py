@@ -43,13 +43,13 @@ class TestModifierBDC:
         msgs = list(get_messages(response.wsgi_request))
         assert any("mis à jour" in str(m) for m in msgs)
 
-    def test_acces_non_secretaire_interdit(self, client, utilisateur_cdt, bdc_a_traiter):
+    def test_cdt_can_access_modifier(self, client, utilisateur_cdt, bdc_a_traiter):
         client.force_login(utilisateur_cdt)
         response = client.post(
             reverse("bdc:modifier", kwargs={"pk": bdc_a_traiter.pk}),
             {"occupation": "VACANT"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 302
 
     def test_get_redirige(self, client, utilisateur_secretaire, bdc_a_traiter):
         client.force_login(utilisateur_secretaire)
@@ -121,13 +121,13 @@ class TestChangerStatutBDC:
         msgs = list(get_messages(response.wsgi_request))
         assert any("Vacant" in str(m) or "Occupé" in str(m) for m in msgs)
 
-    def test_acces_non_secretaire_interdit(self, client, utilisateur_cdt, bdc_a_traiter):
+    def test_cdt_can_access_changer_statut(self, client, utilisateur_cdt, bdc_a_traiter):
         client.force_login(utilisateur_cdt)
         response = client.post(
             reverse("bdc:changer_statut", kwargs={"pk": bdc_a_traiter.pk}),
             {"nouveau_statut": StatutChoices.A_FAIRE},
         )
-        assert response.status_code == 403
+        assert response.status_code == 302
 
     def test_get_redirige(self, client, utilisateur_secretaire, bdc_a_traiter):
         client.force_login(utilisateur_secretaire)
@@ -181,11 +181,11 @@ class TestDetailBDCEnrichi:
         assert "ler" in content  # Contrôler
         assert "Nouveau BDC" in content
 
-    def test_bouton_controler_masque_pour_cdt(self, client, utilisateur_cdt, bdc_a_traiter):
+    def test_bouton_controler_visible_pour_cdt(self, client, utilisateur_cdt, bdc_a_traiter):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:detail", kwargs={"pk": bdc_a_traiter.pk}))
         content = response.content.decode()
-        assert "Nouveau BDC" not in content
+        assert "Nouveau BDC" in content
 
     def test_sous_traitant_affiche(self, client, utilisateur_secretaire, bdc_a_faire, sous_traitant):
         bdc_a_faire.sous_traitant = sous_traitant

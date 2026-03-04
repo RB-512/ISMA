@@ -90,13 +90,13 @@ class TestCreerSousTraitant:
         assert resp.status_code == 302
         assert SousTraitant.objects.filter(nom="Nouveau ST").exists()
 
-    def test_secretaire_cannot_create(self, client_secretaire):
+    def test_secretaire_can_create(self, client_secretaire):
         resp = client_secretaire.post(
             reverse("sous_traitants:creer"),
-            {"nom": "Blocked ST", "telephone": "0622222222"},
+            {"nom": "Allowed ST", "telephone": "0622222222"},
         )
-        assert resp.status_code == 403
-        assert not SousTraitant.objects.filter(nom="Blocked ST").exists()
+        assert resp.status_code == 302
+        assert SousTraitant.objects.filter(nom="Allowed ST").exists()
 
     def test_create_with_full_fields(self, client_cdt):
         resp = client_cdt.post(
@@ -147,14 +147,14 @@ class TestModifierSousTraitant:
         sous_traitant_actif.refresh_from_db()
         assert sous_traitant_actif.nom == "Dupont Renove"
 
-    def test_secretaire_cannot_modify(self, client_secretaire, sous_traitant_actif):
+    def test_secretaire_can_modify(self, client_secretaire, sous_traitant_actif):
         resp = client_secretaire.post(
             reverse("sous_traitants:modifier", kwargs={"pk": sous_traitant_actif.pk}),
-            {"nom": "Hacked", "telephone": "0600000000"},
+            {"nom": "Renamed ST", "telephone": "0600000000"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 302
         sous_traitant_actif.refresh_from_db()
-        assert sous_traitant_actif.nom == "Dupont Peinture"  # unchanged
+        assert sous_traitant_actif.nom == "Renamed ST"
 
     def test_modify_nonexistent_returns_404(self, client_cdt):
         resp = client_cdt.get(reverse("sous_traitants:modifier", kwargs={"pk": 99999}))
@@ -178,17 +178,17 @@ class TestDesactiverReactiver:
         sous_traitant_inactif.refresh_from_db()
         assert sous_traitant_inactif.actif is True
 
-    def test_secretaire_cannot_deactivate(self, client_secretaire, sous_traitant_actif):
+    def test_secretaire_can_deactivate(self, client_secretaire, sous_traitant_actif):
         resp = client_secretaire.post(reverse("sous_traitants:desactiver", kwargs={"pk": sous_traitant_actif.pk}))
-        assert resp.status_code == 403
+        assert resp.status_code == 302
         sous_traitant_actif.refresh_from_db()
-        assert sous_traitant_actif.actif is True  # unchanged
+        assert sous_traitant_actif.actif is False
 
-    def test_secretaire_cannot_reactivate(self, client_secretaire, sous_traitant_inactif):
+    def test_secretaire_can_reactivate(self, client_secretaire, sous_traitant_inactif):
         resp = client_secretaire.post(reverse("sous_traitants:reactiver", kwargs={"pk": sous_traitant_inactif.pk}))
-        assert resp.status_code == 403
+        assert resp.status_code == 302
         sous_traitant_inactif.refresh_from_db()
-        assert sous_traitant_inactif.actif is False  # unchanged
+        assert sous_traitant_inactif.actif is True
 
     def test_get_desactiver_redirects_without_change(self, client_cdt, sous_traitant_actif):
         resp = client_cdt.get(reverse("sous_traitants:desactiver", kwargs={"pk": sous_traitant_actif.pk}))

@@ -147,10 +147,10 @@ class TestVueExportAcces:
         response = client.get(reverse(URL_EXPORT))
         assert response.status_code == 200
 
-    def test_secretaire_refusee(self, client, utilisateur_secretaire):
+    def test_secretaire_can_access(self, client, utilisateur_secretaire):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse(URL_EXPORT))
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     def test_anonyme_redirige(self, client):
         response = client.get(reverse(URL_EXPORT))
@@ -246,8 +246,8 @@ class TestTemplateDashboardExport:
         assert "Export facturation" in content
         assert reverse("bdc:export_facturation") in content
 
-    def test_lien_export_absent_secretaire(self, client, utilisateur_secretaire, bdc_a_facturer):
+    def test_lien_export_visible_secretaire(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:index"))
         content = response.content.decode()
-        assert "Export facturation" not in content
+        assert "Export facturation" in content

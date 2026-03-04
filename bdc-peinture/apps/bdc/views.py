@@ -20,7 +20,6 @@ from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from apps.accounts.decorators import group_required
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
 
 from .filters import BonDeCommandeFilter
@@ -176,16 +175,10 @@ def liste_bdc(request):
         compteurs[row["statut"]] = row["count"]
     total = sum(compteurs.values())
 
-    is_cdt = request.user.groups.filter(name="CDT").exists()
+    from apps.notifications.alertes import get_bdc_delai_proche, get_bdc_en_retard
 
-    # Alertes délais (CDT uniquement)
-    alertes_retard = []
-    alertes_proches = []
-    if is_cdt:
-        from apps.notifications.alertes import get_bdc_delai_proche, get_bdc_en_retard
-
-        alertes_retard = get_bdc_en_retard()
-        alertes_proches = get_bdc_delai_proche()
+    alertes_retard = get_bdc_en_retard()
+    alertes_proches = get_bdc_delai_proche()
 
     nb_filtres = sum(
         [
@@ -203,7 +196,6 @@ def liste_bdc(request):
         "compteurs": compteurs,
         "total": total,
         "statut_choices": StatutChoices,
-        "is_cdt": is_cdt,
         "alertes_retard": alertes_retard,
         "alertes_proches": alertes_proches,
         "nb_filtres": nb_filtres,
@@ -219,7 +211,7 @@ def liste_bdc(request):
 # ─── Upload PDF ───────────────────────────────────────────────────────────────
 
 
-@group_required("Secretaire")
+@login_required
 def upload_pdf(request):
     """
     GET  → Affiche le formulaire d'upload.
@@ -278,7 +270,7 @@ def upload_pdf(request):
 # ─── Création BDC ─────────────────────────────────────────────────────────────
 
 
-@group_required("Secretaire")
+@login_required
 def creer_bdc(request):
     """
     GET  → Affiche les données extraites du PDF en lecture seule pour confirmation.
@@ -417,14 +409,8 @@ def detail_sidebar(request, pk: int):
     lignes = bdc.lignes_prestation.all()
     historique = bdc.historique.all()[:10]
 
-    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
-    is_cdt = request.user.groups.filter(name="CDT").exists()
-
-    transitions = []
-    if is_secretaire:
-        transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
-
-    form_edition = BDCEditionForm(instance=bdc) if (is_secretaire and bdc.statut == StatutChoices.A_TRAITER) else None
+    transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
+    form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
     return render(
         request,
@@ -435,8 +421,6 @@ def detail_sidebar(request, pk: int):
             "historique": historique,
             "transitions": transitions,
             "form_edition": form_edition,
-            "is_secretaire": is_secretaire,
-            "is_cdt": is_cdt,
         },
     )
 
@@ -449,15 +433,8 @@ def detail_bdc(request, pk: int):
     lignes = bdc.lignes_prestation.all()
     historique = bdc.historique.all()[:10]
 
-    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
-    is_cdt = request.user.groups.filter(name="CDT").exists()
-    form_edition = BDCEditionForm(instance=bdc) if (is_secretaire and bdc.statut == StatutChoices.A_TRAITER) else None
-
-    transitions = (
-        [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
-        if is_secretaire
-        else []
-    )
+    form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
+    transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
 
     return render(
         request,
@@ -468,13 +445,11 @@ def detail_bdc(request, pk: int):
             "historique": historique,
             "form_edition": form_edition,
             "transitions": transitions,
-            "is_secretaire": is_secretaire,
-            "is_cdt": is_cdt,
         },
     )
 
 
-@group_required("Secretaire")
+@login_required
 def modifier_bdc(request, pk: int):
     """POST-only : sauvegarde les champs manuels depuis la fiche détail."""
     if request.method != "POST":
@@ -493,7 +468,7 @@ def modifier_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
-@group_required("Secretaire")
+@login_required
 def sidebar_save_and_transition(request, pk: int):
     """POST: save edition form + optional status transition, return updated sidebar partial."""
     if request.method != "POST":
@@ -520,13 +495,7 @@ def sidebar_save_and_transition(request, pk: int):
     lignes = bdc.lignes_prestation.all()
     historique = bdc.historique.all()[:10]
 
-    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
-    is_cdt = request.user.groups.filter(name="CDT").exists()
-
-    transitions = []
-    if is_secretaire:
-        transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
-
+    transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
     form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
     response = render(
@@ -538,8 +507,6 @@ def sidebar_save_and_transition(request, pk: int):
             "historique": historique,
             "transitions": transitions,
             "form_edition": form_edition,
-            "is_secretaire": is_secretaire,
-            "is_cdt": is_cdt,
             "error_message": error_message,
         },
     )
@@ -547,7 +514,7 @@ def sidebar_save_and_transition(request, pk: int):
     return response
 
 
-@group_required("Secretaire")
+@login_required
 def changer_statut_bdc(request, pk: int):
     """POST-only : applique une transition de statut sur le BDC."""
     if request.method != "POST":
@@ -570,7 +537,7 @@ def changer_statut_bdc(request, pk: int):
 # ─── Attribution / Réattribution ─────────────────────────────────────────
 
 
-@group_required("CDT")
+@login_required
 def attribuer_bdc(request, pk: int):
     """GET : formulaire d'attribution — POST : attribue le BDC à un ST."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur"), pk=pk)
@@ -606,7 +573,7 @@ def attribuer_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
-@group_required("CDT")
+@login_required
 def reattribuer_bdc(request, pk: int):
     """GET : formulaire pré-rempli — POST : réattribue le BDC à un autre ST."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
@@ -689,7 +656,9 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
         )
 
     return (
-        SousTraitant.objects.filter(actif=True)
+        SousTraitant.objects.filter(
+            Q(actif=True) | Q(bons_de_commande__statut__in=statuts)
+        ).distinct()
         .annotate(
             nb_bdc=Count("bons_de_commande", filter=filtre),
             total_montant_st=Sum("bons_de_commande__montant_st", filter=filtre),
@@ -698,7 +667,7 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
     )
 
 
-@group_required("CDT")
+@login_required
 def attribution_split(request, pk: int):
     """Page split-screen d'attribution : PDF a gauche, panneau d'action a droite."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
@@ -761,7 +730,7 @@ def attribution_split(request, pk: int):
     return render(request, "bdc/attribution_split.html", ctx)
 
 
-@group_required("CDT")
+@login_required
 def attribution_partial(request, pk: int):
     """Partial HTMX : tableau repartition ST + formulaire attribution/reattribution."""
     bdc = get_object_or_404(BonDeCommande, pk=pk)
@@ -822,7 +791,7 @@ def attribution_partial(request, pk: int):
 # ─── Validation réalisation / Facturation ────────────────────────────────────
 
 
-@group_required("CDT")
+@login_required
 def valider_realisation_bdc(request, pk: int):
     """POST-only : le CDT valide la réalisation (EN_COURS → A_FACTURER)."""
     if request.method != "POST":
@@ -839,7 +808,7 @@ def valider_realisation_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
-@group_required("CDT")
+@login_required
 def valider_facturation_bdc(request, pk: int):
     """POST-only : le CDT passe le BDC en facturation (A_FACTURER → FACTURE)."""
     if request.method != "POST":
@@ -859,7 +828,7 @@ def valider_facturation_bdc(request, pk: int):
 # ─── Renvoi CDT → Secrétaire ────────────────────────────────────────────────
 
 
-@group_required("CDT")
+@login_required
 def renvoyer_controle_bdc(request, pk: int):
     """POST: CDT renvoie un BDC A_FAIRE au contrôle avec un commentaire."""
     if request.method != "POST":
@@ -884,7 +853,7 @@ def renvoyer_controle_bdc(request, pk: int):
 # ─── Recoupement par sous-traitant ────────────────────────────────────────────
 
 
-@group_required("CDT")
+@login_required
 def recoupement_st_liste(request):
     """Liste des sous-traitants avec compteurs BDC par statut, filtrable par periode."""
     statuts = [StatutChoices.EN_COURS, StatutChoices.A_FACTURER, StatutChoices.FACTURE]
@@ -912,7 +881,7 @@ def recoupement_st_liste(request):
     return render(request, "bdc/recoupement_liste.html", context)
 
 
-@group_required("CDT")
+@login_required
 def recoupement_st_detail(request, st_pk: int):
     """BDC d'un sous-traitant donné, avec filtre par statut."""
     from apps.sous_traitants.models import SousTraitant
@@ -939,7 +908,7 @@ def recoupement_st_detail(request, st_pk: int):
 # ─── Export facturation ──────────────────────────────────────────────────────
 
 
-@group_required("CDT")
+@login_required
 def export_facturation(request):
     """GET : formulaire de filtres avec aperçu. POST : téléchargement Excel."""
     from .exports import generer_export_excel
@@ -985,8 +954,7 @@ def export_facturation(request):
 def controle_bdc(request, pk: int):
     """Page de contrôle BDC : split-screen PDF + checklist + formulaire d'édition."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
-    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
-    est_editable = is_secretaire and bdc.statut == StatutChoices.A_TRAITER
+    est_editable = bdc.statut == StatutChoices.A_TRAITER
 
     items = ChecklistItem.objects.filter(actif=True)
 

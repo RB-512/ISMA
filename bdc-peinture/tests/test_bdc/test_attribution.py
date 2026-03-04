@@ -152,10 +152,10 @@ class TestAttribuerBDCView:
         resp = client_cdt.get(url)
         assert resp.status_code == 200
 
-    def test_acces_secretaire_interdit(self, client_secretaire, bdc_a_faire):
+    def test_secretaire_can_access_attribuer(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
         resp = client_secretaire.get(url)
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
     def test_statut_incorrect_redirige(self, client_cdt, bdc_a_traiter):
         url = reverse("bdc:attribuer", args=[bdc_a_traiter.pk])
@@ -241,11 +241,11 @@ class TestDetailBDCBoutonsAttribution:
         resp = client_cdt.get(url)
         assert "Attribuer" in resp.content.decode()
 
-    def test_bouton_attribuer_absent_secretaire(self, client_secretaire, bdc_a_faire):
+    def test_bouton_attribuer_visible_secretaire(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:detail", args=[bdc_a_faire.pk])
         resp = client_secretaire.get(url)
         content = resp.content.decode()
-        assert "attribuer" not in content.lower() or "Attribuer" not in content
+        assert "Attribuer" in content
 
     def test_bouton_reattribuer_visible_cdt_en_cours(self, client_cdt, bdc_a_faire, sous_traitant, utilisateur_cdt):
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
@@ -253,13 +253,13 @@ class TestDetailBDCBoutonsAttribution:
         resp = client_cdt.get(url)
         assert "attribuer" in resp.content.decode().lower()
 
-    def test_transition_en_cours_masquee_pour_secretaire(self, client_secretaire, bdc_a_faire):
-        """La transition A_FAIRE → EN_COURS ne doit pas apparaître dans les boutons statut."""
+    def test_transition_en_cours_visible_pour_secretaire(self, client_secretaire, bdc_a_faire):
+        """La transition A_FAIRE → EN_COURS est visible pour tous les utilisateurs authentifiés."""
         url = reverse("bdc:detail", args=[bdc_a_faire.pk])
         resp = client_secretaire.get(url)
         content = resp.content.decode()
-        # Le bouton « En cours » ne doit pas apparaître comme bouton de transition
-        assert 'value="EN_COURS"' not in content
+        # Le bouton d'attribution (qui déclenche EN_COURS) doit être visible
+        assert "Attribuer" in content
 
 
 # ─── Tests vue attribution_partial (HTMX inline) ────────────────────────────
@@ -311,10 +311,10 @@ class TestAttributionPartial:
         assert "Semaine" in content  # period selector present
         assert "Mois" in content
 
-    def test_acces_secretaire_interdit(self, client_secretaire, bdc_a_faire):
+    def test_secretaire_can_access_attribution_partial(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
         resp = client_secretaire.get(url)
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
 
 # ─── Tests vue attribution_split (page split-screen) ────────────────────────
@@ -360,10 +360,10 @@ class TestAttributionSplit:
         content = resp.content.decode()
         assert "<html" not in content.lower()
 
-    def test_acces_secretaire_interdit(self, client_secretaire, bdc_a_faire):
+    def test_secretaire_can_access_attribution_split(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
         resp = client_secretaire.get(url)
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
     def test_repartition_st_presente(self, client_cdt, bdc_a_faire, sous_traitant):
         url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})

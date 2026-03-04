@@ -125,14 +125,14 @@ class TestControleGet:
         assert response.status_code == 302
         assert "/accounts/login/" in response.url
 
-    def test_controle_cdt_lecture_seule(self, client_cdt, bdc_a_traiter, checklist_items):
-        """GET contrôle en tant que CDT → 200, lecture seule (pas secrétaire)."""
+    def test_controle_cdt_editable(self, client_cdt, bdc_a_traiter, checklist_items):
+        """GET contrôle en tant que CDT → 200, éditable (plus de restriction de rôle)."""
         url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
         response = client_cdt.get(url)
 
         assert response.status_code == 200
-        assert response.context["est_editable"] is False
-        assert response.context["form_edition"] is None
+        assert response.context["est_editable"] is True
+        assert response.context["form_edition"] is not None
 
 
 # ─── Tests POST ──────────────────────────────────────────────────────────────
@@ -370,10 +370,10 @@ class TestRenvoiControle:
         bdc_a_traiter.refresh_from_db()
         assert bdc_a_traiter.statut == StatutChoices.A_TRAITER  # unchanged (was already A_TRAITER)
 
-    def test_renvoi_forbidden_for_secretaire(self, client_secretaire, bdc_a_faire):
+    def test_renvoi_accessible_for_secretaire(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
         resp = client_secretaire.post(url, {"commentaire": "Test"})
-        assert resp.status_code == 403
+        assert resp.status_code == 302
 
     def test_renvoi_get_not_allowed(self, client_cdt, bdc_a_faire):
         url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})

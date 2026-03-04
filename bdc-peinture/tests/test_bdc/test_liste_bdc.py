@@ -298,14 +298,14 @@ class TestSidebarSaveAndTransition:
         assert resp.status_code == 200
         assert resp["HX-Trigger"] == "bdc-updated"
 
-    def test_requires_secretaire(self, client, utilisateur_cdt, bdc_a_traiter):
-        """Only Secretaire group can access sidebar_action."""
+    def test_cdt_can_access_sidebar_action(self, client, utilisateur_cdt, bdc_a_traiter):
+        """Any authenticated user can access sidebar_action."""
         client.force_login(utilisateur_cdt)
         resp = client.post(
             reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]),
             {"occupation": "VACANT"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
     def test_get_redirects(self, client, utilisateur_secretaire, bdc_a_traiter):
         """GET sidebar_action redirects to detail."""

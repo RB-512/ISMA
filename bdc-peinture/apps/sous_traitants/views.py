@@ -4,7 +4,6 @@ from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 
-from apps.accounts.decorators import group_required
 from apps.sous_traitants.forms import SousTraitantForm
 from apps.sous_traitants.models import SousTraitant
 
@@ -17,21 +16,18 @@ def liste_sous_traitants(request):
         sous_traitants = sous_traitants.filter(
             Q(nom__icontains=q) | Q(siret__icontains=q) | Q(ville__icontains=q)
         )
-    is_cdt = request.user.groups.filter(name="CDT").exists()
-    form_creer = SousTraitantForm() if is_cdt else None
     return render(
         request,
         "sous_traitants/list.html",
         {
             "sous_traitants": sous_traitants,
-            "form_creer": form_creer,
-            "is_cdt": is_cdt,
+            "form_creer": SousTraitantForm(),
             "q": q,
         },
     )
 
 
-@group_required("CDT")
+@login_required
 def creer_sous_traitant(request):
     if request.method != "POST":
         return redirect("sous_traitants:list")
@@ -49,13 +45,12 @@ def creer_sous_traitant(request):
         {
             "sous_traitants": sous_traitants,
             "form_creer": form,
-            "is_cdt": True,
             "q": q,
         },
     )
 
 
-@group_required("CDT")
+@login_required
 def modifier_sous_traitant(request, pk):
     sous_traitant = get_object_or_404(SousTraitant, pk=pk)
     if request.method == "POST":
@@ -73,7 +68,7 @@ def modifier_sous_traitant(request, pk):
     )
 
 
-@group_required("CDT")
+@login_required
 def desactiver_sous_traitant(request, pk):
     sous_traitant = get_object_or_404(SousTraitant, pk=pk)
     if request.method == "POST":
@@ -83,7 +78,7 @@ def desactiver_sous_traitant(request, pk):
     return redirect("sous_traitants:list")
 
 
-@group_required("CDT")
+@login_required
 def reactiver_sous_traitant(request, pk):
     sous_traitant = get_object_or_404(SousTraitant, pk=pk)
     if request.method == "POST":
@@ -93,7 +88,7 @@ def reactiver_sous_traitant(request, pk):
     return redirect("sous_traitants:list")
 
 
-@group_required("CDT")
+@login_required
 def supprimer_sous_traitant(request, pk):
     sous_traitant = get_object_or_404(SousTraitant, pk=pk)
     if request.method == "POST":

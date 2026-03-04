@@ -23,9 +23,9 @@ class TestListeUtilisateurs:
         resp = client_cdt.get(reverse("gestion:liste"))
         assert resp.status_code == 200
 
-    def test_acces_secretaire_interdit(self, client_secretaire):
+    def test_secretaire_can_access(self, client_secretaire):
         resp = client_secretaire.get(reverse("gestion:liste"))
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
     def test_liste_affiche_utilisateurs(self, client_cdt, utilisateur_secretaire):
         resp = client_cdt.get(reverse("gestion:liste"))

@@ -76,10 +76,10 @@ class TestUploadPDF:
         assert response.status_code == 302
         assert "/accounts/login/" in response.url
 
-    def test_acces_cdt_interdit(self, client, utilisateur_cdt):
+    def test_cdt_can_access_upload(self, client, utilisateur_cdt):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:upload"))
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     def test_post_sans_fichier_affiche_erreur(self, client, utilisateur_secretaire):
         client.force_login(utilisateur_secretaire)
@@ -173,10 +173,10 @@ class TestCreerBDC:
         assert "450099" in response.content.decode()
         assert "Enregistrer" in response.content.decode()
 
-    def test_acces_cdt_interdit(self, client, utilisateur_cdt):
+    def test_cdt_can_access_nouveau(self, client, utilisateur_cdt):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:nouveau"))
-        assert response.status_code == 403
+        assert response.status_code == 302
 
     def test_post_doublon_affiche_erreur(self, client, utilisateur_secretaire, bdc_a_traiter, bailleur_gdh):
         client.force_login(utilisateur_secretaire)

@@ -123,10 +123,10 @@ class TestVueValiderRealisation:
         response = client.get(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
         assert response.status_code == 302
 
-    def test_secretaire_interdit(self, client, utilisateur_secretaire, bdc_en_cours):
+    def test_secretaire_can_access(self, client, utilisateur_secretaire, bdc_en_cours):
         client.force_login(utilisateur_secretaire)
         response = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
-        assert response.status_code == 403
+        assert response.status_code == 302
 
 
 class TestVueValiderFacturation:
@@ -142,10 +142,10 @@ class TestVueValiderFacturation:
         response = client.get(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
         assert response.status_code == 302
 
-    def test_secretaire_interdit(self, client, utilisateur_secretaire, bdc_a_facturer):
+    def test_secretaire_can_access(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
         response = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
-        assert response.status_code == 403
+        assert response.status_code == 302
 
 
 # ─── 6.5 Tests template detail — boutons conditionnels ─────────────────────
@@ -176,11 +176,11 @@ class TestTemplateBoutonsValidation:
         content = response.content.decode()
         assert "Annuler validation" in content
 
-    def test_boutons_absents_pour_secretaire(self, client, utilisateur_secretaire, bdc_en_cours):
+    def test_boutons_visibles_pour_secretaire(self, client, utilisateur_secretaire, bdc_en_cours):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:detail", kwargs={"pk": bdc_en_cours.pk}))
         content = response.content.decode()
-        assert "Valider réalisation" not in content
+        assert "Valider réalisation" in content
 
 
 # ─── 6.6 Tests vues recoupement ─────────────────────────────────────────────
@@ -192,10 +192,10 @@ class TestRecoupementListe:
         response = client.get(reverse("bdc:recoupement_liste"))
         assert response.status_code == 200
 
-    def test_secretaire_interdit(self, client, utilisateur_secretaire):
+    def test_secretaire_can_access(self, client, utilisateur_secretaire):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:recoupement_liste"))
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     def test_compteurs_affiches(self, client, utilisateur_cdt, bdc_en_cours, sous_traitant):
         client.force_login(utilisateur_cdt)
@@ -236,7 +236,7 @@ class TestRecoupementDetail:
         content = response.content.decode()
         assert reverse("bdc:detail", kwargs={"pk": bdc_en_cours.pk}) in content
 
-    def test_secretaire_interdit(self, client, utilisateur_secretaire, sous_traitant):
+    def test_secretaire_can_access(self, client, utilisateur_secretaire, sous_traitant):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:recoupement_detail", kwargs={"st_pk": sous_traitant.pk}))
-        assert response.status_code == 403
+        assert response.status_code == 200

@@ -373,7 +373,7 @@ class TestDashboardAlertes:
         assert "DASH-001" in content
         assert "en retard" in content
 
-    def test_encart_absent_secretaire(self, client, utilisateur_secretaire, utilisateur_cdt, bailleur_gdh):
+    def test_encart_visible_secretaire(self, client, utilisateur_secretaire, utilisateur_cdt, bailleur_gdh):
         BonDeCommande.objects.create(
             numero_bdc="DASH-002",
             bailleur=bailleur_gdh,
@@ -385,7 +385,7 @@ class TestDashboardAlertes:
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:index"))
         content = response.content.decode()
-        assert "en retard" not in content
+        assert "en retard" in content
 
     def test_encart_absent_si_pas_dalerte(self, client, utilisateur_cdt):
         client.force_login(utilisateur_cdt)

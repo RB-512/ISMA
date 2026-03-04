@@ -155,10 +155,7 @@
                     <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap">Sous-traitants</span>
                 </a>
 
-                {% if is_cdt %}
                 <div class="pt-3 mt-3 border-t border-white/10">
-                    <p x-show="!$store.sidebar.collapsed" x-transition class="px-3 mb-2 text-xs font-semibold text-white/40 uppercase tracking-wider">CDT</p>
-
                     {% url 'bdc:recoupement_liste' as url_recoup %}
                     <a href="{{ url_recoup }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                        {% if '/recoupement/' in request.path %}bg-white/15 text-white{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}">
@@ -180,7 +177,6 @@
                         <span x-show="!$store.sidebar.collapsed" x-transition class="whitespace-nowrap">Accès</span>
                     </a>
                 </div>
-                {% endif %}
             </nav>
 
             {# Bottom section: theme toggle, user, collapse #}

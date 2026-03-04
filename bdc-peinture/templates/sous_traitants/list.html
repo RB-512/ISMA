@@ -11,7 +11,6 @@
             <h1 class="text-2xl font-bold text-[var(--color-text)]">Sous-traitants</h1>
             <p class="text-sm text-[var(--color-text-muted)] mt-1">Gerer les artisans et entreprises sous-traitantes</p>
         </div>
-        {% if is_cdt %}
         <button
             x-data
             @click="$dispatch('toggle-form')"
@@ -22,11 +21,10 @@
             </svg>
             Ajouter un sous-traitant
         </button>
-        {% endif %}
     </div>
 
     {# ── Formulaire de creation (collapsible Alpine) ── #}
-    {% if is_cdt and form_creer %}
+    {% if form_creer %}
     <div
         x-data="{ open: {% if form_creer.errors %}true{% else %}false{% endif %} }"
         @toggle-form.window="open = !open"
@@ -190,8 +188,7 @@
                     {% endif %}
                 </div>
 
-                {# Actions (CDT uniquement) #}
-                {% if is_cdt %}
+                {# Actions #}
                 <div class="flex items-center gap-2 flex-shrink-0">
 
                     {% if st.actif %}
@@ -237,7 +234,6 @@
                         </button>
                     </form>
                 </div>
-                {% endif %}
 
             </div>
             {% endfor %}

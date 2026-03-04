@@ -185,9 +185,9 @@ class TestModifierUtilisateurForm:
 
 @pytest.mark.django_db
 class TestVuesGestion:
-    def test_secretaire_cannot_access_gestion(self, client_secretaire):
+    def test_secretaire_can_access_gestion(self, client_secretaire):
         resp = client_secretaire.get(reverse("gestion:liste"))
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
     def test_cdt_can_access_liste(self, client_cdt):
         resp = client_cdt.get(reverse("gestion:liste"))

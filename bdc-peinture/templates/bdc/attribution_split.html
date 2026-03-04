@@ -45,12 +45,12 @@
                 {% csrf_token %}
 
                 {# ── Scrollable panel content (HTMX reloadable) ── #}
-                <div id="attribution-panel">
+                <div id="attribution-panel" class="flex-1 overflow-hidden flex flex-col min-h-0">
                     {% include "bdc/partials/_attribution_panel.html" %}
                 </div>
 
                 {# ── Action buttons (sticky bottom) ── #}
-                <div class="border-t border-[var(--color-border)] p-4 space-y-2">
+                <div class="border-t border-[var(--color-border)] px-4 py-2 space-y-1">
                     <button type="submit"
                             class="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-success hover:bg-success-dark text-white transition-colors">
                         {% if reattribution %}Réattribuer{% else %}Attribuer{% endif %}

@@ -6,13 +6,13 @@ des vues custom pour styler avec Tailwind.
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.crypto import get_random_string
 from django.views.generic import TemplateView
 
-from apps.accounts.decorators import group_required
 from apps.accounts.forms import CreerUtilisateurForm, ModifierRoleForm, ModifierUtilisateurForm
 
 User = get_user_model()
@@ -27,7 +27,7 @@ class HomeRedirectView(TemplateView):
         return redirect("account_login")
 
 
-@group_required("CDT")
+@login_required
 def liste_utilisateurs(request):
     utilisateurs = User.objects.prefetch_related("groups").order_by("last_name", "first_name")
     form_creer = CreerUtilisateurForm()
@@ -37,12 +37,11 @@ def liste_utilisateurs(request):
         {
             "utilisateurs": utilisateurs,
             "form_creer": form_creer,
-            "is_cdt": True,
         },
     )
 
 
-@group_required("CDT")
+@login_required
 def creer_utilisateur(request):
     if request.method != "POST":
         return redirect("gestion:liste")
@@ -58,12 +57,11 @@ def creer_utilisateur(request):
         {
             "utilisateurs": utilisateurs,
             "form_creer": form,
-            "is_cdt": True,
         },
     )
 
 
-@group_required("CDT")
+@login_required
 def modifier_role(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if request.method == "POST":
@@ -75,7 +73,7 @@ def modifier_role(request, pk):
     return redirect("gestion:liste")
 
 
-@group_required("CDT")
+@login_required
 def desactiver_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
@@ -88,7 +86,7 @@ def desactiver_utilisateur(request, pk):
     return redirect("gestion:liste")
 
 
-@group_required("CDT")
+@login_required
 def modifier_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if request.method == "POST":
@@ -107,7 +105,7 @@ def modifier_utilisateur(request, pk):
     return render(request, "accounts/partials/_modifier_utilisateur.html", {"form": form, "utilisateur": utilisateur})
 
 
-@group_required("CDT")
+@login_required
 def reset_password_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
@@ -125,7 +123,7 @@ def reset_password_utilisateur(request, pk):
     return redirect("gestion:liste")
 
 
-@group_required("CDT")
+@login_required
 def reactiver_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if request.method == "POST":
@@ -135,7 +133,7 @@ def reactiver_utilisateur(request, pk):
     return redirect("gestion:liste")
 
 
-@group_required("CDT")
+@login_required
 def supprimer_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
