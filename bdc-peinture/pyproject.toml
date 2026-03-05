@@ -16,6 +16,7 @@ dependencies = [
     "pillow>=11.0",
     "openpyxl>=3.1",
     "requests>=2.31",
+    "whitenoise>=6.7",
 ]
 
 [project.optional-dependencies]

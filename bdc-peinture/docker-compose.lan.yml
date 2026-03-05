@@ -1,0 +1,40 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.lan
+    env_file:
+      - .env
+    volumes:
+      - media_data:/data/media
+      - static_data:/data/static
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "uv run manage.py collectstatic --noinput &&
+             uv run manage.py migrate --noinput &&
+             uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:
