@@ -1,314 +1,203 @@
 """
-Tests — génération du PDF terrain (sans prix) pour les sous-traitants.
-Couvre les tâches 7.1 à 7.6.
+Tests -- generation du PDF terrain (sans prix) pour les sous-traitants.
 
-Note : WeasyPrint nécessite des bibliothèques C natives (GTK/Pango).
-Les tests ERILIA mockent WeasyPrint et vérifient le HTML généré.
+Generateur unifie PyMuPDF : un seul processus pour tous les bailleurs,
+generation depuis les donnees en base (plus de dispatch GDH/ERILIA).
 """
 
-import sys
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
 
 import fitz  # PyMuPDF
 import pytest
 from django.core.files.base import ContentFile
-from django.template.loader import render_to_string
 from django.test import Client
 from django.urls import reverse
 
 from apps.bdc.models import LignePrestation, StatutChoices
 from apps.bdc.services import attribuer_st, reattribuer_st
-from apps.bdc.terrain import (
-    GenerationTerrainError,
-    _generer_terrain_gdh,
-    generer_pdf_terrain,
-)
+from apps.bdc.terrain import generer_pdf_terrain
 from apps.sous_traitants.models import SousTraitant
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+# --- Helper ------------------------------------------------------------------
 
 
-def _creer_pdf_2_pages() -> bytes:
-    """Crée un PDF de 2 pages en mémoire via PyMuPDF."""
-    doc = fitz.open()
-    page1 = doc.new_page()
-    page1.insert_text((72, 72), "Page 1 — Bon de commande avec prix")
-    page2 = doc.new_page()
-    page2.insert_text((72, 72), "Page 2 — Bon d'intervention sans prix")
-    pdf_bytes = doc.tobytes()
+def _extraire_texte_terrain(bdc) -> str:
+    """Helper : genere le terrain et retourne le texte du PDF."""
+    bdc = generer_pdf_terrain(bdc)
+    doc = fitz.open(stream=bdc.pdf_terrain.read(), filetype="pdf")
+    texte = doc[0].get_text()
     doc.close()
-    return pdf_bytes
+    return texte
 
 
-def _creer_pdf_2_pages_avec_emetteur() -> bytes:
-    """Crée un PDF de 2 pages avec infos émetteur (tél + email) sur page 2."""
-    doc = fitz.open()
-    page1 = doc.new_page()
-    page1.insert_text((72, 72), "Page 1 — Bon de commande avec prix")
-    page2 = doc.new_page()
-    y = 72
-    page2.insert_text((72, y), "Bon d'intervention sans prix")
-    y += 30
-    page2.insert_text((72, y), "Adresse : 3 Rue Francois 1er 84000 AVIGNON")
-    y += 20
-    page2.insert_text((72, y), "Emetteur : Joseph LONEGRO")
-    y += 20
-    page2.insert_text((72, y), "Mail : joseph.lonegro@gdhabitat.fr")
-    y += 20
-    page2.insert_text((72, y), "Tel : 0490272800")
-    y += 20
-    page2.insert_text((72, y), "Portable : 0612345678")
-    pdf_bytes = doc.tobytes()
-    doc.close()
-    return pdf_bytes
+# --- Tests generateur unifie PyMuPDF -----------------------------------------
 
 
-def _creer_pdf_1_page() -> bytes:
-    """Crée un PDF d'une seule page."""
-    doc = fitz.open()
-    page = doc.new_page()
-    page.insert_text((72, 72), "Page unique")
-    pdf_bytes = doc.tobytes()
-    doc.close()
-    return pdf_bytes
+class TestGenererPdfTerrainUnifie:
+    """Tests du generateur unifie PyMuPDF (remplace GDH + ERILIA)."""
 
+    def test_pdf_genere_et_stocke(self, bdc_a_faire):
+        """Le PDF terrain est genere et stocke sur le BDC."""
+        bdc = generer_pdf_terrain(bdc_a_faire)
+        assert bdc.pdf_terrain
+        assert bdc.pdf_terrain.name
 
-def _fake_pdf() -> bytes:
-    """Crée un faux PDF minimal pour les mocks WeasyPrint."""
-    return _creer_pdf_1_page()
-
-
-@pytest.fixture()
-def _mock_weasyprint():
-    """Injecte un module weasyprint factice dans sys.modules."""
-    mock_module = MagicMock()
-    mock_module.HTML.return_value.write_pdf.return_value = _fake_pdf()
-    with patch.dict(sys.modules, {"weasyprint": mock_module}):
-        yield mock_module
-
-
-# ─── 7.1 Tests _generer_terrain_gdh ──────────────────────────────────────────
-
-
-class TestGenererTerrainGDH:
-    def test_extraction_page_2_reussie(self, bdc_a_faire):
-        pdf_2pages = _creer_pdf_2_pages()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_2pages), save=True)
-
-        result = _generer_terrain_gdh(bdc_a_faire)
-
-        assert isinstance(result, bytes)
-        assert len(result) > 0
-        # Vérifier que c'est un PDF valide avec 1 page
-        doc = fitz.open(stream=result, filetype="pdf")
+    def test_pdf_une_seule_page(self, bdc_a_faire):
+        """Le PDF terrain fait une seule page."""
+        bdc = generer_pdf_terrain(bdc_a_faire)
+        doc = fitz.open(stream=bdc.pdf_terrain.read(), filetype="pdf")
         assert len(doc) == 1
-        text = doc[0].get_text()
-        assert "Page 2" in text
         doc.close()
 
-    def test_pdf_1_page_leve_erreur(self, bdc_a_faire):
-        pdf_1page = _creer_pdf_1_page()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_1page), save=True)
+    def test_nom_bailleur_en_entete(self, bdc_a_faire):
+        """Le nom du bailleur apparait en en-tete."""
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert "Grand Delta Habitat" in texte or "GRAND DELTA HABITAT" in texte
 
-        with pytest.raises(GenerationTerrainError, match="1 page"):
-            _generer_terrain_gdh(bdc_a_faire)
+    def test_numero_bdc_present(self, bdc_a_faire):
+        """Le numero BDC apparait dans le PDF."""
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert bdc_a_faire.numero_bdc in texte
 
-    def test_pas_de_pdf_original_leve_erreur(self, bdc_a_faire):
-        assert not bdc_a_faire.pdf_original
+    def test_adresse_presente(self, bdc_a_faire):
+        """L'adresse du chantier apparait."""
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert bdc_a_faire.adresse in texte
+        assert bdc_a_faire.ville in texte
 
-        with pytest.raises(GenerationTerrainError, match="pas de PDF original"):
-            _generer_terrain_gdh(bdc_a_faire)
+    def test_objet_travaux_present(self, bdc_a_faire):
+        """L'objet des travaux apparait."""
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert bdc_a_faire.objet_travaux in texte
 
+    def test_occupant_present(self, bdc_a_faire):
+        """Le contact occupant (nom + tel) apparait."""
+        bdc_a_faire.occupant_nom = "MUSELLA CHRISTIANE"
+        bdc_a_faire.occupant_telephone = "0612345678"
+        bdc_a_faire.save(update_fields=["occupant_nom", "occupant_telephone"])
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert "MUSELLA" in texte
+        assert "0612345678" in texte
 
-# ─── 7.1b Tests anonymisation PDF terrain GDH ─────────────────────────────────
-
-
-class TestAnonymisationTerrainGDH:
-    def test_telephone_emetteur_masque(self, bdc_a_faire):
-        """Le téléphone de l'émetteur doit être remplacé par *** dans le PDF terrain."""
-        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
-
-        result = _generer_terrain_gdh(bdc_a_faire)
-
-        doc = fitz.open(stream=result, filetype="pdf")
-        texte = doc[0].get_text()
-        doc.close()
-        assert "0490272800" not in texte
-        assert "0612345678" not in texte
-
-    def test_email_emetteur_masque(self, bdc_a_faire):
-        """L'email de l'émetteur doit être remplacé par *** dans le PDF terrain."""
-        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
-
-        result = _generer_terrain_gdh(bdc_a_faire)
-
-        doc = fitz.open(stream=result, filetype="pdf")
-        texte = doc[0].get_text()
-        doc.close()
-        assert "joseph.lonegro@gdhabitat.fr" not in texte
-
-    def test_nom_emetteur_preserve(self, bdc_a_faire):
-        """Le nom de l'émetteur doit rester visible (seuls tél et email masqués)."""
-        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
-
-        result = _generer_terrain_gdh(bdc_a_faire)
-
-        doc = fitz.open(stream=result, filetype="pdf")
-        texte = doc[0].get_text()
-        doc.close()
-        assert "Emetteur" in texte
-
-    def test_adresse_preservee(self, bdc_a_faire):
-        """L'adresse du chantier ne doit pas être masquée."""
-        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
-
-        result = _generer_terrain_gdh(bdc_a_faire)
-
-        doc = fitz.open(stream=result, filetype="pdf")
-        texte = doc[0].get_text()
-        doc.close()
-        assert "AVIGNON" in texte
-
-    def test_remplacement_par_etoiles(self, bdc_a_faire):
-        """Les valeurs masquées doivent être remplacées par ***."""
-        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
-
-        result = _generer_terrain_gdh(bdc_a_faire)
-
-        doc = fitz.open(stream=result, filetype="pdf")
-        texte = doc[0].get_text()
-        doc.close()
-        assert "***" in texte
-
-
-# ─── 7.2 Tests _generer_terrain_erilia ────────────────────────────────────────
-
-
-@pytest.mark.usefixtures("_mock_weasyprint")
-class TestGenererTerrainERILIA:
-    def test_pdf_genere(self, bdc_a_faire):
-        from apps.bdc.terrain import _generer_terrain_erilia
-
-        result = _generer_terrain_erilia(bdc_a_faire)
-
-        assert isinstance(result, bytes)
-        assert len(result) > 0
-
-    def test_pas_de_prix_dans_html(self, bdc_a_faire):
-        """Vérifie que le template HTML ne contient aucun prix."""
-        bdc_a_faire.montant_ht = Decimal("1071.40")
-        bdc_a_faire.montant_tva = Decimal("107.14")
-        bdc_a_faire.montant_ttc = Decimal("1178.54")
-        bdc_a_faire.save(update_fields=["montant_ht", "montant_tva", "montant_ttc"])
-
+    def test_prestations_sans_prix(self, bdc_a_faire):
+        """Les prestations apparaissent (designation, quantite, unite) SANS prix."""
         LignePrestation.objects.create(
             bdc=bdc_a_faire,
-            designation="Peinture WC",
+            designation="Peinture SDB",
             quantite=Decimal("15"),
-            unite="m²",
+            unite="m2",
             prix_unitaire=Decimal("11.19"),
             montant=Decimal("167.85"),
             ordre=0,
         )
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert "Peinture SDB" in texte
+        assert "15" in texte
+        assert "11.19" not in texte
+        assert "167.85" not in texte
 
-        lignes = bdc_a_faire.lignes_prestation.all()
-        html = render_to_string(
-            "bdc/terrain_erilia.html",
-            {
-                "bdc": bdc_a_faire,
-                "lignes": lignes,
-            },
-        )
+    def test_montants_bdc_absents(self, bdc_a_faire):
+        """Les montants globaux du BDC n'apparaissent pas."""
+        bdc_a_faire.montant_ht = Decimal("1071.40")
+        bdc_a_faire.montant_tva = Decimal("107.14")
+        bdc_a_faire.montant_ttc = Decimal("1178.54")
+        bdc_a_faire.save(update_fields=["montant_ht", "montant_tva", "montant_ttc"])
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert "1071" not in texte
+        assert "1178" not in texte
 
-        assert "1071" not in html
-        assert "107.14" not in html
-        assert "1178" not in html
-        assert "11.19" not in html
-        assert "167.85" not in html
-        # Mais la désignation et quantité sont présentes
-        assert "Peinture WC" in html
-        assert "15" in html
+    def test_contact_emetteur_absent(self, bdc_a_faire):
+        """Le telephone et email de l'emetteur n'apparaissent pas."""
+        bdc_a_faire.emetteur_nom = "Joseph LONEGRO"
+        bdc_a_faire.emetteur_telephone = "0490272800"
+        bdc_a_faire.save(update_fields=["emetteur_nom", "emetteur_telephone"])
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert "0490272800" not in texte
 
+    def test_mention_sans_prix(self, bdc_a_faire):
+        """La mention DOCUMENT TERRAIN SANS PRIX apparait."""
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert "SANS PRIX" in texte
 
-# ─── 7.3 Tests generer_pdf_terrain (dispatch) ────────────────────────────────
-
-
-@pytest.mark.usefixtures("_mock_weasyprint")
-class TestGenererPdfTerrain:
-    def test_dispatch_gdh(self, bdc_a_faire):
+    def test_fonctionne_bailleur_gdh(self, bdc_a_faire):
+        """Fonctionne pour un BDC GDH (plus besoin de pdf_original)."""
         assert bdc_a_faire.bailleur.code == "GDH"
-        pdf_2pages = _creer_pdf_2_pages()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_2pages), save=True)
-
+        assert not bdc_a_faire.pdf_original  # pas de PDF original necessaire
         bdc = generer_pdf_terrain(bdc_a_faire)
-
         assert bdc.pdf_terrain
-        assert bdc.pdf_terrain.name
 
-    def test_dispatch_erilia(self, bdc_a_faire, bailleur_erilia):
+    def test_fonctionne_bailleur_erilia(self, bdc_a_faire, bailleur_erilia):
+        """Fonctionne pour un BDC ERILIA."""
         bdc_a_faire.bailleur = bailleur_erilia
         bdc_a_faire.save(update_fields=["bailleur"])
-
         bdc = generer_pdf_terrain(bdc_a_faire)
+        assert bdc.pdf_terrain
 
+    def test_fonctionne_bailleur_inconnu(self, bdc_a_faire):
+        """Fonctionne pour n'importe quel bailleur."""
+        from apps.bdc.models import Bailleur
+
+        autre = Bailleur.objects.create(nom="Nouveau Bailleur", code="NB")
+        bdc_a_faire.bailleur = autre
+        bdc_a_faire.save(update_fields=["bailleur"])
+        bdc = generer_pdf_terrain(bdc_a_faire)
+        assert bdc.pdf_terrain
+        texte = _extraire_texte_terrain(bdc_a_faire)
+        assert "NOUVEAU BAILLEUR" in texte
+
+
+# --- Tests generer_pdf_terrain (dispatch unifie) -----------------------------
+
+
+class TestGenererPdfTerrain:
+    def test_genere_gdh(self, bdc_a_faire):
+        assert bdc_a_faire.bailleur.code == "GDH"
+        bdc = generer_pdf_terrain(bdc_a_faire)
         assert bdc.pdf_terrain
         assert bdc.pdf_terrain.name
 
-    def test_bailleur_inconnu_fallback_erilia(self, bdc_a_faire):
+    def test_genere_erilia(self, bdc_a_faire, bailleur_erilia):
+        bdc_a_faire.bailleur = bailleur_erilia
+        bdc_a_faire.save(update_fields=["bailleur"])
+        bdc = generer_pdf_terrain(bdc_a_faire)
+        assert bdc.pdf_terrain
+        assert bdc.pdf_terrain.name
+
+    def test_bailleur_inconnu(self, bdc_a_faire):
         from apps.bdc.models import Bailleur
 
         autre = Bailleur.objects.create(nom="Autre Bailleur", code="AUTRE")
         bdc_a_faire.bailleur = autre
         bdc_a_faire.save(update_fields=["bailleur"])
-
         bdc = generer_pdf_terrain(bdc_a_faire)
-
         assert bdc.pdf_terrain
         assert bdc.pdf_terrain.name
 
 
-# ─── 7.4 Tests intégration : attribution génère le PDF terrain ───────────────
+# --- Tests integration : attribution genere le PDF terrain -------------------
 
 
-@pytest.mark.usefixtures("_mock_weasyprint")
 class TestAttributionGenereTerrainIntegration:
     def test_attribution_genere_pdf_terrain(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
-        pdf_2pages = _creer_pdf_2_pages()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_2pages), save=True)
-
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
-
         bdc.refresh_from_db()
         assert bdc.pdf_terrain
 
     def test_reattribution_regenere_pdf_terrain(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
-        pdf_2pages = _creer_pdf_2_pages()
-        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_2pages), save=True)
-
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
-
         autre_st = SousTraitant.objects.create(nom="Martin", telephone="0600000000", actif=True)
         bdc = reattribuer_st(bdc, autre_st, Decimal("70"), utilisateur_cdt)
-
         bdc.refresh_from_db()
         assert bdc.pdf_terrain
 
     def test_attribution_reussit_meme_si_terrain_echoue(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
-        """L'attribution ne doit pas échouer si la génération terrain échoue."""
-        # Pas de pdf_original → la génération GDH échouera
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
-
         assert bdc.statut == StatutChoices.EN_COURS
         assert bdc.sous_traitant == sous_traitant
 
 
-# ─── 7.5 Tests vue telecharger_terrain ────────────────────────────────────────
+# --- Tests vue telecharger_terrain -------------------------------------------
 
 
 @pytest.fixture
@@ -337,7 +226,7 @@ class TestTelechargerTerrain:
         assert resp.status_code == 404
 
 
-# ─── 7.6 Tests template detail : bouton BDC terrain ──────────────────────────
+# --- Tests template detail : bouton BDC terrain ------------------------------
 
 
 class TestDetailBoutonTerrain:
