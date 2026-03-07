@@ -15,6 +15,6 @@ urlpatterns = [
     path("", include("apps.bdc.urls")),
 ]
 
-# En développement : servir les fichiers media via Django
-if settings.DEBUG:
+# Servir les fichiers media via Django (dev + LAN sans nginx)
+if settings.DEBUG or not getattr(settings, "USE_NGINX_MEDIA", True):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

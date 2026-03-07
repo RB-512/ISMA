@@ -37,6 +37,9 @@ DATABASES = {
 STATIC_ROOT = "/data/static/"
 MEDIA_ROOT = "/data/media/"
 
+# Pas de Nginx en LAN : Django sert les fichiers media
+USE_NGINX_MEDIA = False
+
 # Pas de securite HTTPS en LAN
 SESSION_COOKIE_HTTPONLY = True
 
