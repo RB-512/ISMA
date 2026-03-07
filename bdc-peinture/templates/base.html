@@ -10,8 +10,8 @@
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <meta name="theme-color" content="#1B2B3A">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="icon" type="image/svg+xml" href="{% static 'icons/icon-192.svg' %}">
-    <link rel="apple-touch-icon" href="{% static 'icons/icon-192.svg' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
 
     {# ── Dark mode : apply before render to avoid flash ── #}
     <script>
@@ -134,8 +134,10 @@
             {# Logo #}
             <div class="flex items-center h-16 px-4 border-b border-white/10">
                 <a href="{% url 'bdc:index' %}" class="flex items-center gap-2 overflow-hidden">
-                    <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-accent flex items-center justify-center font-bold text-white text-sm">I</span>
-                    <span x-show="!$store.sidebar.collapsed" x-transition class="font-bold text-lg tracking-tight whitespace-nowrap">ISMA</span>
+                    <img x-show="!$store.sidebar.collapsed" src="{% static 'icons/logo-isma.png' %}" alt="ISMA"
+                         class="h-8 object-contain brightness-0 invert">
+                    <img x-show="$store.sidebar.collapsed" src="{% static 'icons/logo-isma-icon.png' %}" alt="ISMA"
+                         class="h-8 w-8 object-contain brightness-0 invert flex-shrink-0">
                 </a>
             </div>
 
