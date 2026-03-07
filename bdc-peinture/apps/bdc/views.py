@@ -656,9 +656,8 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
         )
 
     return (
-        SousTraitant.objects.filter(
-            Q(actif=True) | Q(bons_de_commande__statut__in=statuts)
-        ).distinct()
+        SousTraitant.objects.filter(Q(actif=True) | Q(bons_de_commande__statut__in=statuts))
+        .distinct()
         .annotate(
             nb_bdc=Count("bons_de_commande", filter=filtre),
             total_montant_st=Sum("bons_de_commande__montant_st", filter=filtre),
@@ -1040,6 +1039,139 @@ def telecharger_terrain(request, pk: int):
         as_attachment=True,
         filename=f"BDC_{bdc.numero_bdc}_terrain.pdf",
     )
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+
+# ─── Relevés de facturation ─────────────────────────────────────────────────
+
+
+@login_required
+def releve_creer(request, st_pk: int):
+    """POST-only : crée un relevé brouillon pour un ST."""
+    from apps.sous_traitants.models import SousTraitant
+
+    from .releves import ReleveError, creer_releve
+
+    if request.method != "POST":
+        return redirect("bdc:recoupement_liste")
+
+    sous_traitant = get_object_or_404(SousTraitant, pk=st_pk)
+    try:
+        releve = creer_releve(sous_traitant, request.user)
+        messages.success(request, f"Relevé n°{releve.numero} créé pour {sous_traitant.nom}.")
+        return redirect("bdc:releve_detail", pk=releve.pk)
+    except ReleveError as e:
+        messages.error(request, str(e))
+        return redirect("bdc:recoupement_liste")
+
+
+@login_required
+def releve_detail(request, pk: int):
+    """Détail d'un relevé : liste des BDC, montant total, actions."""
+    from .models import ReleveFacturation
+
+    releve = get_object_or_404(
+        ReleveFacturation.objects.select_related("sous_traitant", "cree_par"),
+        pk=pk,
+    )
+    bdc_list = releve.bdc.select_related("bailleur").order_by("date_realisation")
+
+    return render(
+        request,
+        "bdc/releve_detail.html",
+        {
+            "releve": releve,
+            "bdc_list": bdc_list,
+        },
+    )
+
+
+@login_required
+def releve_valider(request, pk: int):
+    """POST-only : valide un relevé brouillon."""
+    from .models import ReleveFacturation
+    from .releves import ReleveError
+    from .releves import valider_releve as _valider
+
+    if request.method != "POST":
+        return redirect("bdc:releve_detail", pk=pk)
+
+    releve = get_object_or_404(ReleveFacturation, pk=pk)
+    try:
+        _valider(releve, request.user)
+        messages.success(request, f"Relevé n°{releve.numero} validé.")
+    except ReleveError as e:
+        messages.error(request, str(e))
+    return redirect("bdc:releve_detail", pk=pk)
+
+
+@login_required
+def releve_retirer_bdc(request, pk: int, bdc_pk: int):
+    """POST-only : retire un BDC d'un relevé brouillon."""
+    from .models import ReleveFacturation
+    from .releves import ReleveError, retirer_bdc_du_releve
+
+    if request.method != "POST":
+        return redirect("bdc:releve_detail", pk=pk)
+
+    releve = get_object_or_404(ReleveFacturation, pk=pk)
+    bdc = get_object_or_404(BonDeCommande, pk=bdc_pk)
+    try:
+        retirer_bdc_du_releve(releve, bdc)
+        messages.success(request, f"BDC {bdc.numero_bdc} retiré du relevé.")
+    except ReleveError as e:
+        messages.error(request, str(e))
+    return redirect("bdc:releve_detail", pk=pk)
+
+
+@login_required
+def releve_historique(request, st_pk: int):
+    """Historique des relevés d'un ST."""
+    from apps.sous_traitants.models import SousTraitant
+
+    from .models import ReleveFacturation
+
+    sous_traitant = get_object_or_404(SousTraitant, pk=st_pk)
+    releves = ReleveFacturation.objects.filter(
+        sous_traitant=sous_traitant,
+    ).order_by("-date_creation")
+
+    return render(
+        request,
+        "bdc/releve_historique.html",
+        {
+            "sous_traitant": sous_traitant,
+            "releves": releves,
+        },
+    )
+
+
+@login_required
+def releve_pdf(request, pk: int):
+    """Génère et télécharge le PDF du relevé."""
+    from .models import ReleveFacturation
+    from .releves_export import generer_releve_pdf
+
+    releve = get_object_or_404(
+        ReleveFacturation.objects.select_related("sous_traitant"),
+        pk=pk,
+    )
+    return generer_releve_pdf(releve)
+
+
+@login_required
+def releve_excel(request, pk: int):
+    """Génère et télécharge l'Excel du relevé."""
+    from .models import ReleveFacturation
+    from .releves_export import generer_releve_excel
+
+    releve = get_object_or_404(
+        ReleveFacturation.objects.select_related("sous_traitant"),
+        pk=pk,
+    )
+    return generer_releve_excel(releve)
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

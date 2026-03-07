@@ -1,5 +1,6 @@
 import os
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.db import models
@@ -349,3 +350,73 @@ class HistoriqueAction(models.Model):
 
     def __str__(self) -> str:
         return f"{self.bdc.numero_bdc} — {self.get_action_display()} par {self.utilisateur} le {self.created_at:%d/%m/%Y %H:%M}"
+
+
+# ─── ReleveFacturation ───────────────────────────────────────────────────────
+
+
+class ReleveStatutChoices(models.TextChoices):
+    BROUILLON = "BROUILLON", "Brouillon"
+    VALIDE = "VALIDE", "Validé"
+
+
+class ReleveFacturation(models.Model):
+    """
+    Relevé de facturation regroupant les BDC réalisés par un sous-traitant.
+    Workflow : BROUILLON → VALIDE.
+    Un BDC ne peut appartenir qu'à un seul relevé validé (anti-doublon).
+    """
+
+    numero = models.PositiveIntegerField(verbose_name="N° Relevé")
+    sous_traitant = models.ForeignKey(
+        "sous_traitants.SousTraitant",
+        on_delete=models.PROTECT,
+        related_name="releves_facturation",
+        verbose_name="Sous-traitant",
+    )
+    statut = models.CharField(
+        max_length=10,
+        choices=ReleveStatutChoices.choices,
+        default=ReleveStatutChoices.BROUILLON,
+        verbose_name="Statut",
+    )
+    bdc = models.ManyToManyField(
+        BonDeCommande,
+        blank=True,
+        related_name="releves_facturation",
+        verbose_name="Bons de commande",
+    )
+    notes = models.TextField(blank=True, verbose_name="Notes")
+    cree_par = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="releves_crees",
+        verbose_name="Créé par",
+    )
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
+    date_validation = models.DateTimeField(null=True, blank=True, verbose_name="Validé le")
+
+    class Meta:
+        verbose_name = "Relevé de facturation"
+        verbose_name_plural = "Relevés de facturation"
+        ordering = ["-date_creation"]
+
+    def __str__(self):
+        return f"Relevé n°{self.numero} — {self.sous_traitant.nom}"
+
+    @property
+    def montant_total(self):
+        result = self.bdc.aggregate(total=models.Sum("montant_st"))["total"]
+        return result or Decimal("0")
+
+    @property
+    def nb_bdc(self):
+        return self.bdc.count()
+
+    @property
+    def periode(self):
+        agg = self.bdc.aggregate(
+            debut=models.Min("date_realisation"),
+            fin=models.Max("date_realisation"),
+        )
+        return agg["debut"], agg["fin"]

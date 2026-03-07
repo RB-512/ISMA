@@ -25,4 +25,12 @@ urlpatterns = [
     path("export/", views.export_facturation, name="export_facturation"),
     path("recoupement/", views.recoupement_st_liste, name="recoupement_liste"),
     path("recoupement/<int:st_pk>/", views.recoupement_st_detail, name="recoupement_detail"),
+    # ─── Relevés de facturation ─────────────────────────────────────────────
+    path("releves/<int:st_pk>/creer/", views.releve_creer, name="releve_creer"),
+    path("releves/<int:pk>/", views.releve_detail, name="releve_detail"),
+    path("releves/<int:pk>/valider/", views.releve_valider, name="releve_valider"),
+    path("releves/<int:pk>/retirer/<int:bdc_pk>/", views.releve_retirer_bdc, name="releve_retirer_bdc"),
+    path("releves/<int:pk>/pdf/", views.releve_pdf, name="releve_pdf"),
+    path("releves/<int:pk>/excel/", views.releve_excel, name="releve_excel"),
+    path("releves/st/<int:st_pk>/", views.releve_historique, name="releve_historique"),
 ]

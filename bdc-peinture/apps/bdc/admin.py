@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Bailleur, BonDeCommande, ChecklistItem, HistoriqueAction, LignePrestation
+from .models import Bailleur, BonDeCommande, ChecklistItem, HistoriqueAction, LignePrestation, ReleveFacturation
 
 
 @admin.register(Bailleur)
@@ -33,3 +33,10 @@ class HistoriqueActionAdmin(admin.ModelAdmin):
     list_display = ("bdc", "utilisateur", "action", "created_at")
     list_filter = ("action",)
     readonly_fields = ("created_at",)
+
+
+@admin.register(ReleveFacturation)
+class ReleveFacturationAdmin(admin.ModelAdmin):
+    list_display = ("numero", "sous_traitant", "statut", "date_creation", "date_validation")
+    list_filter = ("statut", "sous_traitant")
+    readonly_fields = ("date_creation",)
