@@ -7,6 +7,7 @@ Stratégies :
 """
 
 import logging
+import re
 
 import fitz  # PyMuPDF
 from django.core.files.base import ContentFile
@@ -19,6 +20,36 @@ logger = logging.getLogger(__name__)
 
 class GenerationTerrainError(Exception):
     """Levée quand la génération du PDF terrain échoue."""
+
+
+# ─── Anonymisation ───────────────────────────────────────────────────────────
+
+
+def _anonymiser_page(page: fitz.Page) -> None:
+    """Masque le téléphone et l'email de l'émetteur sur une page PDF.
+
+    Cherche les valeurs (numéros de tél, adresses email) dans les lignes
+    situées après « Emetteur » et les remplace par « *** » via redaction PyMuPDF.
+    """
+    texte = page.get_text()
+
+    # Chercher les numéros de téléphone après "Emetteur"
+    # Patterns : "Tel : 0490272800", "Portable : 0612345678"
+    for match in re.finditer(r"(?:T[eé]l|Portable)\s*:\s*(\d[\d\s.]+\d)", texte):
+        valeur = match.group(1).strip()
+        rects = page.search_for(valeur)
+        for rect in rects:
+            page.add_redact_annot(rect, text="***")
+
+    # Chercher les emails après "Emetteur"
+    # Pattern : "Mail : prenom.nom@domain.fr"
+    for match in re.finditer(r"Mail\s*:\s*([\w.\-]+@[\w.\-]+\.\w+)", texte):
+        valeur = match.group(1).strip()
+        rects = page.search_for(valeur)
+        for rect in rects:
+            page.add_redact_annot(rect, text="***")
+
+    page.apply_redactions()
 
 
 # ─── Stratégie GDH : extraction page 2 ──────────────────────────────────────
@@ -53,6 +84,9 @@ def _generer_terrain_gdh(bdc: BonDeCommande) -> bytes:
         # Créer un nouveau PDF avec uniquement la page 2
         nouveau = fitz.open()
         nouveau.insert_pdf(doc, from_page=1, to_page=1)
+
+        # Anonymiser les données émetteur (tél + email)
+        _anonymiser_page(nouveau[0])
 
         pdf_bytes = nouveau.tobytes()
         nouveau.close()

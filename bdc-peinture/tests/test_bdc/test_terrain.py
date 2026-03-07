@@ -41,6 +41,29 @@ def _creer_pdf_2_pages() -> bytes:
     return pdf_bytes
 
 
+def _creer_pdf_2_pages_avec_emetteur() -> bytes:
+    """Crée un PDF de 2 pages avec infos émetteur (tél + email) sur page 2."""
+    doc = fitz.open()
+    page1 = doc.new_page()
+    page1.insert_text((72, 72), "Page 1 — Bon de commande avec prix")
+    page2 = doc.new_page()
+    y = 72
+    page2.insert_text((72, y), "Bon d'intervention sans prix")
+    y += 30
+    page2.insert_text((72, y), "Adresse : 3 Rue Francois 1er 84000 AVIGNON")
+    y += 20
+    page2.insert_text((72, y), "Emetteur : Joseph LONEGRO")
+    y += 20
+    page2.insert_text((72, y), "Mail : joseph.lonegro@gdhabitat.fr")
+    y += 20
+    page2.insert_text((72, y), "Tel : 0490272800")
+    y += 20
+    page2.insert_text((72, y), "Portable : 0612345678")
+    pdf_bytes = doc.tobytes()
+    doc.close()
+    return pdf_bytes
+
+
 def _creer_pdf_1_page() -> bytes:
     """Crée un PDF d'une seule page."""
     doc = fitz.open()
@@ -96,6 +119,72 @@ class TestGenererTerrainGDH:
 
         with pytest.raises(GenerationTerrainError, match="pas de PDF original"):
             _generer_terrain_gdh(bdc_a_faire)
+
+
+# ─── 7.1b Tests anonymisation PDF terrain GDH ─────────────────────────────────
+
+
+class TestAnonymisationTerrainGDH:
+    def test_telephone_emetteur_masque(self, bdc_a_faire):
+        """Le téléphone de l'émetteur doit être remplacé par *** dans le PDF terrain."""
+        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
+        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
+
+        result = _generer_terrain_gdh(bdc_a_faire)
+
+        doc = fitz.open(stream=result, filetype="pdf")
+        texte = doc[0].get_text()
+        doc.close()
+        assert "0490272800" not in texte
+        assert "0612345678" not in texte
+
+    def test_email_emetteur_masque(self, bdc_a_faire):
+        """L'email de l'émetteur doit être remplacé par *** dans le PDF terrain."""
+        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
+        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
+
+        result = _generer_terrain_gdh(bdc_a_faire)
+
+        doc = fitz.open(stream=result, filetype="pdf")
+        texte = doc[0].get_text()
+        doc.close()
+        assert "joseph.lonegro@gdhabitat.fr" not in texte
+
+    def test_nom_emetteur_preserve(self, bdc_a_faire):
+        """Le nom de l'émetteur doit rester visible (seuls tél et email masqués)."""
+        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
+        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
+
+        result = _generer_terrain_gdh(bdc_a_faire)
+
+        doc = fitz.open(stream=result, filetype="pdf")
+        texte = doc[0].get_text()
+        doc.close()
+        assert "Emetteur" in texte
+
+    def test_adresse_preservee(self, bdc_a_faire):
+        """L'adresse du chantier ne doit pas être masquée."""
+        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
+        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
+
+        result = _generer_terrain_gdh(bdc_a_faire)
+
+        doc = fitz.open(stream=result, filetype="pdf")
+        texte = doc[0].get_text()
+        doc.close()
+        assert "AVIGNON" in texte
+
+    def test_remplacement_par_etoiles(self, bdc_a_faire):
+        """Les valeurs masquées doivent être remplacées par ***."""
+        pdf_avec_emetteur = _creer_pdf_2_pages_avec_emetteur()
+        bdc_a_faire.pdf_original.save("test.pdf", ContentFile(pdf_avec_emetteur), save=True)
+
+        result = _generer_terrain_gdh(bdc_a_faire)
+
+        doc = fitz.open(stream=result, filetype="pdf")
+        texte = doc[0].get_text()
+        doc.close()
+        assert "***" in texte
 
 
 # ─── 7.2 Tests _generer_terrain_erilia ────────────────────────────────────────
