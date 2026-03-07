@@ -115,10 +115,10 @@ class TestGenererPdfTerrainUnifie:
         texte = _extraire_texte_terrain(bdc_a_faire)
         assert "0490272800" not in texte
 
-    def test_mention_sans_prix(self, bdc_a_faire):
-        """La mention DOCUMENT TERRAIN SANS PRIX apparait."""
+    def test_pas_de_mention_sans_prix(self, bdc_a_faire):
+        """Aucune mention SANS PRIX n'apparait."""
         texte = _extraire_texte_terrain(bdc_a_faire)
-        assert "SANS PRIX" in texte
+        assert "SANS PRIX" not in texte
 
     def test_fonctionne_bailleur_gdh(self, bdc_a_faire):
         """Fonctionne pour un BDC GDH (plus besoin de pdf_original)."""
