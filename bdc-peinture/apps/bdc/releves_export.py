@@ -87,9 +87,10 @@ def generer_releve_pdf(releve: ReleveFacturation) -> HttpResponse:
     pdf_bytes = doc.tobytes()
     doc.close()
 
-    filename = f"releve_{releve.sous_traitant.nom}_{releve.numero}.pdf"
+    safe_nom = releve.sous_traitant.nom.replace(" ", "_")
+    filename = f"releve_{safe_nom}_{releve.numero}.pdf"
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Content-Disposition"] = f"attachment; filename={filename}"
     return response
 
 
@@ -134,10 +135,11 @@ def generer_releve_excel(releve: ReleveFacturation) -> HttpResponse:
         max_length = max(len(str(cell.value or "")) for cell in col)
         ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 40)
 
-    filename = f"releve_{releve.sous_traitant.nom}_{releve.numero}_{date.today().isoformat()}.xlsx"
+    safe_nom = releve.sous_traitant.nom.replace(" ", "_")
+    filename = f"releve_{safe_nom}_{releve.numero}_{date.today().isoformat()}.xlsx"
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Content-Disposition"] = f"attachment; filename={filename}"
     wb.save(response)
     return response
