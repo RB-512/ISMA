@@ -17,7 +17,7 @@ services:
     command: >
       sh -c "uv run manage.py collectstatic --noinput &&
              uv run manage.py migrate --noinput &&
-             uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"
+             uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120"
 
   db:
     image: postgres:16

@@ -12,6 +12,9 @@ DEBUG = False
 # WhiteNoise pour servir les fichiers statiques sans Nginx
 MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")  # noqa: F405
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
@@ -33,6 +36,9 @@ DATABASES = {
 # Fichiers statiques et media (volumes Docker)
 STATIC_ROOT = "/data/static/"
 MEDIA_ROOT = "/data/media/"
+
+# Pas de Nginx en LAN : Django sert les fichiers media
+USE_NGINX_MEDIA = False
 
 # Pas de securite HTTPS en LAN
 SESSION_COOKIE_HTTPONLY = True
