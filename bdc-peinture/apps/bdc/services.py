@@ -254,7 +254,6 @@ def attribuer_st(
         },
     )
 
-    _generer_terrain_si_possible(bdc)
     _notifier_st_si_possible(bdc)
 
     return bdc
@@ -302,20 +301,9 @@ def reattribuer_st(
         },
     )
 
-    _generer_terrain_si_possible(bdc)
     _notifier_reattribution_si_possible(bdc, ancien_st_telephone, ancien_st_email)
 
     return bdc
-
-
-def _generer_terrain_si_possible(bdc: BonDeCommande) -> None:
-    """Génère le PDF terrain, non-bloquant en cas d'erreur."""
-    try:
-        from .terrain import generer_pdf_terrain
-
-        generer_pdf_terrain(bdc)
-    except Exception:
-        logger.warning("Échec génération PDF terrain pour BDC %s", bdc.numero_bdc, exc_info=True)
 
 
 def _notifier_st_si_possible(bdc: BonDeCommande) -> None:

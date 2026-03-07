@@ -8,12 +8,14 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
+from django.db import models
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.crypto import get_random_string
 from django.views.generic import TemplateView
 
 from apps.accounts.forms import CreerUtilisateurForm, ModifierRoleForm, ModifierUtilisateurForm
+from apps.bdc.models import Bailleur, ChecklistItem
 
 User = get_user_model()
 
@@ -151,3 +153,106 @@ def supprimer_utilisateur(request, pk):
                 "Désactivez le compte à la place.",
             )
     return redirect("gestion:liste")
+
+
+# ── Checklist de contrôle ──────────────────────────────────────────────────
+
+
+@login_required
+def checklist_liste(request):
+    if request.method == "POST":
+        libelle = request.POST.get("libelle", "").strip()
+        if libelle:
+            max_ordre = ChecklistItem.objects.aggregate(m=models.Max("ordre"))["m"] or 0
+            ChecklistItem.objects.create(libelle=libelle, ordre=max_ordre + 1)
+            messages.success(request, f"Point de contrôle « {libelle} » ajouté.")
+        else:
+            messages.error(request, "Le libellé ne peut pas être vide.")
+        return redirect("gestion:checklist_liste")
+    items = ChecklistItem.objects.order_by("ordre")
+    return render(request, "accounts/checklist.html", {"items": items})
+
+
+@login_required
+def checklist_modifier(request, pk):
+    item = get_object_or_404(ChecklistItem, pk=pk)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "toggle":
+            item.actif = not item.actif
+            item.save()
+            etat = "activé" if item.actif else "désactivé"
+            messages.success(request, f"« {item.libelle} » {etat}.")
+            return redirect("gestion:checklist_liste")
+        libelle = request.POST.get("libelle", "").strip()
+        ordre = request.POST.get("ordre", "").strip()
+        if libelle:
+            item.libelle = libelle
+        if ordre.isdigit():
+            item.ordre = int(ordre)
+        item.save()
+        messages.success(request, f"Point de contrôle « {item.libelle} » mis à jour.")
+        return redirect("gestion:checklist_liste")
+    return render(request, "accounts/partials/_modifier_checklist.html", {"item": item})
+
+
+@login_required
+def checklist_supprimer(request, pk):
+    item = get_object_or_404(ChecklistItem, pk=pk)
+    if request.method == "POST":
+        libelle = item.libelle
+        item.delete()
+        messages.success(request, f"Point de contrôle « {libelle} » supprimé.")
+    return redirect("gestion:checklist_liste")
+
+
+# ── Config masquage PDF par bailleur ─────────────────────────────────────
+
+
+@login_required
+def config_bailleurs(request):
+    from apps.bdc.masquage_pdf import CHAMPS_DISPONIBLES
+
+    bailleurs = Bailleur.objects.all()
+
+    if request.method == "POST":
+        bailleur_id = request.POST.get("bailleur_id")
+        bailleur = get_object_or_404(Bailleur, pk=bailleur_id)
+        champs = request.POST.getlist("champs_masques")
+        bailleur.champs_masques = champs
+        bailleur.save(update_fields=["champs_masques"])
+        messages.success(request, f"Configuration de masquage mise à jour pour {bailleur.nom}.")
+        if request.headers.get("HX-Request"):
+            return render(
+                request,
+                "accounts/partials/_config_bailleur_form.html",
+                {
+                    "bailleur": bailleur,
+                    "champs_disponibles": CHAMPS_DISPONIBLES,
+                },
+            )
+        return redirect("gestion:config_bailleurs")
+
+    return render(
+        request,
+        "accounts/config_bailleur.html",
+        {
+            "bailleurs": bailleurs,
+            "champs_disponibles": CHAMPS_DISPONIBLES,
+        },
+    )
+
+
+@login_required
+def config_bailleur_form(request, pk):
+    from apps.bdc.masquage_pdf import CHAMPS_DISPONIBLES
+
+    bailleur = get_object_or_404(Bailleur, pk=pk)
+    return render(
+        request,
+        "accounts/partials/_config_bailleur_form.html",
+        {
+            "bailleur": bailleur,
+            "champs_disponibles": CHAMPS_DISPONIBLES,
+        },
+    )

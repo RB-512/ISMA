@@ -2,7 +2,13 @@
 
 from django.db import migrations, models
 
-import apps.bdc.models
+
+def _pdf_terrain_upload_path(instance, filename):
+    """Historical upload path for pdf_terrain (field removed in 0008)."""
+    import os
+    from datetime import date
+    today = date.today()
+    return f"bdc_terrain/{today.year}/{today.month:02d}/{instance.numero_bdc}_terrain.pdf"
 
 
 class Migration(migrations.Migration):
@@ -17,7 +23,7 @@ class Migration(migrations.Migration):
             field=models.FileField(
                 blank=True,
                 help_text="Version sans prix du BDC, destinée au sous-traitant",
-                upload_to=apps.bdc.models.pdf_terrain_upload_path,
+                upload_to=_pdf_terrain_upload_path,
                 verbose_name="PDF terrain",
             ),
         ),

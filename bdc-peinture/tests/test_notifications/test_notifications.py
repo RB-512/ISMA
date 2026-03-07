@@ -215,7 +215,7 @@ class TestEnvoyerEmailAttribution:
         assert result is False
         assert len(mail.outbox) == 0
 
-    def test_email_sans_pdf_si_terrain_absent(self, bdc_a_faire, sous_traitant):
+    def test_email_sans_pdf_si_masquage_absent(self, bdc_a_faire, sous_traitant):
         bdc_a_faire.sous_traitant = sous_traitant
         bdc_a_faire.save()
 
@@ -224,7 +224,7 @@ class TestEnvoyerEmailAttribution:
         assert result is True
         email_sent = mail.outbox[0]
         assert len(email_sent.attachments) == 0
-        assert "document terrain" in email_sent.body
+        assert "document" in email_sent.body
 
 
 class TestEnvoyerEmailReattribution:
@@ -247,17 +247,15 @@ class TestEnvoyerEmailReattribution:
 
 class TestBranchementAttribution:
     @patch("apps.bdc.services._notifier_st_si_possible")
-    @patch("apps.bdc.services._generer_terrain_si_possible")
     def test_attribution_appelle_notifications(
-        self, mock_terrain, mock_notif, bdc_a_faire, sous_traitant, utilisateur_cdt
+        self, mock_notif, bdc_a_faire, sous_traitant, utilisateur_cdt
     ):
         attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
         mock_notif.assert_called_once_with(bdc_a_faire)
 
     @patch("apps.notifications.sms.envoyer_sms_attribution", side_effect=Exception("SMS crash"))
-    @patch("apps.bdc.services._generer_terrain_si_possible")
     def test_attribution_ok_meme_si_notification_echoue(
-        self, mock_terrain, mock_sms, bdc_a_faire, sous_traitant, utilisateur_cdt
+        self, mock_sms, bdc_a_faire, sous_traitant, utilisateur_cdt
     ):
         # Le SMS lève une exception mais l'attribution ne doit pas être annulée
         # car _notifier_st_si_possible a un try/except interne
@@ -268,9 +266,8 @@ class TestBranchementAttribution:
 
 class TestBranchementReattribution:
     @patch("apps.bdc.services._notifier_reattribution_si_possible")
-    @patch("apps.bdc.services._generer_terrain_si_possible")
     def test_reattribution_appelle_notifications(
-        self, mock_terrain, mock_notif, bdc_en_cours, sous_traitant_b, utilisateur_cdt
+        self, mock_notif, bdc_en_cours, sous_traitant_b, utilisateur_cdt
     ):
         reattribuer_st(bdc_en_cours, sous_traitant_b, Decimal("70"), utilisateur_cdt)
         mock_notif.assert_called_once()

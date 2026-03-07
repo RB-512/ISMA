@@ -17,16 +17,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _obtenir_pdf_terrain(bdc: BonDeCommande) -> bytes | None:
-    """Retourne le contenu du PDF terrain, ou None si indisponible."""
+def _obtenir_pdf_masque(bdc: BonDeCommande) -> bytes | None:
+    """Retourne le PDF original avec les champs sensibles masqués, ou None."""
     try:
-        if bdc.pdf_terrain and bdc.pdf_terrain.name:
-            bdc.pdf_terrain.open("rb")
-            contenu = bdc.pdf_terrain.read()
-            bdc.pdf_terrain.close()
-            return contenu
+        from apps.bdc.masquage_pdf import generer_pdf_masque
+
+        return generer_pdf_masque(bdc)
     except Exception:
-        logger.warning("PDF terrain indisponible pour BDC %s", bdc.numero_bdc, exc_info=True)
+        logger.warning("PDF masqué indisponible pour BDC %s", bdc.numero_bdc, exc_info=True)
     return None
 
 
@@ -65,12 +63,12 @@ def envoyer_email_attribution(bdc: BonDeCommande) -> bool:
         to=[email_st],
     )
 
-    pdf_contenu = _obtenir_pdf_terrain(bdc)
+    pdf_contenu = _obtenir_pdf_masque(bdc)
     if pdf_contenu:
-        email.attach(f"{bdc.numero_bdc}_terrain.pdf", pdf_contenu, "application/pdf")
+        email.attach(f"{bdc.numero_bdc}.pdf", pdf_contenu, "application/pdf")
     else:
         email.body += (
-            "\n\nNote : le document terrain n'a pas pu être joint. "
+            "\n\nNote : le document n'a pas pu être joint. "
             "Veuillez le récupérer auprès du conducteur de travaux."
         )
 

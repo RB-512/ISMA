@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Config masquage PDF — ISMA{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+    {# ── En-tete ── #}
+    <div>
+        <h1 class="text-2xl font-bold text-[var(--color-text)]">Masquage PDF par bailleur</h1>
+        <p class="text-sm text-[var(--color-text-muted)] mt-1">
+            Choisissez les champs a masquer sur le PDF original avant envoi au sous-traitant
+        </p>
+    </div>
+
+    {# ── Liste des bailleurs ── #}
+    {% if bailleurs %}
+    <div class="space-y-4">
+        {% for bailleur in bailleurs %}
+        <div x-data="{ open: false }" class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+            <button @click="open = !open; if(open && !$refs.form_{{ bailleur.pk }}.innerHTML.trim()) htmx.trigger($refs.trigger_{{ bailleur.pk }}, 'load-form')"
+                    class="w-full flex items-center justify-between px-6 py-4 hover:bg-accent/5 transition-colors">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-sm font-bold text-accent">
+                        {{ bailleur.code }}
+                    </div>
+                    <div class="text-left">
+                        <p class="text-sm font-semibold text-[var(--color-text)]">{{ bailleur.nom }}</p>
+                        <p class="text-xs text-[var(--color-text-muted)]">
+                            {% if bailleur.champs_masques %}
+                                {{ bailleur.champs_masques|length }} champ{{ bailleur.champs_masques|length|pluralize }} masque{{ bailleur.champs_masques|length|pluralize }}
+                            {% else %}
+                                Aucun masquage configure
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <svg :class="open && 'rotate-180'" class="w-5 h-5 text-[var(--color-text-muted)] transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            <div x-show="open" x-transition x-ref="form_{{ bailleur.pk }}" class="border-t border-[var(--color-border)]">
+                <span x-ref="trigger_{{ bailleur.pk }}"
+                      hx-get="{% url 'gestion:config_bailleur_form' bailleur.pk %}"
+                      hx-target="[x-ref='form_{{ bailleur.pk }}']"
+                      hx-trigger="load-form"
+                      hx-swap="innerHTML"></span>
+                {% include "accounts/partials/_config_bailleur_form.html" %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] px-6 py-12 text-center text-sm text-[var(--color-text-muted)]">
+        Aucun bailleur configure. Les bailleurs sont crees automatiquement lors de l'import de PDF.
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -48,8 +48,8 @@ Context requis : bdc, form, reattribution, repartition, has_n1,
             </thead>
             <tbody class="divide-y divide-[var(--color-border)]">
                 {% for st in repartition %}
-                <tr>
-                    <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ st.nom }}</td>
+                <tr class="{% if not st.actif %}opacity-50 italic{% endif %}">
+                    <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ st.nom }}{% if not st.actif %} <span class="text-xs text-[var(--color-text-muted)] not-italic">(inactif)</span>{% endif %}</td>
                     <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ st.nb_bdc }}</td>
                     <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">
                         {% if st.total_montant_st %}{{ st.total_montant_st|floatformat:0 }} &euro;{% else %}0 &euro;{% endif %}

@@ -99,12 +99,6 @@
                 Nouveau BDC
             </a>
             {% endif %}
-            {% if bdc.pdf_terrain %}
-            <a href="{% url 'bdc:terrain' bdc.pk %}"
-               class="px-4 py-2 bg-primary/10 dark:bg-white/10 text-primary dark:text-white text-sm font-medium rounded-lg whitespace-nowrap hover:bg-primary/20 dark:hover:bg-white/20 transition-colors">
-                BDC terrain
-            </a>
-            {% endif %}
             {% if bdc.pdf_original %}
             <a href="{{ bdc.pdf_original.url }}" target="_blank"
                class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium rounded-lg whitespace-nowrap hover:bg-accent/10 transition-colors">

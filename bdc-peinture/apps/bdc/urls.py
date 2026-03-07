@@ -18,7 +18,6 @@ urlpatterns = [
     path("<int:pk>/reattribuer/", views.reattribuer_bdc, name="reattribuer"),
     path("<int:pk>/attribution-form/", views.attribution_partial, name="attribution_partial"),
     path("<int:pk>/attribution/", views.attribution_split, name="attribution_split"),
-    path("<int:pk>/terrain/", views.telecharger_terrain, name="terrain"),
     path("<int:pk>/valider/", views.valider_realisation_bdc, name="valider_realisation"),
     path("<int:pk>/facturer/", views.valider_facturation_bdc, name="valider_facturation"),
     path("<int:pk>/renvoyer/", views.renvoyer_controle_bdc, name="renvoyer_controle"),
