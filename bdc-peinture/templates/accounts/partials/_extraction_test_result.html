@@ -1,0 +1,29 @@
+{% if erreur %}
+<div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+    {{ erreur }}
+</div>
+{% elif resultats %}
+<div class="bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-3">
+    <p class="text-sm text-green-700 font-medium">Test à blanc — {{ pdf_name }}</p>
+</div>
+<table class="w-full text-sm">
+    <thead>
+        <tr class="border-b border-[var(--color-border)]">
+            <th class="text-left py-2 text-xs font-medium text-[var(--color-text-muted)]">Champ</th>
+            <th class="text-left py-2 text-xs font-medium text-[var(--color-text-muted)]">Label</th>
+            <th class="text-left py-2 text-xs font-medium text-[var(--color-text-muted)]">Valeur trouvée</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in resultats %}
+        <tr class="border-b border-[var(--color-border)]/50">
+            <td class="py-2 text-[var(--color-text)] font-mono text-xs">{{ r.champ }}</td>
+            <td class="py-2 text-[var(--color-text-muted)]">{{ r.label }}</td>
+            <td class="py-2 {% if r.valeur == '(non trouvé)' %}text-red-500{% else %}text-green-600{% endif %} font-medium">
+                {{ r.valeur }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}

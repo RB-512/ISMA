@@ -247,16 +247,12 @@ class TestEnvoyerEmailReattribution:
 
 class TestBranchementAttribution:
     @patch("apps.bdc.services._notifier_st_si_possible")
-    def test_attribution_appelle_notifications(
-        self, mock_notif, bdc_a_faire, sous_traitant, utilisateur_cdt
-    ):
+    def test_attribution_appelle_notifications(self, mock_notif, bdc_a_faire, sous_traitant, utilisateur_cdt):
         attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
-        mock_notif.assert_called_once_with(bdc_a_faire)
+        mock_notif.assert_called_once_with(bdc_a_faire, commentaire="")
 
     @patch("apps.notifications.sms.envoyer_sms_attribution", side_effect=Exception("SMS crash"))
-    def test_attribution_ok_meme_si_notification_echoue(
-        self, mock_sms, bdc_a_faire, sous_traitant, utilisateur_cdt
-    ):
+    def test_attribution_ok_meme_si_notification_echoue(self, mock_sms, bdc_a_faire, sous_traitant, utilisateur_cdt):
         # Le SMS lève une exception mais l'attribution ne doit pas être annulée
         # car _notifier_st_si_possible a un try/except interne
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
@@ -266,15 +262,14 @@ class TestBranchementAttribution:
 
 class TestBranchementReattribution:
     @patch("apps.bdc.services._notifier_reattribution_si_possible")
-    def test_reattribution_appelle_notifications(
-        self, mock_notif, bdc_en_cours, sous_traitant_b, utilisateur_cdt
-    ):
+    def test_reattribution_appelle_notifications(self, mock_notif, bdc_en_cours, sous_traitant_b, utilisateur_cdt):
         reattribuer_st(bdc_en_cours, sous_traitant_b, Decimal("70"), utilisateur_cdt)
         mock_notif.assert_called_once()
-        call_args = mock_notif.call_args[0]
-        assert call_args[0] == bdc_en_cours
-        assert call_args[1] == "0612345678"  # ancien ST téléphone
-        assert call_args[2] == "dupont@peinture.fr"  # ancien ST email
+        call_args = mock_notif.call_args
+        assert call_args[0][0] == bdc_en_cours
+        assert call_args[0][1] == "0612345678"  # ancien ST téléphone
+        assert call_args[0][2] == "dupont@peinture.fr"  # ancien ST email
+        assert call_args[1]["commentaire"] == ""
 
 
 # ─── 7.5 Tests alertes ──────────────────────────────────────────────────────

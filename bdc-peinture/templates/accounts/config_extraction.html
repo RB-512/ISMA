@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Config extraction — {{ bailleur.nom }} — ISMA{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    {# ── En-tete ── #}
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-[var(--color-text)]">Extraction PDF — {{ bailleur.nom }}</h1>
+            <p class="text-sm text-[var(--color-text-muted)] mt-1">
+                Configurez les labels pour extraire automatiquement les données des PDF de ce bailleur
+            </p>
+        </div>
+        <a href="{% url 'gestion:config_bailleurs' %}"
+           class="px-4 py-2 rounded-lg border border-[var(--color-border)] text-sm text-[var(--color-text)] hover:bg-accent/5 transition-colors">
+            Retour
+        </a>
+    </div>
+
+    {# ── Upload PDF modele ── #}
+    <form method="post" action="{% url 'gestion:config_extraction_save' bailleur.pk %}" enctype="multipart/form-data"
+          id="extraction-form" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] px-6 py-5">
+            <h2 class="text-sm font-semibold text-[var(--color-text)] mb-3">PDF modèle</h2>
+            <div class="flex items-center gap-4">
+                <input type="file" name="pdf_modele" accept=".pdf"
+                       class="text-sm text-[var(--color-text)] file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-[var(--color-border)] file:bg-[var(--color-surface)] file:text-sm file:text-[var(--color-text)] hover:file:bg-accent/5">
+                {% if bailleur.pdf_modele and bailleur.pdf_modele.name %}
+                <span class="text-xs text-green-600">PDF modèle actuel : {{ bailleur.pdf_modele.name|truncatechars:40 }}</span>
+                {% else %}
+                <span class="text-xs text-[var(--color-text-muted)]">Aucun PDF modèle uploadé</span>
+                {% endif %}
+            </div>
+
+            {# ── Marqueur detection ── #}
+            <div class="mt-4">
+                <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Marqueur de détection</label>
+                <input type="text" name="marqueur_detection" value="{{ bailleur.marqueur_detection }}"
+                       placeholder="Texte unique dans les PDF (ex: ICF HABITAT)"
+                       class="w-full max-w-md px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:ring-2 focus:ring-accent focus:border-accent">
+            </div>
+        </div>
+
+        {# ── Layout split : texte PDF + mapping ── #}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {# ── Gauche : texte du PDF ── #}
+            <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] px-6 py-5">
+                <h2 class="text-sm font-semibold text-[var(--color-text)] mb-3">Texte du PDF modèle</h2>
+                {% if texte_pdf %}
+                <textarea readonly rows="30"
+                          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text)] font-mono resize-y">{{ texte_pdf }}</textarea>
+                {% else %}
+                <div class="px-4 py-8 text-center text-sm text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] rounded-lg">
+                    Uploadez un PDF modèle puis enregistrez pour voir le texte ici
+                </div>
+                {% endif %}
+            </div>
+
+            {# ── Droite : mapping champ → label ── #}
+            <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] px-6 py-5">
+                <h2 class="text-sm font-semibold text-[var(--color-text)] mb-3">Mapping label → champ</h2>
+                <p class="text-xs text-[var(--color-text-muted)] mb-4">
+                    Pour chaque champ, indiquez le texte (label) qui le précède dans le PDF
+                </p>
+                <div class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                    {% for champ in champs %}
+                    <div class="flex items-center gap-3">
+                        <label class="text-xs text-[var(--color-text-muted)] w-40 shrink-0 text-right">{{ champ.nom }}</label>
+                        <input type="text" name="label_{{ champ.nom }}" value="{{ champ.label }}"
+                               placeholder="Label dans le PDF..."
+                               class="flex-1 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:ring-2 focus:ring-accent focus:border-accent">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# ── Boutons sauvegarde ── #}
+        <div class="flex items-center gap-3">
+            <button type="submit"
+                    class="px-5 py-2.5 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
+                Enregistrer la configuration
+            </button>
+            {% if texte_pdf %}
+            <button type="button"
+                    hx-post="{% url 'gestion:config_extraction_preview' bailleur.pk %}"
+                    hx-include="#extraction-form"
+                    hx-target="#preview-zone"
+                    hx-swap="innerHTML"
+                    class="px-5 py-2.5 rounded-lg border border-accent text-accent text-sm font-medium hover:bg-accent/5 transition-colors">
+                Prévisualiser l'extraction
+            </button>
+            {% endif %}
+        </div>
+    </form>
+
+    {# ── Preview extraction ── #}
+    <div id="preview-zone"></div>
+
+    {# ── Test a blanc ── #}
+    {% if bailleur.modele_extraction %}
+    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] px-6 py-5">
+        <h2 class="text-sm font-semibold text-[var(--color-text)] mb-3">Tester avec un autre PDF</h2>
+        <p class="text-xs text-[var(--color-text-muted)] mb-4">
+            Uploadez un vrai BDC de ce bailleur pour vérifier que les labels fonctionnent correctement.
+            Rien n'est créé en base.
+        </p>
+        <form hx-post="{% url 'gestion:config_extraction_test' bailleur.pk %}"
+              hx-target="#test-result-zone"
+              hx-swap="innerHTML"
+              hx-encoding="multipart/form-data"
+              class="flex items-center gap-3">
+            {% csrf_token %}
+            <input type="file" name="pdf_test" accept=".pdf" required
+                   class="text-sm text-[var(--color-text)] file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-[var(--color-border)] file:bg-[var(--color-surface)] file:text-sm file:text-[var(--color-text)] hover:file:bg-accent/5">
+            <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors shrink-0">
+                Tester l'extraction
+            </button>
+        </form>
+        <div id="test-result-zone" class="mt-4"></div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

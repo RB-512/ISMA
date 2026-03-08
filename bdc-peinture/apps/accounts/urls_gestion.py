@@ -20,4 +20,16 @@ urlpatterns = [
     # Config masquage PDF par bailleur
     path("config-bailleurs/", views.config_bailleurs, name="config_bailleurs"),
     path("config-bailleurs/<int:pk>/form/", views.config_bailleur_form, name="config_bailleur_form"),
+    path("config-bailleurs/<int:pk>/supprimer/", views.config_bailleur_supprimer, name="config_bailleur_supprimer"),
+    # Création bailleur + config extraction
+    path("config-bailleurs/creer/", views.config_bailleur_creer, name="config_bailleur_creer"),
+    path("config-bailleurs/<int:pk>/extraction/", views.config_extraction, name="config_extraction"),
+    path("config-bailleurs/<int:pk>/extraction/save/", views.config_extraction_save, name="config_extraction_save"),
+    path(
+        "config-bailleurs/<int:pk>/extraction/preview/",
+        views.config_extraction_preview,
+        name="config_extraction_preview",
+    ),
+    path("config-bailleurs/<int:pk>/extraction/test/", views.config_extraction_test, name="config_extraction_test"),
+    path("config-bailleurs/<int:pk>/preview-masquage/", views.preview_masquage, name="preview_masquage"),
 ]

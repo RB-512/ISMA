@@ -13,9 +13,7 @@ def liste_sous_traitants(request):
     q = request.GET.get("q", "").strip()
     sous_traitants = SousTraitant.objects.all()
     if q:
-        sous_traitants = sous_traitants.filter(
-            Q(nom__icontains=q) | Q(siret__icontains=q) | Q(ville__icontains=q)
-        )
+        sous_traitants = sous_traitants.filter(Q(nom__icontains=q) | Q(siret__icontains=q) | Q(ville__icontains=q))
     return render(
         request,
         "sous_traitants/list.html",
@@ -99,7 +97,6 @@ def supprimer_sous_traitant(request, pk):
         except ProtectedError:
             messages.error(
                 request,
-                f"Impossible de supprimer « {nom} » car il est lié à des bons de commande. "
-                "Désactivez-le à la place.",
+                f"Impossible de supprimer « {nom} » car il est lié à des bons de commande. Désactivez-le à la place.",
             )
     return redirect("sous_traitants:list")

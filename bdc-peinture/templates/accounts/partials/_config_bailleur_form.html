@@ -1,31 +1,93 @@
-<form method="post" action="{% url 'gestion:config_bailleurs' %}" class="px-6 py-5 space-y-5">
+<form method="post" action="{% url 'gestion:config_bailleurs' %}" class="px-6 py-5 space-y-5"
+      x-data="masquageEditor({{ bailleur.zones_masquage|safe }}, '{% if bailleur.pdf_modele and bailleur.pdf_modele.name %}{{ bailleur.pdf_modele.url }}{% endif %}')"
+      x-init="init()">
     {% csrf_token %}
     <input type="hidden" name="bailleur_id" value="{{ bailleur.pk }}">
+    <input type="hidden" name="zones_masquage" :value="JSON.stringify(zones)">
 
-    {% for groupe, champs in champs_disponibles.items %}
+    {# ── Editeur visuel ── #}
+    {% if bailleur.pdf_modele and bailleur.pdf_modele.name %}
     <div>
-        <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">{{ groupe }}</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {% for cle, libelle in champs %}
-            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--color-border)] hover:border-accent/50 cursor-pointer transition-colors
-                          {% if cle in bailleur.champs_masques %}bg-accent/5 border-accent/30{% endif %}">
-                <input type="checkbox" name="champs_masques" value="{{ cle }}"
-                       {% if cle in bailleur.champs_masques %}checked{% endif %}
-                       class="h-4 w-4 rounded border-[var(--color-border)] text-accent focus:ring-accent">
-                <span class="text-sm text-[var(--color-text)]">{{ libelle }}</span>
-            </label>
-            {% endfor %}
+        <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+            Zones de masquage
+        </h3>
+        <p class="text-xs text-[var(--color-text-muted)] mb-3">
+            Dessinez des rectangles sur les zones a masquer (prix, montants...).
+            Cliquez-glissez pour creer une zone.
+        </p>
+
+        {# Navigation pages #}
+        <div class="flex items-center gap-2 mb-2" x-show="totalPages > 1">
+            <button type="button" @click="goToPage(currentPage - 1)" :disabled="currentPage <= 1"
+                    class="px-2 py-1 rounded border border-[var(--color-border)] text-xs disabled:opacity-30">
+                &larr;
+            </button>
+            <span class="text-xs text-[var(--color-text-muted)]">
+                Page <span x-text="currentPage"></span> / <span x-text="totalPages"></span>
+            </span>
+            <button type="button" @click="goToPage(currentPage + 1)" :disabled="currentPage >= totalPages"
+                    class="px-2 py-1 rounded border border-[var(--color-border)] text-xs disabled:opacity-30">
+                &rarr;
+            </button>
+        </div>
+
+        {# Canvas container #}
+        <div class="relative border border-[var(--color-border)] rounded-lg overflow-auto bg-gray-100 dark:bg-gray-800"
+             style="max-height: 80vh;">
+            <canvas x-ref="pdfCanvas" class="block"></canvas>
+            <canvas x-ref="overlayCanvas" class="absolute top-0 left-0 cursor-crosshair"
+                    @mousedown="startDraw($event)"
+                    @mousemove="drawing($event)"
+                    @mouseup="endDraw($event)"></canvas>
         </div>
     </div>
-    {% endfor %}
+    {% else %}
+    <div class="px-4 py-8 text-center border border-dashed border-[var(--color-border)] rounded-lg">
+        <p class="text-sm text-[var(--color-text-muted)]">
+            Uploadez un PDF modele dans la
+            <a href="{% url 'gestion:config_extraction' bailleur.pk %}" class="text-accent hover:underline">
+                configuration d'extraction
+            </a>
+            pour activer l'editeur de zones de masquage.
+        </p>
+    </div>
+    {% endif %}
 
+    {# ── Liste des zones existantes ── #}
+    <div x-show="zones.length > 0">
+        <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+            Zones configurees
+        </h3>
+        <div class="space-y-1">
+            <template x-for="(zone, idx) in zones" :key="idx">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--color-border)] text-sm"
+                     @mouseenter="highlightZone(idx)" @mouseleave="redrawOverlay()">
+                    <div class="w-3 h-3 rounded bg-red-400/60 shrink-0"></div>
+                    <input type="text" x-model="zone.label" placeholder="Ex: Colonne prix..."
+                           class="flex-1 px-2 py-1 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text)] focus:ring-1 focus:ring-accent">
+                    <span class="text-xs text-[var(--color-text-muted)] shrink-0" x-text="'p.' + zone.page"></span>
+                    <button type="button" @click="removeZone(idx)"
+                            class="text-red-500 hover:text-red-700 text-xs font-bold px-1">&times;</button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    {# ── Pages a envoyer ── #}
+    <div>
+        <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Pages a envoyer</h3>
+        <p class="text-xs text-[var(--color-text-muted)] mb-2">Laissez vide pour envoyer toutes les pages du PDF</p>
+        <input type="text" name="pages_a_envoyer" placeholder="Ex: 1 ou 1,2"
+               value="{{ bailleur.pages_a_envoyer|join:',' }}"
+               class="w-full sm:w-48 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:ring-2 focus:ring-accent focus:border-accent">
+    </div>
+
+    {# ── Boutons ── #}
     <div class="flex items-center gap-3 pt-2">
         <button type="submit"
                 class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
             Enregistrer
         </button>
-        <span class="text-xs text-[var(--color-text-muted)]">
-            Les champs coches seront remplaces par ***** sur le PDF envoye au sous-traitant
-        </span>
+        <span class="text-xs text-[var(--color-text-muted)]" x-text="zones.length + ' zone(s) de masquage'"></span>
     </div>
 </form>

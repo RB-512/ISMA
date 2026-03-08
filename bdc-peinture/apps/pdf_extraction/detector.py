@@ -50,4 +50,26 @@ def detecter_parser(pdf_path: str | Path) -> PDFParser:
     if MARQUEUR_ERILIA in texte_upper:
         return ERILIAParser(pdf_path)
 
-    raise PDFTypeInconnu(f"Type de PDF non reconnu pour '{pdf_path.name}'. Formats supportés : GDH, ERILIA")
+    # Fallback : chercher un bailleur configurable via marqueur_detection
+    try:
+        from apps.bdc.models import Bailleur
+
+        for bailleur in Bailleur.objects.exclude(marqueur_detection="").exclude(modele_extraction={}):
+            if bailleur.marqueur_detection.upper() in texte_upper:
+                from .template_parser import TemplateParser
+
+                return TemplateParser(pdf_path, bailleur)
+
+        # Construire la liste des formats supportes dynamiquement
+        bailleurs_custom = list(
+            Bailleur.objects.exclude(marqueur_detection="")
+            .exclude(modele_extraction={})
+            .values_list("code", flat=True)
+        )
+    except Exception:
+        bailleurs_custom = []
+
+    formats = ["GDH", "ERILIA"] + bailleurs_custom
+    formats_str = ", ".join(formats)
+
+    raise PDFTypeInconnu(f"Type de PDF non reconnu pour '{pdf_path.name}'. Formats supportés : {formats_str}")

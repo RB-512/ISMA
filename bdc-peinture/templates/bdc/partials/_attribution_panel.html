@@ -94,6 +94,13 @@ Context requis : bdc, form, reattribution, repartition, has_n1,
                 <p class="text-xs text-red-600 mt-1">{{ form.pourcentage_st.errors.0 }}</p>
                 {% endif %}
             </div>
+            <div>
+                <label for="id_commentaire" class="block text-xs text-[var(--color-text-muted)] mb-1">
+                    {{ form.commentaire.label }}
+                </label>
+                {{ form.commentaire }}
+            </div>
+            {% include "bdc/partials/_checklist_attribution.html" %}
         </div>
     </div>
 </div>

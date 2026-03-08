@@ -1,0 +1,28 @@
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6 max-w-lg mx-auto">
+    <h2 class="text-base font-semibold text-[var(--color-text)] mb-4">
+        Modifier « {{ item.libelle }} »
+    </h2>
+    <form method="post" action="{% url 'gestion:checklist_modifier' item.pk %}">
+        {% csrf_token %}
+        <div class="space-y-4">
+            <div>
+                <label for="id_libelle_edit">Libelle</label>
+                <input type="text" name="libelle" id="id_libelle_edit" value="{{ item.libelle }}" required>
+            </div>
+            <div>
+                <label for="id_ordre_edit">Ordre</label>
+                <input type="number" name="ordre" id="id_ordre_edit" value="{{ item.ordre }}" min="0">
+            </div>
+        </div>
+        <div class="flex items-center gap-3 pt-4">
+            <button type="submit"
+                class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
+                Enregistrer
+            </button>
+            <a href="{% url 'gestion:checklist_liste' %}"
+                class="px-4 py-2 rounded-lg text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+                Annuler
+            </a>
+        </div>
+    </form>
+</div>

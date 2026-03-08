@@ -1,0 +1,29 @@
+{% if resultats %}
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] px-6 py-5">
+    <h3 class="text-sm font-semibold text-[var(--color-text)] mb-3">Aperçu de l'extraction</h3>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-[var(--color-border)]">
+                <th class="text-left py-2 text-xs font-medium text-[var(--color-text-muted)]">Champ</th>
+                <th class="text-left py-2 text-xs font-medium text-[var(--color-text-muted)]">Label</th>
+                <th class="text-left py-2 text-xs font-medium text-[var(--color-text-muted)]">Valeur extraite</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in resultats %}
+            <tr class="border-b border-[var(--color-border)]/50">
+                <td class="py-2 text-[var(--color-text)] font-mono text-xs">{{ r.champ }}</td>
+                <td class="py-2 text-[var(--color-text-muted)]">{{ r.label }}</td>
+                <td class="py-2 {% if r.valeur == '(non trouvé)' %}text-red-500{% else %}text-green-600{% endif %} font-medium">
+                    {{ r.valeur }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] px-6 py-8 text-center text-sm text-[var(--color-text-muted)]">
+    Aucun label configuré. Remplissez les labels ci-dessus puis cliquez sur "Prévisualiser".
+</div>
+{% endif %}

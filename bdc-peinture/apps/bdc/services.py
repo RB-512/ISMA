@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 
 from apps.sous_traitants.models import SousTraitant
 
-from .models import ActionChoices, BonDeCommande, ChecklistItem, HistoriqueAction, StatutChoices
+from .models import ActionChoices, BonDeCommande, ChecklistItem, HistoriqueAction, StatutChoices, TransitionChoices
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,20 @@ class TransitionInvalide(Exception):  # noqa: N818
 
 class BDCIncomplet(Exception):  # noqa: N818
     """Levée quand un BDC ne remplit pas les conditions pour changer de statut."""
+
+
+def _verifier_checklist_transition(bdc, ancien_statut, nouveau_statut):
+    """Vérifie que tous les items de checklist sont cochés pour une transition donnée."""
+    transition_key = f"{ancien_statut}__{nouveau_statut}"
+    if transition_key not in TransitionChoices.values:
+        return
+    items_actifs = ChecklistItem.objects.filter(actif=True, transition=transition_key).count()
+    if items_actifs > 0:
+        items_coches = bdc.checklist_resultats.filter(
+            item__actif=True, item__transition=transition_key, coche=True
+        ).count()
+        if items_coches < items_actifs:
+            raise BDCIncomplet("Tous les points de contrôle doivent être cochés.")
 
 
 # ─── Fonctions de service ─────────────────────────────────────────────────────
@@ -77,14 +91,7 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             raise BDCIncomplet(
                 "La date de RDV est obligatoire pour un logement occupé avant passage en 'À attribuer'."
             )
-        # Checklist de contrôle : tous les items actifs doivent être cochés
-        items_actifs = ChecklistItem.objects.filter(actif=True).count()
-        if items_actifs > 0:
-            items_coches = bdc.checklist_resultats.filter(item__actif=True, coche=True).count()
-            if items_coches < items_actifs:
-                raise BDCIncomplet(
-                    "Tous les points de contrôle doivent être cochés avant de passer en « À attribuer »."
-                )
+        _verifier_checklist_transition(bdc, ancien_statut, nouveau_statut)
 
     # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation à null
     if ancien_statut == StatutChoices.A_FACTURER and nouveau_statut == StatutChoices.EN_COURS:
@@ -147,6 +154,8 @@ def valider_realisation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
             f"Validation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'En cours'."
         )
 
+    _verifier_checklist_transition(bdc, StatutChoices.EN_COURS, StatutChoices.A_FACTURER)
+
     bdc.statut = StatutChoices.A_FACTURER
     bdc.date_realisation = date.today()
     bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
@@ -170,6 +179,8 @@ def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
         raise TransitionInvalide(
             f"Facturation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'À facturer'."
         )
+
+    _verifier_checklist_transition(bdc, StatutChoices.A_FACTURER, StatutChoices.FACTURE)
 
     bdc.statut = StatutChoices.FACTURE
     bdc.save(update_fields=["statut", "updated_at"])
@@ -219,6 +230,7 @@ def attribuer_st(
     sous_traitant: SousTraitant,
     pourcentage: Decimal,
     utilisateur: User,
+    commentaire: str = "",
 ) -> BonDeCommande:
     """
     Attribue un BDC à un sous-traitant. Le BDC doit être en statut A_FAIRE.
@@ -228,6 +240,8 @@ def attribuer_st(
         raise TransitionInvalide(
             f"Attribution impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'À attribuer'."
         )
+
+    _verifier_checklist_transition(bdc, StatutChoices.A_FAIRE, StatutChoices.EN_COURS)
 
     bdc.sous_traitant = sous_traitant
     bdc.pourcentage_st = pourcentage
@@ -254,7 +268,7 @@ def attribuer_st(
         },
     )
 
-    _notifier_st_si_possible(bdc)
+    _notifier_st_si_possible(bdc, commentaire=commentaire)
 
     return bdc
 
@@ -264,6 +278,7 @@ def reattribuer_st(
     nouveau_st: SousTraitant,
     pourcentage: Decimal,
     utilisateur: User,
+    commentaire: str = "",
 ) -> BonDeCommande:
     """
     Réattribue un BDC en cours à un autre sous-traitant.
@@ -301,12 +316,12 @@ def reattribuer_st(
         },
     )
 
-    _notifier_reattribution_si_possible(bdc, ancien_st_telephone, ancien_st_email)
+    _notifier_reattribution_si_possible(bdc, ancien_st_telephone, ancien_st_email, commentaire=commentaire)
 
     return bdc
 
 
-def _notifier_st_si_possible(bdc: BonDeCommande) -> None:
+def _notifier_st_si_possible(bdc: BonDeCommande, commentaire: str = "") -> None:
     """Envoie les notifications SMS et email au ST, non-bloquant."""
     try:
         from apps.notifications.sms import envoyer_sms_attribution
@@ -318,12 +333,14 @@ def _notifier_st_si_possible(bdc: BonDeCommande) -> None:
     try:
         from apps.notifications.email import envoyer_email_attribution
 
-        envoyer_email_attribution(bdc)
+        envoyer_email_attribution(bdc, commentaire=commentaire)
     except Exception:
         logger.warning("Échec email attribution BDC %s", bdc.numero_bdc, exc_info=True)
 
 
-def _notifier_reattribution_si_possible(bdc: BonDeCommande, ancien_st_telephone: str, ancien_st_email: str) -> None:
+def _notifier_reattribution_si_possible(
+    bdc: BonDeCommande, ancien_st_telephone: str, ancien_st_email: str, commentaire: str = ""
+) -> None:
     """Envoie les notifications de réattribution, non-bloquant."""
     try:
         from apps.notifications.sms import envoyer_sms_reattribution
@@ -335,6 +352,6 @@ def _notifier_reattribution_si_possible(bdc: BonDeCommande, ancien_st_telephone:
     try:
         from apps.notifications.email import envoyer_email_reattribution
 
-        envoyer_email_reattribution(bdc, ancien_st_email)
+        envoyer_email_reattribution(bdc, ancien_st_email, commentaire=commentaire)
     except Exception:
         logger.warning("Échec email réattribution BDC %s", bdc.numero_bdc, exc_info=True)

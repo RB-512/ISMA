@@ -19,6 +19,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
 
@@ -32,6 +33,7 @@ from .models import (
     ChecklistResultat,
     LignePrestation,
     StatutChoices,
+    TransitionChoices,
 )
 from .notifications import notifier_st_attribution
 from .services import (
@@ -240,8 +242,8 @@ def upload_pdf(request):
         parser = detecter_parser(tmp_path)
         donnees = parser.extraire()
 
-    except PDFTypeInconnu:
-        messages.error(request, "Type de PDF non reconnu. Formats supportés : GDH, ERILIA.")
+    except PDFTypeInconnu as e:
+        messages.error(request, str(e))
         return render(request, "bdc/upload.html")
     except Exception:
         messages.error(request, "Impossible de lire ce PDF. Vérifiez que le fichier n'est pas corrompu.")
@@ -401,6 +403,43 @@ def creer_bdc(request):
 # ─── Détail BDC ───────────────────────────────────────────────────────────────
 
 
+def _render_sidebar(request, bdc, error_message=None, success_message=None):
+    """Render le partial sidebar avec contexte complet. Ajoute HX-Trigger pour rafraîchir le dashboard."""
+    bdc.refresh_from_db()
+    lignes = bdc.lignes_prestation.all()
+    historique = bdc.historique.all()[:10]
+    transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
+    form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
+
+    # Déterminer si des checklists existent pour les transitions du statut courant
+    checklist_transitions = {}
+    if bdc.statut == StatutChoices.EN_COURS:
+        checklist_transitions["EN_COURS__A_FACTURER"] = ChecklistItem.objects.filter(
+            actif=True, transition=TransitionChoices.REALISATION
+        ).exists()
+    elif bdc.statut == StatutChoices.A_FACTURER:
+        checklist_transitions["A_FACTURER__FACTURE"] = ChecklistItem.objects.filter(
+            actif=True, transition=TransitionChoices.FACTURATION
+        ).exists()
+
+    response = render(
+        request,
+        "bdc/_detail_sidebar.html",
+        {
+            "bdc": bdc,
+            "lignes": lignes,
+            "historique": historique,
+            "transitions": transitions,
+            "form_edition": form_edition,
+            "error_message": error_message,
+            "success_message": success_message,
+            "checklist_transitions": checklist_transitions,
+        },
+    )
+    response["HX-Trigger"] = "bdc-updated"
+    return response
+
+
 @login_required
 def detail_sidebar(request, pk: int):
     """Partial HTML for the HTMX sidebar — no base layout."""
@@ -412,6 +451,17 @@ def detail_sidebar(request, pk: int):
     transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
     form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
+    # Déterminer si des checklists existent pour les transitions du statut courant
+    checklist_transitions = {}
+    if bdc.statut == StatutChoices.EN_COURS:
+        checklist_transitions["EN_COURS__A_FACTURER"] = ChecklistItem.objects.filter(
+            actif=True, transition=TransitionChoices.REALISATION
+        ).exists()
+    elif bdc.statut == StatutChoices.A_FACTURER:
+        checklist_transitions["A_FACTURER__FACTURE"] = ChecklistItem.objects.filter(
+            actif=True, transition=TransitionChoices.FACTURATION
+        ).exists()
+
     return render(
         request,
         "bdc/_detail_sidebar.html",
@@ -421,6 +471,7 @@ def detail_sidebar(request, pk: int):
             "historique": historique,
             "transitions": transitions,
             "form_edition": form_edition,
+            "checklist_transitions": checklist_transitions,
         },
     )
 
@@ -498,6 +549,17 @@ def sidebar_save_and_transition(request, pk: int):
     transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
     form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
+    # Déterminer si des checklists existent pour les transitions du statut courant
+    checklist_transitions = {}
+    if bdc.statut == StatutChoices.EN_COURS:
+        checklist_transitions["EN_COURS__A_FACTURER"] = ChecklistItem.objects.filter(
+            actif=True, transition=TransitionChoices.REALISATION
+        ).exists()
+    elif bdc.statut == StatutChoices.A_FACTURER:
+        checklist_transitions["A_FACTURER__FACTURE"] = ChecklistItem.objects.filter(
+            actif=True, transition=TransitionChoices.FACTURATION
+        ).exists()
+
     response = render(
         request,
         "bdc/_detail_sidebar.html",
@@ -508,6 +570,7 @@ def sidebar_save_and_transition(request, pk: int):
             "transitions": transitions,
             "form_edition": form_edition,
             "error_message": error_message,
+            "checklist_transitions": checklist_transitions,
         },
     )
     response["HX-Trigger"] = "bdc-updated"
@@ -534,7 +597,34 @@ def changer_statut_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
+def _msg_attribution(bdc, reattribution=False):
+    """Construit le message flash d'attribution avec lien retour."""
+    lien_retour = reverse("bdc:index") + "?statut=A_FAIRE"
+    verbe = "réattribué" if reattribution else "attribué"
+    base = f"BDC n°{bdc.numero_bdc} {verbe} à {bdc.sous_traitant}. "
+    if bdc.sous_traitant and bdc.sous_traitant.email:
+        base += "Un email lui a été adressé. "
+    lien = f'<a href="{lien_retour}" class="underline font-medium">Continuer les attributions →</a>'
+    return mark_safe(base + lien)
+
+
 # ─── Attribution / Réattribution ─────────────────────────────────────────
+
+
+def _get_checklist_attribution(bdc):
+    """Retourne les items de checklist pour la transition d'attribution du BDC."""
+    if bdc.statut == StatutChoices.A_FAIRE:
+        transition = TransitionChoices.ATTRIBUTION
+    else:
+        return []
+    return list(ChecklistItem.objects.filter(actif=True, transition=transition).order_by("ordre"))
+
+
+def _save_checklist_from_post(bdc, request, items):
+    """Enregistre les résultats de checklist depuis les données POST."""
+    for item in items:
+        coche = request.POST.get(f"checklist_{item.pk}") == "on"
+        ChecklistResultat.objects.update_or_create(bdc=bdc, item=item, defaults={"coche": coche})
 
 
 @login_required
@@ -546,13 +636,19 @@ def attribuer_bdc(request, pk: int):
         messages.error(request, "Ce BDC n'est pas en statut « À attribuer ».")
         return redirect("bdc:detail", pk=pk)
 
+    checklist_items = _get_checklist_attribution(bdc)
+    ctx = {"bdc": bdc, "checklist_items": checklist_items}
+
     if request.method == "GET":
-        form = AttributionForm()
-        return render(request, "bdc/attribuer.html", {"bdc": bdc, "form": form})
+        ctx["form"] = AttributionForm()
+        return render(request, "bdc/attribuer.html", ctx)
 
     form = AttributionForm(request.POST)
     if not form.is_valid():
-        return render(request, "bdc/attribuer.html", {"bdc": bdc, "form": form})
+        ctx["form"] = form
+        return render(request, "bdc/attribuer.html", ctx)
+
+    _save_checklist_from_post(bdc, request, checklist_items)
 
     try:
         attribuer_st(
@@ -560,16 +656,14 @@ def attribuer_bdc(request, pk: int):
             form.cleaned_data["sous_traitant"],
             form.cleaned_data["pourcentage_st"],
             request.user,
+            commentaire=form.cleaned_data.get("commentaire", ""),
         )
-    except TransitionInvalide as e:
+    except (TransitionInvalide, BDCIncomplet) as e:
         messages.error(request, str(e))
         return redirect("bdc:detail", pk=pk)
 
     notifier_st_attribution(bdc)
-    messages.success(
-        request,
-        f"BDC attribué à {bdc.sous_traitant} ({bdc.pourcentage_st} %).",
-    )
+    messages.success(request, _msg_attribution(bdc))
     return redirect("bdc:detail", pk=pk)
 
 
@@ -617,16 +711,14 @@ def reattribuer_bdc(request, pk: int):
             form.cleaned_data["sous_traitant"],
             form.cleaned_data["pourcentage_st"],
             request.user,
+            commentaire=form.cleaned_data.get("commentaire", ""),
         )
-    except TransitionInvalide as e:
+    except (TransitionInvalide, BDCIncomplet) as e:
         messages.error(request, str(e))
         return redirect("bdc:detail", pk=pk)
 
     notifier_st_attribution(bdc)
-    messages.success(
-        request,
-        f"BDC réattribué à {bdc.sous_traitant} ({bdc.pourcentage_st} %).",
-    )
+    messages.success(request, _msg_attribution(bdc, reattribution=True))
     return redirect("bdc:detail", pk=pk)
 
 
@@ -677,6 +769,7 @@ def attribution_split(request, pk: int):
         return redirect("bdc:detail", pk=pk)
 
     date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
+    checklist_items = _get_checklist_attribution(bdc)
 
     def _panel_context(form):
         repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
@@ -693,6 +786,7 @@ def attribution_split(request, pk: int):
             "date_au": date_au.isoformat() if date_au else "",
             "hx_url": reverse("bdc:attribution_split", kwargs={"pk": bdc.pk}),
             "hx_target": "#attribution-panel",
+            "checklist_items": checklist_items,
         }
 
     if request.method == "POST":
@@ -700,17 +794,18 @@ def attribution_split(request, pk: int):
         if form.is_valid():
             st = form.cleaned_data["sous_traitant"]
             pct = form.cleaned_data["pourcentage_st"]
+            commentaire = form.cleaned_data.get("commentaire", "")
+            _save_checklist_from_post(bdc, request, checklist_items)
             try:
                 if reattribution:
-                    reattribuer_st(bdc, st, pct, request.user)
+                    reattribuer_st(bdc, st, pct, request.user, commentaire=commentaire)
                 else:
-                    attribuer_st(bdc, st, pct, request.user)
-            except TransitionInvalide as e:
+                    attribuer_st(bdc, st, pct, request.user, commentaire=commentaire)
+            except (TransitionInvalide, BDCIncomplet) as e:
                 messages.error(request, str(e))
                 return redirect("bdc:detail", pk=pk)
             notifier_st_attribution(bdc)
-            msg = "réattribué" if reattribution else "attribué"
-            messages.success(request, f"BDC n°{bdc.numero_bdc} {msg} à {st}.")
+            messages.success(request, _msg_attribution(bdc, reattribution=reattribution))
             return redirect("bdc:detail", pk=bdc.pk)
         ctx = _panel_context(form)
         if request.headers.get("HX-Request"):
@@ -740,6 +835,7 @@ def attribution_partial(request, pk: int):
     hx_target = f"#{hx_target_id}"
 
     date_du, date_au, date_du_n1, date_au_n1, periode_active = _parse_periode_params(request)
+    checklist_items = _get_checklist_attribution(bdc)
 
     def _build_context(form):
         repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
@@ -756,6 +852,7 @@ def attribution_partial(request, pk: int):
             "date_au": date_au.isoformat() if date_au else "",
             "hx_url": reverse("bdc:attribution_partial", kwargs={"pk": bdc.pk}),
             "hx_target": hx_target,
+            "checklist_items": checklist_items,
         }
 
     if request.method == "POST":
@@ -763,17 +860,18 @@ def attribution_partial(request, pk: int):
         if form.is_valid():
             st = form.cleaned_data["sous_traitant"]
             pct = form.cleaned_data["pourcentage_st"]
+            commentaire = form.cleaned_data.get("commentaire", "")
+            _save_checklist_from_post(bdc, request, checklist_items)
             try:
                 if reattribution:
-                    reattribuer_st(bdc, st, pct, request.user)
+                    reattribuer_st(bdc, st, pct, request.user, commentaire=commentaire)
                 else:
-                    attribuer_st(bdc, st, pct, request.user)
-            except TransitionInvalide as e:
+                    attribuer_st(bdc, st, pct, request.user, commentaire=commentaire)
+            except (TransitionInvalide, BDCIncomplet) as e:
                 messages.error(request, str(e))
                 return redirect("bdc:detail", pk=pk)
             notifier_st_attribution(bdc)
-            msg = "réattribué" if reattribution else "attribué"
-            messages.success(request, f"BDC n°{bdc.numero_bdc} {msg} à {st}.")
+            messages.success(request, _msg_attribution(bdc, reattribution=reattribution))
             response = HttpResponse(status=204)
             response["HX-Redirect"] = reverse("bdc:detail", kwargs={"pk": bdc.pk})
             return response
@@ -796,14 +894,20 @@ def valider_realisation_bdc(request, pk: int):
     if request.method != "POST":
         return redirect("bdc:detail", pk=pk)
 
-    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
 
     try:
         valider_realisation(bdc, request.user)
-        messages.success(request, f"BDC n°{bdc.numero_bdc} : réalisation validée.")
     except TransitionInvalide as e:
+        if request.headers.get("HX-Request"):
+            return _render_sidebar(request, bdc, error_message=str(e))
         messages.error(request, str(e))
+        return redirect("bdc:detail", pk=pk)
 
+    if request.headers.get("HX-Request"):
+        return _render_sidebar(request, bdc, success_message=f"BDC n°{bdc.numero_bdc} : réalisation validée.")
+
+    messages.success(request, f"BDC n°{bdc.numero_bdc} : réalisation validée.")
     return redirect("bdc:detail", pk=pk)
 
 
@@ -813,15 +917,105 @@ def valider_facturation_bdc(request, pk: int):
     if request.method != "POST":
         return redirect("bdc:detail", pk=pk)
 
-    bdc = get_object_or_404(BonDeCommande, pk=pk)
+    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
 
     try:
         valider_facturation(bdc, request.user)
-        messages.success(request, f"BDC n°{bdc.numero_bdc} : passé en facturation.")
     except TransitionInvalide as e:
+        if request.headers.get("HX-Request"):
+            return _render_sidebar(request, bdc, error_message=str(e))
         messages.error(request, str(e))
+        return redirect("bdc:detail", pk=pk)
 
+    if request.headers.get("HX-Request"):
+        return _render_sidebar(request, bdc, success_message=f"BDC n°{bdc.numero_bdc} : passé en facturation.")
+
+    messages.success(request, f"BDC n°{bdc.numero_bdc} : passé en facturation.")
     return redirect("bdc:detail", pk=pk)
+
+
+# Map transition_key → (service_function, success_message)
+_TRANSITION_ACTIONS = {
+    "EN_COURS__A_FACTURER": (valider_realisation, "réalisation validée"),
+    "A_FACTURER__FACTURE": (valider_facturation, "passé en facturation"),
+}
+
+
+@login_required
+def sidebar_checklist(request, pk: int):
+    """GET: affiche la checklist pour une transition. POST: sauvegarde + tente la transition."""
+    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
+    transition_key = request.GET.get("transition") or request.POST.get("transition", "")
+
+    items = list(ChecklistItem.objects.filter(actif=True, transition=transition_key))
+
+    if request.method == "POST":
+        # Sauvegarder les résultats
+        for item in items:
+            coche = f"check_{item.pk}" in request.POST
+            ChecklistResultat.objects.update_or_create(
+                bdc=bdc,
+                item=item,
+                defaults={"coche": coche},
+            )
+
+        # Tenter la transition
+        action_info = _TRANSITION_ACTIONS.get(transition_key)
+        if action_info:
+            try:
+                action_info[0](bdc, request.user)
+                return _render_sidebar(
+                    request,
+                    bdc,
+                    success_message=f"BDC n°{bdc.numero_bdc} : {action_info[1]}.",
+                )
+            except (TransitionInvalide, BDCIncomplet) as e:
+                items_deja_coches = set(
+                    bdc.checklist_resultats.filter(item__transition=transition_key, coche=True).values_list(
+                        "item_id", flat=True
+                    )
+                )
+                return render(
+                    request,
+                    "bdc/partials/_checklist_transition.html",
+                    {
+                        "bdc": bdc,
+                        "checklist_items": items,
+                        "transition_key": transition_key,
+                        "items_deja_coches": items_deja_coches,
+                        "error_message": str(e),
+                    },
+                )
+
+        return _render_sidebar(request, bdc)
+
+    # GET: si pas d'items, faire la transition directement
+    if not items:
+        action_info = _TRANSITION_ACTIONS.get(transition_key)
+        if action_info:
+            try:
+                action_info[0](bdc, request.user)
+                return _render_sidebar(
+                    request,
+                    bdc,
+                    success_message=f"BDC n°{bdc.numero_bdc} : {action_info[1]}.",
+                )
+            except (TransitionInvalide, BDCIncomplet) as e:
+                return _render_sidebar(request, bdc, error_message=str(e))
+
+    items_deja_coches = set(
+        bdc.checklist_resultats.filter(item__transition=transition_key, coche=True).values_list("item_id", flat=True)
+    )
+    return render(
+        request,
+        "bdc/partials/_checklist_transition.html",
+        {
+            "bdc": bdc,
+            "checklist_items": items,
+            "transition_key": transition_key,
+            "items_deja_coches": items_deja_coches,
+        },
+    )
 
 
 # ─── Renvoi CDT → Secrétaire ────────────────────────────────────────────────
@@ -955,7 +1149,7 @@ def controle_bdc(request, pk: int):
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
     est_editable = bdc.statut == StatutChoices.A_TRAITER
 
-    items = ChecklistItem.objects.filter(actif=True)
+    items = ChecklistItem.objects.filter(actif=True, transition=TransitionChoices.CONTROLE)
 
     if request.method == "POST" and est_editable:
         # Sauver le formulaire d'édition
@@ -1174,3 +1368,29 @@ def _serialiser_pour_session(donnees: dict) -> dict:
         else:
             result[key] = value
     return result
+
+
+# ── Preview PDF masqué (tel qu'envoyé au ST) ──────────────────────────────
+
+
+@login_required
+def pdf_masque_preview(request, pk: int):
+    """Sert le PDF masqué + filtré par pages, tel qu'il sera envoyé au ST."""
+    from .masquage_pdf import generer_pdf_masque
+
+    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur"), pk=pk)
+    pages = bdc.bailleur.pages_a_envoyer if bdc.bailleur else []
+    pdf_bytes = generer_pdf_masque(bdc, pages=pages or None)
+
+    if not pdf_bytes:
+        # Pas de masquage configuré : servir le PDF original tel quel
+        if bdc.pdf_original and bdc.pdf_original.name:
+            bdc.pdf_original.open("rb")
+            pdf_bytes = bdc.pdf_original.read()
+            bdc.pdf_original.close()
+        else:
+            return HttpResponse("Aucun PDF disponible.", status=404)
+
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="preview_st_{bdc.numero_bdc}.pdf"'
+    return response

@@ -15,7 +15,6 @@ def pdf_upload_path(instance: "BonDeCommande", filename: str) -> str:
     return f"bdc/{today.year}/{today.month:02d}/{instance.numero_bdc}_{basename}"
 
 
-
 # ─── Bailleur ─────────────────────────────────────────────────────────────────
 
 
@@ -32,11 +31,34 @@ class Bailleur(models.Model):
         verbose_name="Code",
         help_text="Code court utilisé dans l'application. Ex: GDH, ERILIA",
     )
-    champs_masques = models.JSONField(
+    zones_masquage = models.JSONField(
         default=list,
         blank=True,
-        verbose_name="Champs à masquer sur le PDF",
-        help_text="Liste des clés de champs extraits à masquer (ex: montant_ht, montant_ttc)",
+        verbose_name="Zones à masquer sur le PDF",
+        help_text="Rectangles de masquage [{x, y, w, h, page, label}]. Coordonnées en points PDF.",
+    )
+    marqueur_detection = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Marqueur de détection PDF",
+        help_text="Texte unique dans les PDF de ce bailleur (ex: 'ICF HABITAT')",
+    )
+    modele_extraction = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Modèle d'extraction PDF",
+        help_text="Mapping champ → label pour extraction automatique",
+    )
+    pages_a_envoyer = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Pages PDF à envoyer au ST",
+        help_text="Liste des numéros de page à inclure (ex: [1]). Vide = toutes les pages.",
+    )
+    pdf_modele = models.FileField(
+        upload_to="bailleurs/modeles/",
+        blank=True,
+        verbose_name="PDF modèle",
     )
 
     class Meta:
@@ -256,18 +278,30 @@ class LignePrestation(models.Model):
 # ─── ChecklistItem / ChecklistResultat ────────────────────────────────────────
 
 
+class TransitionChoices(models.TextChoices):
+    CONTROLE = "A_TRAITER__A_FAIRE", "Contrôle → À attribuer"
+    ATTRIBUTION = "A_FAIRE__EN_COURS", "Attribution → En cours"
+    REALISATION = "EN_COURS__A_FACTURER", "Réalisation → À facturer"
+    FACTURATION = "A_FACTURER__FACTURE", "Facturation → Facturé"
+
+
 class ChecklistItem(models.Model):
     """
     Item de checklist de contrôle configurable.
-    La secrétaire doit cocher tous les items actifs avant de valider un BDC.
+    Associé à une transition spécifique du workflow.
     """
 
     libelle = models.CharField(max_length=200)
     ordre = models.PositiveSmallIntegerField(default=0)
     actif = models.BooleanField(default=True)
+    transition = models.CharField(
+        max_length=30,
+        choices=TransitionChoices.choices,
+        default=TransitionChoices.CONTROLE,
+    )
 
     class Meta:
-        ordering = ["ordre"]
+        ordering = ["transition", "ordre"]
         verbose_name = "Item de checklist"
         verbose_name_plural = "Items de checklist"
 

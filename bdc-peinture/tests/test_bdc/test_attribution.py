@@ -7,6 +7,7 @@ import logging
 from decimal import Decimal
 
 import pytest
+from django.contrib.messages import get_messages
 from django.urls import reverse
 
 from apps.bdc.models import HistoriqueAction, StatutChoices
@@ -177,6 +178,15 @@ class TestAttribuerBDCView:
         assert bdc_a_faire.sous_traitant == sous_traitant
         assert bdc_a_faire.statut == StatutChoices.EN_COURS
 
+    def test_post_valide_message_contient_lien_retour(self, client_cdt, bdc_a_faire, sous_traitant):
+        url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
+        resp = client_cdt.post(url, {"sous_traitant": sous_traitant.pk, "pourcentage_st": "65"})
+        msgs = [str(m) for m in get_messages(resp.wsgi_request)]
+        msg = msgs[0]
+        assert "attribué à" in msg
+        assert "Continuer les attributions" in msg
+        assert "statut=A_FAIRE" in msg
+
     def test_post_invalide_renvoie_formulaire(self, client_cdt, bdc_a_faire):
         url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
         resp = client_cdt.post(
@@ -228,6 +238,30 @@ class TestReattribuerBDCView:
         bdc_en_cours.refresh_from_db()
         assert bdc_en_cours.sous_traitant == autre_st
         assert bdc_en_cours.pourcentage_st == Decimal("70")
+
+    def test_post_valide_message_contient_lien_retour(self, client_cdt, bdc_en_cours, autre_st):
+        url = reverse("bdc:reattribuer", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url, {"sous_traitant": autre_st.pk, "pourcentage_st": "70"})
+        msgs = [str(m) for m in get_messages(resp.wsgi_request)]
+        msg = msgs[0]
+        assert "réattribué à" in msg
+        assert "Continuer les attributions" in msg
+
+    def test_message_email_si_st_a_email(self, client_cdt, bdc_en_cours, autre_st):
+        autre_st.email = "martin@example.com"
+        autre_st.save(update_fields=["email"])
+        url = reverse("bdc:reattribuer", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url, {"sous_traitant": autre_st.pk, "pourcentage_st": "70"})
+        msgs = [str(m) for m in get_messages(resp.wsgi_request)]
+        assert "email" in msgs[0].lower()
+
+    def test_message_sans_email_si_st_sans_email(self, client_cdt, bdc_en_cours, autre_st):
+        autre_st.email = ""
+        autre_st.save(update_fields=["email"])
+        url = reverse("bdc:reattribuer", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url, {"sous_traitant": autre_st.pk, "pourcentage_st": "70"})
+        msgs = [str(m) for m in get_messages(resp.wsgi_request)]
+        assert "email" not in msgs[0].lower()
 
 
 # ─── 7.4 Tests template detail : boutons Attribuer / Réattribuer ─────────────
@@ -291,6 +325,14 @@ class TestAttributionPartial:
         bdc_a_faire.refresh_from_db()
         assert bdc_a_faire.statut == StatutChoices.EN_COURS
 
+    def test_post_valide_message_contient_lien_retour(self, client_cdt, bdc_a_faire, sous_traitant):
+        url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.post(url, {"sous_traitant": sous_traitant.pk, "pourcentage_st": "65.00"})
+        msgs = [str(m) for m in get_messages(resp.wsgi_request)]
+        msg = msgs[0]
+        assert "attribué à" in msg
+        assert "Continuer les attributions" in msg
+
     def test_post_invalide_reaffiche_formulaire(self, client_cdt, bdc_a_faire):
         url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
         resp = client_cdt.post(url, {})
@@ -342,6 +384,14 @@ class TestAttributionSplit:
         bdc_a_faire.refresh_from_db()
         assert bdc_a_faire.statut == StatutChoices.EN_COURS
 
+    def test_post_valide_message_contient_lien_retour(self, client_cdt, bdc_a_faire, sous_traitant):
+        url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
+        resp = client_cdt.post(url, {"sous_traitant": sous_traitant.pk, "pourcentage_st": "65.00"})
+        msgs = [str(m) for m in get_messages(resp.wsgi_request)]
+        msg = msgs[0]
+        assert "attribué à" in msg
+        assert "Continuer les attributions" in msg
+
     def test_post_invalide_reaffiche(self, client_cdt, bdc_a_faire):
         url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
         resp = client_cdt.post(url, {})
@@ -375,3 +425,66 @@ class TestAttributionSplit:
         url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_traiter.pk})
         resp = client_cdt.get(url)
         assert resp.status_code == 302
+
+
+# ─── Tests validation HTMX depuis la sidebar ─────────────────────────────
+
+
+class TestSidebarValidation:
+    """Tests du flux de validation rapide via HTMX dans la sidebar du dashboard."""
+
+    @pytest.fixture
+    def bdc_en_cours(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
+        return attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+
+    def test_valider_realisation_htmx_retourne_sidebar(self, client_cdt, bdc_en_cours):
+        url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert bdc_en_cours.numero_bdc in content
+        assert "bdc-updated" in resp["HX-Trigger"]
+
+    def test_valider_realisation_htmx_change_statut(self, client_cdt, bdc_en_cours):
+        url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        bdc_en_cours.refresh_from_db()
+        assert bdc_en_cours.statut == StatutChoices.A_FACTURER
+
+    def test_valider_realisation_htmx_affiche_succes(self, client_cdt, bdc_en_cours):
+        url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        content = resp.content.decode()
+        assert "réalisation validée" in content.lower() or "alisation valid" in content
+
+    def test_valider_realisation_htmx_affiche_nouveau_statut(self, client_cdt, bdc_en_cours):
+        url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        content = resp.content.decode()
+        assert "facturer" in content.lower()
+
+    def test_valider_realisation_non_htmx_redirige(self, client_cdt, bdc_en_cours):
+        url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url)
+        assert resp.status_code == 302
+
+    def test_valider_facturation_htmx(self, client_cdt, bdc_en_cours, utilisateur_cdt):
+        from apps.bdc.services import valider_realisation as _valider
+
+        _valider(bdc_en_cours, utilisateur_cdt)
+
+        url = reverse("bdc:valider_facturation", args=[bdc_en_cours.pk])
+        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        bdc_en_cours.refresh_from_db()
+        assert bdc_en_cours.statut == StatutChoices.FACTURE
+        assert "bdc-updated" in resp["HX-Trigger"]
+
+    def test_valider_realisation_htmx_erreur_si_mauvais_statut(self, client_cdt, bdc_a_faire):
+        url = reverse("bdc:valider_realisation", args=[bdc_a_faire.pk])
+        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        # Error message should be in the sidebar
+        assert "bg-danger" in content

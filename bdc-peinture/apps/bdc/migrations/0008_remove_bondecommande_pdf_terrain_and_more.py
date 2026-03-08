@@ -4,19 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0007_releve_facturation'),
+        ("bdc", "0007_releve_facturation"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='bondecommande',
-            name='pdf_terrain',
+            model_name="bondecommande",
+            name="pdf_terrain",
         ),
         migrations.AddField(
-            model_name='bailleur',
-            name='champs_masques',
-            field=models.JSONField(blank=True, default=list, help_text='Liste des clés de champs extraits à masquer (ex: montant_ht, montant_ttc)', verbose_name='Champs à masquer sur le PDF'),
+            model_name="bailleur",
+            name="champs_masques",
+            field=models.JSONField(
+                blank=True,
+                default=list,
+                help_text="Liste des clés de champs extraits à masquer (ex: montant_ht, montant_ttc)",
+                verbose_name="Champs à masquer sur le PDF",
+            ),
         ),
     ]

@@ -102,7 +102,9 @@ class TestUploadPDF:
     def test_post_pdf_inconnu_affiche_erreur(self, mock_storage, mock_detect, client, utilisateur_secretaire):
         from apps.pdf_extraction.detector import PDFTypeInconnu
 
-        mock_detect.side_effect = PDFTypeInconnu("inconnu")
+        mock_detect.side_effect = PDFTypeInconnu(
+            "Type de PDF non reconnu pour 'test.pdf'. Formats supportés : GDH, ERILIA"
+        )
         client.force_login(utilisateur_secretaire)
         pdf = _fake_pdf_file()
         response = client.post(reverse("bdc:upload"), {"pdf_file": pdf})

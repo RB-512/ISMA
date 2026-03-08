@@ -216,9 +216,7 @@ class TestVuesGestion:
         assert resp.status_code == 200
         assert "form" in resp.context
 
-    def test_modifier_utilisateur_post_updates(
-        self, client_cdt, utilisateur_secretaire, groupe_secretaire_accent
-    ):
+    def test_modifier_utilisateur_post_updates(self, client_cdt, utilisateur_secretaire, groupe_secretaire_accent):
         EmailAddress.objects.create(
             user=utilisateur_secretaire, email=utilisateur_secretaire.email, verified=True, primary=True
         )
@@ -238,50 +236,38 @@ class TestVuesGestion:
 
     def test_reset_password_generates_new_password(self, client_cdt, utilisateur_secretaire):
         old_password_hash = utilisateur_secretaire.password
-        resp = client_cdt.post(
-            reverse("gestion:reset_password", kwargs={"pk": utilisateur_secretaire.pk})
-        )
+        resp = client_cdt.post(reverse("gestion:reset_password", kwargs={"pk": utilisateur_secretaire.pk}))
         assert resp.status_code == 200
         assert "new_password" in resp.context
         utilisateur_secretaire.refresh_from_db()
         assert utilisateur_secretaire.password != old_password_hash
 
     def test_reset_password_self_protection(self, client_cdt, utilisateur_cdt):
-        resp = client_cdt.post(
-            reverse("gestion:reset_password", kwargs={"pk": utilisateur_cdt.pk})
-        )
+        resp = client_cdt.post(reverse("gestion:reset_password", kwargs={"pk": utilisateur_cdt.pk}))
         assert resp.status_code == 302  # redirect with error message
 
     def test_reactiver_utilisateur(self, client_cdt, utilisateur_secretaire):
         utilisateur_secretaire.is_active = False
         utilisateur_secretaire.save()
 
-        resp = client_cdt.post(
-            reverse("gestion:reactiver", kwargs={"pk": utilisateur_secretaire.pk})
-        )
+        resp = client_cdt.post(reverse("gestion:reactiver", kwargs={"pk": utilisateur_secretaire.pk}))
         assert resp.status_code == 302
         utilisateur_secretaire.refresh_from_db()
         assert utilisateur_secretaire.is_active is True
 
     def test_desactiver_self_protection(self, client_cdt, utilisateur_cdt):
-        resp = client_cdt.post(
-            reverse("gestion:desactiver", kwargs={"pk": utilisateur_cdt.pk})
-        )
+        client_cdt.post(reverse("gestion:desactiver", kwargs={"pk": utilisateur_cdt.pk}))
         utilisateur_cdt.refresh_from_db()
         assert utilisateur_cdt.is_active is True
 
     def test_supprimer_utilisateur(self, client_cdt, utilisateur_secretaire):
         pk = utilisateur_secretaire.pk
-        resp = client_cdt.post(
-            reverse("gestion:supprimer", kwargs={"pk": pk})
-        )
+        resp = client_cdt.post(reverse("gestion:supprimer", kwargs={"pk": pk}))
         assert resp.status_code == 302
         assert not User.objects.filter(pk=pk).exists()
 
     def test_supprimer_self_protection(self, client_cdt, utilisateur_cdt):
-        resp = client_cdt.post(
-            reverse("gestion:supprimer", kwargs={"pk": utilisateur_cdt.pk})
-        )
+        resp = client_cdt.post(reverse("gestion:supprimer", kwargs={"pk": utilisateur_cdt.pk}))
         assert resp.status_code == 302
         assert User.objects.filter(pk=utilisateur_cdt.pk).exists()
 

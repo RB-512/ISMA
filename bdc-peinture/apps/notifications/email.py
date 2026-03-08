@@ -18,20 +18,25 @@ logger = logging.getLogger(__name__)
 
 
 def _obtenir_pdf_masque(bdc: BonDeCommande) -> bytes | None:
-    """Retourne le PDF original avec les champs sensibles masqués, ou None."""
+    """Retourne le PDF original avec les champs sensibles masqués et pages filtrées, ou None."""
     try:
         from apps.bdc.masquage_pdf import generer_pdf_masque
 
-        return generer_pdf_masque(bdc)
+        pages = bdc.bailleur.pages_a_envoyer if bdc.bailleur else []
+        return generer_pdf_masque(bdc, pages=pages or None)
     except Exception:
         logger.warning("PDF masqué indisponible pour BDC %s", bdc.numero_bdc, exc_info=True)
     return None
 
 
-def envoyer_email_attribution(bdc: BonDeCommande) -> bool:
+def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool:
     """
     Envoie un email d'attribution au sous-traitant avec le PDF terrain en pièce jointe.
     Ne bloque jamais l'attribution en cas d'erreur.
+
+    Args:
+        bdc: Le bon de commande attribué.
+        commentaire: Commentaire optionnel du CDT, ajouté dans le corps du mail.
 
     Returns:
         True si l'email a été envoyé avec succès, False sinon.
@@ -54,6 +59,8 @@ def envoyer_email_attribution(bdc: BonDeCommande) -> bool:
     )
     if bdc.delai_execution:
         corps += f"Délai : {bdc.delai_execution.strftime('%d/%m/%Y')}\n"
+    if commentaire:
+        corps += f"\nCommentaire :\n{commentaire}\n"
     corps += "\nCordialement,\nBDC Peinture"
 
     email = EmailMessage(
@@ -68,8 +75,7 @@ def envoyer_email_attribution(bdc: BonDeCommande) -> bool:
         email.attach(f"{bdc.numero_bdc}.pdf", pdf_contenu, "application/pdf")
     else:
         email.body += (
-            "\n\nNote : le document n'a pas pu être joint. "
-            "Veuillez le récupérer auprès du conducteur de travaux."
+            "\n\nNote : le document n'a pas pu être joint. Veuillez le récupérer auprès du conducteur de travaux."
         )
 
     email.send(fail_silently=False)
@@ -77,9 +83,12 @@ def envoyer_email_attribution(bdc: BonDeCommande) -> bool:
     return True
 
 
-def envoyer_email_reattribution(bdc: BonDeCommande, ancien_st_email: str) -> bool:
+def envoyer_email_reattribution(bdc: BonDeCommande, ancien_st_email: str, commentaire: str = "") -> bool:
     """
     Envoie un email d'annulation à l'ancien ST et un email d'attribution au nouveau.
+
+    Args:
+        commentaire: Commentaire optionnel du CDT, ajouté dans l'email au nouveau ST.
 
     Returns:
         True si tous les emails ont été envoyés avec succès.
@@ -106,7 +115,7 @@ def envoyer_email_reattribution(bdc: BonDeCommande, ancien_st_email: str) -> boo
             succes = False
 
     # Email d'attribution au nouveau ST
-    if not envoyer_email_attribution(bdc):
+    if not envoyer_email_attribution(bdc, commentaire=commentaire):
         succes = False
 
     return succes

@@ -2,12 +2,21 @@
 Tests de la page de contrôle BDC (split-screen PDF + checklist).
 """
 
+from decimal import Decimal
+
 import pytest
 from django.urls import reverse
 
 from apps.bdc.forms import BDCEditionForm
-from apps.bdc.models import ActionChoices, ChecklistItem, ChecklistResultat, HistoriqueAction, StatutChoices
-from apps.bdc.services import BDCIncomplet, changer_statut
+from apps.bdc.models import (
+    ActionChoices,
+    ChecklistItem,
+    ChecklistResultat,
+    HistoriqueAction,
+    StatutChoices,
+    TransitionChoices,
+)
+from apps.bdc.services import BDCIncomplet, attribuer_st, changer_statut, valider_facturation, valider_realisation
 
 # ─── Tests BDCEditionForm ───────────────────────────────────────────────────
 
@@ -72,11 +81,59 @@ class TestBDCEditionForm:
 
 @pytest.fixture
 def checklist_items(db):
-    """Crée 3 items de checklist actifs."""
+    """Crée 3 items de checklist actifs pour la transition A_TRAITER → A_FAIRE."""
     return [
-        ChecklistItem.objects.create(libelle="Nature des prestations vérifiée", ordre=1),
-        ChecklistItem.objects.create(libelle="Cohérence surface / type de logement", ordre=2),
-        ChecklistItem.objects.create(libelle="Montant vérifié", ordre=3),
+        ChecklistItem.objects.create(
+            libelle="Nature des prestations vérifiée",
+            ordre=1,
+            transition=TransitionChoices.CONTROLE,
+        ),
+        ChecklistItem.objects.create(
+            libelle="Cohérence surface / type de logement",
+            ordre=2,
+            transition=TransitionChoices.CONTROLE,
+        ),
+        ChecklistItem.objects.create(
+            libelle="Montant vérifié",
+            ordre=3,
+            transition=TransitionChoices.CONTROLE,
+        ),
+    ]
+
+
+@pytest.fixture
+def checklist_items_attribution(db):
+    """Items de checklist pour la transition A_FAIRE -> EN_COURS."""
+    return [
+        ChecklistItem.objects.create(
+            libelle="Sous-traitant contacté",
+            ordre=1,
+            transition=TransitionChoices.ATTRIBUTION,
+        ),
+    ]
+
+
+@pytest.fixture
+def checklist_items_realisation(db):
+    """Items de checklist pour la transition EN_COURS -> A_FACTURER."""
+    return [
+        ChecklistItem.objects.create(
+            libelle="Photos avant/après prises",
+            ordre=1,
+            transition=TransitionChoices.REALISATION,
+        ),
+    ]
+
+
+@pytest.fixture
+def checklist_items_facturation(db):
+    """Items de checklist pour la transition A_FACTURER -> FACTURE."""
+    return [
+        ChecklistItem.objects.create(
+            libelle="Facture reçue",
+            ordre=1,
+            transition=TransitionChoices.FACTURATION,
+        ),
     ]
 
 
@@ -133,6 +190,17 @@ class TestControleGet:
         assert response.status_code == 200
         assert response.context["est_editable"] is True
         assert response.context["form_edition"] is not None
+
+
+class TestControleFiltrageTransition:
+    """La page contrôle ne montre que les items A_TRAITER__A_FAIRE."""
+
+    def test_controle_ne_montre_pas_items_autres_transitions(
+        self, client_secretaire, bdc_a_traiter, checklist_items, checklist_items_attribution
+    ):
+        url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
+        response = client_secretaire.get(url)
+        assert len(response.context["checklist_items"]) == 3
 
 
 # ─── Tests POST ──────────────────────────────────────────────────────────────
@@ -426,3 +494,134 @@ class TestControleToast:
         resp = client_secretaire.post(url, data, follow=True)
         messages_list = list(resp.context["messages"])
         assert any("valid" in str(m) and "attribuer" in str(m) for m in messages_list)
+
+
+# ─── Tests garde checklist générique sur toutes les transitions ──────────────
+
+
+class TestChecklistTransitionGenerique:
+    """Tests de la garde checklist générique sur toutes les transitions."""
+
+    def test_attribution_bloquee_si_checklist_incomplete(
+        self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_attribution
+    ):
+        with pytest.raises(BDCIncomplet, match="points de contrôle"):
+            attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+
+    def test_attribution_ok_si_checklist_complete(
+        self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_attribution
+    ):
+        for item in checklist_items_attribution:
+            ChecklistResultat.objects.create(bdc=bdc_a_faire, item=item, coche=True)
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+        assert bdc.statut == StatutChoices.EN_COURS
+
+    def test_attribution_ok_sans_checklist(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+        assert bdc.statut == StatutChoices.EN_COURS
+
+    def test_realisation_bloquee_si_checklist_incomplete(
+        self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_realisation
+    ):
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+        with pytest.raises(BDCIncomplet, match="points de contrôle"):
+            valider_realisation(bdc, utilisateur_cdt)
+
+    def test_realisation_ok_si_checklist_complete(
+        self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_realisation
+    ):
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+        for item in checklist_items_realisation:
+            ChecklistResultat.objects.create(bdc=bdc, item=item, coche=True)
+        bdc = valider_realisation(bdc, utilisateur_cdt)
+        assert bdc.statut == StatutChoices.A_FACTURER
+
+    def test_facturation_bloquee_si_checklist_incomplete(
+        self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_facturation
+    ):
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+        bdc = valider_realisation(bdc, utilisateur_cdt)
+        with pytest.raises(BDCIncomplet, match="points de contrôle"):
+            valider_facturation(bdc, utilisateur_cdt)
+
+    def test_facturation_ok_si_checklist_complete(
+        self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_facturation
+    ):
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+        bdc = valider_realisation(bdc, utilisateur_cdt)
+        for item in checklist_items_facturation:
+            ChecklistResultat.objects.create(bdc=bdc, item=item, coche=True)
+        bdc = valider_facturation(bdc, utilisateur_cdt)
+        assert bdc.statut == StatutChoices.FACTURE
+
+    def test_checklist_controle_filtre_par_transition(
+        self, bdc_a_traiter, utilisateur_secretaire, checklist_items, checklist_items_attribution
+    ):
+        """Les items d'attribution ne bloquent pas la transition A_TRAITER -> A_FAIRE."""
+        bdc_a_traiter.occupation = "VACANT"
+        bdc_a_traiter.type_acces = "BADGE_CODE"
+        bdc_a_traiter.save()
+        for item in checklist_items:
+            ChecklistResultat.objects.create(bdc=bdc_a_traiter, item=item, coche=True)
+        bdc = changer_statut(bdc_a_traiter, StatutChoices.A_FAIRE, utilisateur_secretaire)
+        assert bdc.statut == StatutChoices.A_FAIRE
+
+
+# ─── Tests sidebar checklist transition ──────────────────────────────────────
+
+
+class TestSidebarChecklistTransition:
+    """Tests du flux checklist inline dans la sidebar."""
+
+    @pytest.fixture
+    def bdc_en_cours(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
+        return attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+
+    @pytest.fixture
+    def bdc_a_facturer(self, bdc_en_cours, utilisateur_cdt):
+        return valider_realisation(bdc_en_cours, utilisateur_cdt)
+
+    def test_get_checklist_realisation(self, client_cdt, bdc_en_cours, checklist_items_realisation):
+        url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})
+        resp = client_cdt.get(url + "?transition=EN_COURS__A_FACTURER")
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "Photos avant" in content
+
+    def test_get_sans_items_fait_transition_directe(self, client_cdt, bdc_en_cours):
+        """Si pas d'items pour cette transition, la transition passe directement."""
+        url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})
+        resp = client_cdt.get(url + "?transition=EN_COURS__A_FACTURER")
+        assert resp.status_code == 200
+        bdc_en_cours.refresh_from_db()
+        assert bdc_en_cours.statut == StatutChoices.A_FACTURER
+
+    def test_post_checklist_complete_valide_transition(self, client_cdt, bdc_en_cours, checklist_items_realisation):
+        url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})
+        data = {"transition": "EN_COURS__A_FACTURER"}
+        for item in checklist_items_realisation:
+            data[f"check_{item.pk}"] = "on"
+        resp = client_cdt.post(url, data, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        bdc_en_cours.refresh_from_db()
+        assert bdc_en_cours.statut == StatutChoices.A_FACTURER
+
+    def test_post_checklist_incomplete_bloque(self, client_cdt, bdc_en_cours, checklist_items_realisation):
+        url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})
+        data = {"transition": "EN_COURS__A_FACTURER"}
+        # Ne pas cocher → bloque
+        resp = client_cdt.post(url, data, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        bdc_en_cours.refresh_from_db()
+        assert bdc_en_cours.statut == StatutChoices.EN_COURS
+        assert "points de contr" in resp.content.decode().lower()
+
+    def test_post_checklist_facturation(self, client_cdt, bdc_a_facturer, checklist_items_facturation):
+        url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_a_facturer.pk})
+        data = {"transition": "A_FACTURER__FACTURE"}
+        for item in checklist_items_facturation:
+            data[f"check_{item.pk}"] = "on"
+        resp = client_cdt.post(url, data, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        bdc_a_facturer.refresh_from_db()
+        assert bdc_a_facturer.statut == StatutChoices.FACTURE

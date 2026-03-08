@@ -90,6 +90,11 @@ class AttributionForm(forms.Form):
         min_value=0,
         max_value=100,
     )
+    commentaire = forms.CharField(
+        required=False,
+        label="Commentaire pour le sous-traitant",
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Commentaire ajouté dans l'email au ST…"}),
+    )
 
 
 STATUT_EXPORT_CHOICES = [

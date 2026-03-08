@@ -6,31 +6,62 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0006_add_renvoi_action'),
-        ('sous_traitants', '0002_soustraitant_adresse_soustraitant_code_postal_and_more'),
+        ("bdc", "0006_add_renvoi_action"),
+        ("sous_traitants", "0002_soustraitant_adresse_soustraitant_code_postal_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ReleveFacturation',
+            name="ReleveFacturation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('numero', models.PositiveIntegerField(verbose_name='N° Relevé')),
-                ('statut', models.CharField(choices=[('BROUILLON', 'Brouillon'), ('VALIDE', 'Validé')], default='BROUILLON', max_length=10, verbose_name='Statut')),
-                ('notes', models.TextField(blank=True, verbose_name='Notes')),
-                ('date_creation', models.DateTimeField(auto_now_add=True, verbose_name='Créé le')),
-                ('date_validation', models.DateTimeField(blank=True, null=True, verbose_name='Validé le')),
-                ('bdc', models.ManyToManyField(blank=True, related_name='releves_facturation', to='bdc.bondecommande', verbose_name='Bons de commande')),
-                ('cree_par', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='releves_crees', to=settings.AUTH_USER_MODEL, verbose_name='Créé par')),
-                ('sous_traitant', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='releves_facturation', to='sous_traitants.soustraitant', verbose_name='Sous-traitant')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("numero", models.PositiveIntegerField(verbose_name="N° Relevé")),
+                (
+                    "statut",
+                    models.CharField(
+                        choices=[("BROUILLON", "Brouillon"), ("VALIDE", "Validé")],
+                        default="BROUILLON",
+                        max_length=10,
+                        verbose_name="Statut",
+                    ),
+                ),
+                ("notes", models.TextField(blank=True, verbose_name="Notes")),
+                ("date_creation", models.DateTimeField(auto_now_add=True, verbose_name="Créé le")),
+                ("date_validation", models.DateTimeField(blank=True, null=True, verbose_name="Validé le")),
+                (
+                    "bdc",
+                    models.ManyToManyField(
+                        blank=True,
+                        related_name="releves_facturation",
+                        to="bdc.bondecommande",
+                        verbose_name="Bons de commande",
+                    ),
+                ),
+                (
+                    "cree_par",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="releves_crees",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Créé par",
+                    ),
+                ),
+                (
+                    "sous_traitant",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="releves_facturation",
+                        to="sous_traitants.soustraitant",
+                        verbose_name="Sous-traitant",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Relevé de facturation',
-                'verbose_name_plural': 'Relevés de facturation',
-                'ordering': ['-date_creation'],
+                "verbose_name": "Relevé de facturation",
+                "verbose_name_plural": "Relevés de facturation",
+                "ordering": ["-date_creation"],
             },
         ),
     ]
