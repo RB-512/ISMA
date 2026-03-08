@@ -206,7 +206,8 @@
       "Bash(rtk uv run:*)",
       "Bash(claude:*)",
       "Bash(npm uninstall:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(gh run:*)"
     ]
   }
 }

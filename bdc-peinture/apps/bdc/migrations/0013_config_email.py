@@ -4,22 +4,36 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0012_remove_bailleur_champs_masques_and_more'),
+        ("bdc", "0012_remove_bailleur_champs_masques_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ConfigEmail',
+            name="ConfigEmail",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('sujet', models.CharField(blank=True, help_text='Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}', max_length=200, verbose_name='Sujet du mail')),
-                ('corps', models.TextField(blank=True, help_text='Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}, {commentaire}', verbose_name='Corps du mail')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "sujet",
+                    models.CharField(
+                        blank=True,
+                        help_text="Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}",
+                        max_length=200,
+                        verbose_name="Sujet du mail",
+                    ),
+                ),
+                (
+                    "corps",
+                    models.TextField(
+                        blank=True,
+                        help_text="Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}, {commentaire}",
+                        verbose_name="Corps du mail",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Configuration email',
-                'verbose_name_plural': 'Configuration email',
+                "verbose_name": "Configuration email",
+                "verbose_name_plural": "Configuration email",
             },
         ),
     ]
