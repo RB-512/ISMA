@@ -110,8 +110,10 @@ class PDFResult:
         self.bailleur = bailleur
         self.pdf_name = pdf_name
         self.numero_bdc = ""
+        self.bailleur_extrait = ""
         self.adresse = ""
         self.nb_lignes = 0
+        self.champs_manquants = []
         self.pk = None
         self.upload_ok = False
         self.extraction_ok = False
@@ -184,28 +186,47 @@ def step_verify_extraction(page, result):
     # Extraire le numero BDC depuis le titre h1
     h1 = page.locator("h1").first
     h1_text = h1.inner_text()
-    # Format : "BDC n°XXXXX"
     match = re.search(r"n[°o]?\s*(\S+)", h1_text)
     if match:
         result.numero_bdc = match.group(1)
 
-    # Extraire l'adresse depuis les <dd>
-    dd_elements = page.locator("dd").all()
-    for dd in dd_elements:
-        text = dd.inner_text().strip()
-        if text and not result.adresse:
-            # La premiere dd non-vide dans la section Localisation est souvent l'adresse
-            pass
+    # Extraire le bailleur depuis le paragraphe sous le h1
+    p_bailleur = page.locator("h1 + p").first
+    if p_bailleur.count():
+        bailleur_text = p_bailleur.inner_text().strip()
+        if bailleur_text and bailleur_text != "—":
+            result.bailleur_extrait = bailleur_text.split("—")[0].strip()
+        else:
+            result.champs_manquants.append("Bailleur")
+
+    # Extraire l'adresse : <div> contenant <dt>Adresse</dt> <dd>...</dd>
+    dt_adresse = page.locator("dt:has-text('Adresse')").first
+    if dt_adresse.count():
+        # Le dd est frère du dt dans le même <div>
+        parent_div = dt_adresse.locator("..")
+        dd_adresse = parent_div.locator("dd").first
+        if dd_adresse.count():
+            adresse_text = dd_adresse.inner_text().strip()
+            if adresse_text and adresse_text != "—":
+                result.adresse = adresse_text
+            else:
+                result.champs_manquants.append("Adresse")
+        else:
+            result.champs_manquants.append("Adresse")
+    else:
+        result.champs_manquants.append("Adresse")
 
     # Compter les lignes de prestation
     tbody_rows = page.locator("table tbody tr").all()
     result.nb_lignes = len(tbody_rows)
+    if result.nb_lignes == 0:
+        result.champs_manquants.append("Lignes de prestation")
 
     # Verifier qu'on a au moins un numero BDC
-    if not result.numero_bdc or result.numero_bdc == "\u2014":
+    if not result.numero_bdc or result.numero_bdc == "—":
         raise RuntimeError(f"Numero BDC non extrait (h1: {h1_text})")
 
-    result.extraction_ok = True
+    result.extraction_ok = len(result.champs_manquants) == 0
 
 
 def step_save(page, result):
@@ -369,6 +390,8 @@ def generate_report(results, total_duration):
         print(
             f"{i:>3}  {r.bailleur:<8}  {r.pdf_name:<28}  {r.numero_bdc:<12}  {r.nb_lignes:>6}  {duration_str:>6}  {status:<20}"
         )
+        if r.champs_manquants:
+            print(f"     -> Champs manquants: {', '.join(r.champs_manquants)}")
         if r.error:
             print(f"     -> {r.error}")
 
@@ -392,6 +415,8 @@ def generate_report(results, total_duration):
             f.write(
                 f"{i:>3}  {r.bailleur:<8}  {r.pdf_name:<28}  {r.numero_bdc:<12}  {r.nb_lignes:>6}  {duration_str:>6}  {r.status_str:<20}\n"
             )
+            if r.champs_manquants:
+                f.write(f"     -> Champs manquants: {', '.join(r.champs_manquants)}\n")
             if r.error:
                 f.write(f"     -> {r.error}\n")
 
