@@ -70,6 +70,41 @@ class Bailleur(models.Model):
         return f"{self.nom} ({self.code})"
 
 
+# ─── ConfigEmail (singleton) ─────────────────────────────────────────────────
+
+
+class ConfigEmail(models.Model):
+    """Template email personnalisable pour les notifications ST. Singleton."""
+
+    sujet = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Sujet du mail",
+        help_text="Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}",
+    )
+    corps = models.TextField(
+        blank=True,
+        verbose_name="Corps du mail",
+        help_text="Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}, {commentaire}",
+    )
+
+    class Meta:
+        verbose_name = "Configuration email"
+        verbose_name_plural = "Configuration email"
+
+    def __str__(self):
+        return "Configuration email"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 # ─── BonDeCommande ────────────────────────────────────────────────────────────
 
 

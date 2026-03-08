@@ -19,6 +19,7 @@ urlpatterns = [
     path("checklist/<int:pk>/supprimer/", views.checklist_supprimer, name="checklist_supprimer"),
     # Config masquage PDF par bailleur
     path("config-bailleurs/", views.config_bailleurs, name="config_bailleurs"),
+    path("config-bailleurs/email/", views.config_email_save, name="config_email_save"),
     path("config-bailleurs/<int:pk>/form/", views.config_bailleur_form, name="config_bailleur_form"),
     path("config-bailleurs/<int:pk>/supprimer/", views.config_bailleur_supprimer, name="config_bailleur_supprimer"),
     # Création bailleur + config extraction

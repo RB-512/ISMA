@@ -50,18 +50,36 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
         logger.warning("Email attribution : ST %s sans email", bdc.sous_traitant.nom)
         return False
 
-    sujet = f"BDC {bdc.numero_bdc} — Attribution"
-    corps = (
-        f"Bonjour,\n\n"
-        f"Le BDC n°{bdc.numero_bdc} vous a été attribué.\n\n"
-        f"Adresse : {bdc.adresse}, {bdc.ville}\n"
-        f"Travaux : {bdc.objet_travaux or 'Non précisé'}\n"
-    )
-    if bdc.delai_execution:
-        corps += f"Délai : {bdc.delai_execution.strftime('%d/%m/%Y')}\n"
-    if commentaire:
-        corps += f"\nCommentaire :\n{commentaire}\n"
-    corps += "\nCordialement,\nBDC Peinture"
+    # Variables de substitution
+    variables = {
+        "numero_bdc": bdc.numero_bdc,
+        "adresse": bdc.adresse or "",
+        "ville": bdc.ville or "",
+        "travaux": bdc.objet_travaux or "Non précisé",
+        "delai": bdc.delai_execution.strftime("%d/%m/%Y") if bdc.delai_execution else "Non précisé",
+        "commentaire": f"Commentaire :\n{commentaire}" if commentaire else "",
+    }
+
+    # Utiliser le template personnalisé si configuré
+    from apps.bdc.models import ConfigEmail
+
+    config = ConfigEmail.get()
+    if config.sujet and config.corps:
+        sujet = config.sujet.format_map(variables)
+        corps = config.corps.format_map(variables)
+    else:
+        sujet = f"BDC {bdc.numero_bdc} — Attribution"
+        corps = (
+            f"Bonjour,\n\n"
+            f"Le BDC n°{bdc.numero_bdc} vous a été attribué.\n\n"
+            f"Adresse : {bdc.adresse}, {bdc.ville}\n"
+            f"Travaux : {bdc.objet_travaux or 'Non précisé'}\n"
+        )
+        if bdc.delai_execution:
+            corps += f"Délai : {bdc.delai_execution.strftime('%d/%m/%Y')}\n"
+        if commentaire:
+            corps += f"\nCommentaire :\n{commentaire}\n"
+        corps += "\nCordialement,\nBDC Peinture"
 
     email = EmailMessage(
         subject=sujet,

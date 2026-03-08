@@ -20,7 +20,7 @@ from django.utils.crypto import get_random_string
 from django.views.generic import TemplateView
 
 from apps.accounts.forms import CreerUtilisateurForm, ModifierRoleForm, ModifierUtilisateurForm
-from apps.bdc.models import Bailleur, ChecklistItem, TransitionChoices
+from apps.bdc.models import Bailleur, ChecklistItem, ConfigEmail, TransitionChoices
 
 User = get_user_model()
 
@@ -268,8 +268,21 @@ def config_bailleurs(request):
         "accounts/config_bailleur.html",
         {
             "bailleurs": bailleurs,
+            "config_email": ConfigEmail.get(),
         },
     )
+
+
+@login_required
+def config_email_save(request):
+    if request.method != "POST":
+        return redirect("gestion:config_bailleurs")
+    config = ConfigEmail.get()
+    config.sujet = request.POST.get("sujet", "").strip()
+    config.corps = request.POST.get("corps", "").strip()
+    config.save()
+    messages.success(request, "Template email mis à jour.")
+    return redirect("gestion:config_bailleurs")
 
 
 @login_required
