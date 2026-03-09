@@ -9,7 +9,20 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from .models import ReleveFacturation
+from .models import ActionChoices, HistoriqueAction, ReleveFacturation
+
+
+def _dates_attribution(bdc_ids):
+    """Retourne un dict {bdc_id: datetime} des dates d'attribution."""
+    attributions = {}
+    for ha in HistoriqueAction.objects.filter(
+        bdc_id__in=bdc_ids,
+        action=ActionChoices.ATTRIBUTION,
+    ).order_by("bdc_id", "-created_at"):
+        if ha.bdc_id not in attributions:
+            attributions[ha.bdc_id] = ha.created_at
+    return attributions
+
 
 # ─── Constantes PDF ─────────────────────────────────────────────────────────
 
@@ -52,29 +65,40 @@ def generer_releve_pdf(releve: ReleveFacturation) -> HttpResponse:
 
     # En-tête tableau
     col_bdc = _MARGE_G
-    col_adresse = _MARGE_G + 80
+    col_bailleur = _MARGE_G + 65
+    col_adresse = _MARGE_G + 115
+    col_attrib = width - _MARGE_D - 140
     col_montant = width - _MARGE_D - 70
-    page.insert_text((col_bdc, y), "N\u00b0 BDC", fontsize=9, fontname="helv", color=(0.4, 0.4, 0.4))
-    page.insert_text((col_adresse, y), "Adresse", fontsize=9, fontname="helv", color=(0.4, 0.4, 0.4))
-    page.insert_text((col_montant, y), "Montant ST", fontsize=9, fontname="helv", color=(0.4, 0.4, 0.4))
+    header_color = (0.4, 0.4, 0.4)
+    page.insert_text((col_bdc, y), "N\u00b0 BDC", fontsize=8, fontname="helv", color=header_color)
+    page.insert_text((col_bailleur, y), "Bailleur", fontsize=8, fontname="helv", color=header_color)
+    page.insert_text((col_adresse, y), "Adresse", fontsize=8, fontname="helv", color=header_color)
+    page.insert_text((col_attrib, y), "Attribution", fontsize=8, fontname="helv", color=header_color)
+    page.insert_text((col_montant, y), "Montant ST", fontsize=8, fontname="helv", color=header_color)
     y += 4
     page.draw_line(fitz.Point(_MARGE_G, y), fitz.Point(width - _MARGE_D, y), color=(0.85, 0.85, 0.85), width=0.5)
     y += _INTERLIGNE - 2
 
     # Lignes BDC
-    bdc_list = releve.bdc.select_related("bailleur").order_by("date_realisation")
+    bdc_list = list(releve.bdc.select_related("bailleur").order_by("date_realisation"))
+    attributions = _dates_attribution([b.pk for b in bdc_list])
+
     for bdc in bdc_list:
         if y > 780:  # nouvelle page si besoin
             page = doc.new_page(width=595, height=842)
             y = _Y_START
 
-        page.insert_text((col_bdc, y), bdc.numero_bdc, fontsize=9, fontname="helv")
+        page.insert_text((col_bdc, y), bdc.numero_bdc, fontsize=8, fontname="helv")
+        page.insert_text((col_bailleur, y), bdc.bailleur.code, fontsize=8, fontname="helv")
         adresse = bdc.adresse
-        if len(adresse) > 45:
-            adresse = adresse[:42] + "..."
-        page.insert_text((col_adresse, y), adresse, fontsize=9, fontname="helv")
+        if len(adresse) > 35:
+            adresse = adresse[:32] + "..."
+        page.insert_text((col_adresse, y), adresse, fontsize=8, fontname="helv")
+        date_attr = attributions.get(bdc.pk)
+        attr_str = date_attr.strftime("%d/%m/%Y") if date_attr else "\u2014"
+        page.insert_text((col_attrib, y), attr_str, fontsize=8, fontname="helv")
         montant_str = f"{bdc.montant_st:.2f} \u20ac" if bdc.montant_st else "\u2014"
-        page.insert_text((col_montant, y), montant_str, fontsize=9, fontname="helv")
+        page.insert_text((col_montant, y), montant_str, fontsize=8, fontname="helv")
         y += _INTERLIGNE
 
     # Total
@@ -102,6 +126,7 @@ COLONNES_RELEVE = [
     "Adresse",
     "Ville",
     "Montant ST (\u20ac)",
+    "Date attribution",
     "Date r\u00e9alisation",
 ]
 
@@ -118,14 +143,19 @@ def generer_releve_excel(releve: ReleveFacturation) -> HttpResponse:
         cell.font = Font(bold=True)
 
     # Données
-    for bdc in releve.bdc.select_related("bailleur").order_by("date_realisation"):
+    bdc_list = list(releve.bdc.select_related("bailleur").order_by("date_realisation"))
+    attributions = _dates_attribution([b.pk for b in bdc_list])
+
+    for bdc in bdc_list:
+        date_attr = attributions.get(bdc.pk)
         ws.append(
             [
                 bdc.numero_bdc,
-                str(bdc.bailleur),
+                bdc.bailleur.code,
                 bdc.adresse,
                 bdc.ville,
                 float(bdc.montant_st) if bdc.montant_st else None,
+                date_attr.strftime("%d/%m/%Y") if date_attr else "",
                 bdc.date_realisation.strftime("%d/%m/%Y") if bdc.date_realisation else "",
             ]
         )

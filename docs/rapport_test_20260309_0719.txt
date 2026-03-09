@@ -1,0 +1,48 @@
+RAPPORT TEST E2E - 40 PDFs - 09/03/2026 07:19
+====================================================================================================
+
+  #  Bailleur  PDF                           N BDC         Lignes   Duree  Statut              
+----------------------------------------------------------------------------------------------------
+  1  GDH       GDH_test_500001               500001             1    5.5s  OK                  
+  2  GDH       GDH_test_500002               500002             1    8.1s  OK                  
+  3  GDH       GDH_test_500003               500003             1    8.0s  OK                  
+  4  GDH       GDH_test_500004               500004             1    6.0s  OK                  
+  5  GDH       GDH_test_500005               500005             1    7.7s  OK                  
+  6  GDH       GDH_test_500006               500006             1    8.6s  OK                  
+  7  GDH       GDH_test_500007               500007             1    7.0s  OK                  
+  8  GDH       GDH_test_500008               500008             1    7.3s  OK                  
+  9  GDH       GDH_test_500009               500009             1    6.3s  OK                  
+ 10  GDH       GDH_test_500010               500010             1    6.9s  OK                  
+ 11  GDH       GDH_test_500011               500011             1    7.8s  OK                  
+ 12  GDH       GDH_test_500012               500012             1    6.7s  OK                  
+ 13  GDH       GDH_test_500013               500013             1    6.7s  OK                  
+ 14  GDH       GDH_test_500014               500014             1    6.7s  OK                  
+ 15  GDH       GDH_test_500015               500015             1    7.2s  OK                  
+ 16  GDH       GDH_test_500016               500016             1    9.4s  OK                  
+ 17  GDH       GDH_test_500017               500017             1    8.6s  OK                  
+ 18  GDH       GDH_test_500018               500018             1    8.5s  OK                  
+ 19  GDH       GDH_test_500019               500019             1   10.3s  OK                  
+ 20  GDH       GDH_test_500020               500020             1    8.2s  OK                  
+ 21  ERILIA    ERILIA_test_2026_30001        2026               3    9.3s  OK                  
+ 22  ERILIA    ERILIA_test_2026_30002        2026               3    7.0s  OK                  
+ 23  ERILIA    ERILIA_test_2026_30003        2026               3    7.5s  OK                  
+ 24  ERILIA    ERILIA_test_2026_30004        2026               3    7.4s  OK                  
+ 25  ERILIA    ERILIA_test_2026_30005        2026               3    6.0s  OK                  
+ 26  ERILIA    ERILIA_test_2026_30006        2026               3    7.8s  OK                  
+ 27  ERILIA    ERILIA_test_2026_30007        2026               3    6.8s  OK                  
+ 28  ERILIA    ERILIA_test_2026_30008        2026               3    6.7s  OK                  
+ 29  ERILIA    ERILIA_test_2026_30009999     2026               3    7.8s  OK                  
+ 30  ERILIA    ERILIA_test_2026_30010        2026               3    8.0s  OK                  
+ 31  ERILIA    ERILIA_test_2026_30011        2026               3    7.8s  OK                  
+ 32  ERILIA    ERILIA_test_2026_30012        2026               3    6.8s  OK                  
+ 33  ERILIA    ERILIA_test_2026_30013        2026               3    9.0s  OK                  
+ 34  ERILIA    ERILIA_test_2026_30014        2026               3    7.9s  OK                  
+ 35  ERILIA    ERILIA_test_2026_30015        2026               3    7.2s  OK                  
+ 36  ERILIA    ERILIA_test_2026_30016        2026               3    7.2s  OK                  
+ 37  ERILIA    ERILIA_test_2026_30017        2026               3    6.3s  OK                  
+ 38  ERILIA    ERILIA_test_2026_30018        2026               3    9.1s  OK                  
+ 39  ERILIA    ERILIA_test_2026_30019        2026               3    7.6s  OK                  
+ 40  ERILIA    ERILIA_test_2026_30020        2026               3    8.1s  OK                  
+----------------------------------------------------------------------------------------------------
+
+Total : 40 PDFs  |  OK : 40  |  ECHEC : 0  |  Duree totale : 306.4s

@@ -1245,13 +1245,27 @@ def releve_creer(request, st_pk: int):
 @login_required
 def releve_detail(request, pk: int):
     """Détail d'un relevé : liste des BDC, montant total, actions."""
-    from .models import ReleveFacturation
+    from .models import ActionChoices, HistoriqueAction, ReleveFacturation
 
     releve = get_object_or_404(
         ReleveFacturation.objects.select_related("sous_traitant", "cree_par"),
         pk=pk,
     )
-    bdc_list = releve.bdc.select_related("bailleur").order_by("date_realisation")
+    bdc_list = list(releve.bdc.select_related("bailleur").order_by("date_realisation"))
+
+    # Annoter chaque BDC avec sa date d'attribution (depuis HistoriqueAction)
+    bdc_ids = [b.pk for b in bdc_list]
+    attributions = {}
+    if bdc_ids:
+        for ha in HistoriqueAction.objects.filter(
+            bdc_id__in=bdc_ids,
+            action=ActionChoices.ATTRIBUTION,
+        ).order_by("bdc_id", "-created_at"):
+            if ha.bdc_id not in attributions:
+                attributions[ha.bdc_id] = ha.created_at
+
+    for bdc in bdc_list:
+        bdc.date_attribution = attributions.get(bdc.pk)
 
     return render(
         request,

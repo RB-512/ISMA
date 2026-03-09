@@ -207,7 +207,8 @@
       "Bash(claude:*)",
       "Bash(npm uninstall:*)",
       "Bash(npm install:*)",
-      "Bash(gh run:*)"
+      "Bash(gh run:*)",
+      "Bash(ssh-copy-id:*)"
     ]
   }
 }

@@ -25,8 +25,8 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 BASE_URL = "http://127.0.0.1:8000"
-EMAIL = "secretaire@test.fr"
-PASSWORD = "testpass123"
+EMAIL = "ismail@isma.fr"
+PASSWORD = "isma2024"
 
 # Repertoire des PDFs de test (relatif a la racine du projet ISMA)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent  # ISMA/
@@ -51,20 +51,18 @@ DEFAULT_TIMEOUT = 10_000
 
 
 def build_pdf_list():
-    """Construit la liste ordonnee des 40 PDFs : 20 GDH puis 20 ERILIA."""
-    pdfs = []
+    """Construit la liste des PDFs presents dans le repertoire : GDH d'abord, puis ERILIA."""
+    pdfs_gdh = []
+    pdfs_erilia = []
 
-    # GDH : GDH_test_500001.pdf .. GDH_test_500020.pdf
-    for i in range(500001, 500021):
-        path = PDF_DIR / f"GDH_test_{i}.pdf"
-        pdfs.append(("GDH", f"GDH_test_{i}", path))
+    for path in sorted(PDF_DIR.glob("*.pdf")):
+        name = path.stem  # sans extension
+        if name.startswith("GDH"):
+            pdfs_gdh.append(("GDH", name, path))
+        elif name.startswith("ERILIA"):
+            pdfs_erilia.append(("ERILIA", name, path))
 
-    # ERILIA : ERILIA_test_2026_30001.pdf .. ERILIA_test_2026_30020.pdf
-    for i in range(30001, 30021):
-        path = PDF_DIR / f"ERILIA_test_2026_{i}.pdf"
-        pdfs.append(("ERILIA", f"ERILIA_test_2026_{i}", path))
-
-    return pdfs
+    return pdfs_gdh + pdfs_erilia
 
 
 def purge_existing_bdc():
@@ -78,11 +76,14 @@ def purge_existing_bdc():
         "BonDeCommande.objects.all().delete(); "
         "print('PURGE OK')"
     )
+    env = os.environ.copy()
+    env["DJANGO_SETTINGS_MODULE"] = "config.settings.dev_sqlite"
     result = subprocess.run(
         [sys.executable, str(manage_py), "shell", "-c", script],
         capture_output=True,
         text=True,
         cwd=str(manage_py.parent),
+        env=env,
     )
     if "PURGE OK" in result.stdout:
         print("[PURGE] Base purgee avec succes.")
@@ -248,6 +249,7 @@ def step_save(page, result):
 def step_controle(page, result, index):
     """Remplit le formulaire de controle et valide."""
     page.goto(f"{BASE_URL}/{result.pk}/controle/", wait_until="domcontentloaded")
+    page.wait_for_timeout(500)  # Attendre le rendu complet (Alpine.js init)
 
     # Alterner VACANT / OCCUPE
     is_vacant = (index % 2) == 0
@@ -255,7 +257,7 @@ def step_controle(page, result, index):
 
     # Selectionner l'occupation via Alpine x-model
     page.select_option('select[name="occupation"]', occupation)
-    page.wait_for_timeout(300)  # Attendre la transition Alpine x-show
+    page.wait_for_timeout(500)  # Attendre la transition Alpine x-show
 
     if is_vacant:
         # Type d'acces : alterner BADGE_CODE et CLE
@@ -290,12 +292,16 @@ def step_controle(page, result, index):
     # Verifier qu'on est redirige (liste BDC ou page detail)
     if "/controle/" in page.url:
         # Peut-etre une erreur de validation, verifier les messages
-        error_msgs = page.locator(".text-danger, .text-red-500").all()
-        error_texts = [e.inner_text() for e in error_msgs if e.is_visible()]
+        error_msgs = page.locator(".text-danger, .errorlist, .alert-danger").all()
+        error_texts = [e.inner_text().strip() for e in error_msgs if e.is_visible()]
+        # Filtrer les faux positifs (asterisques de champs required)
+        error_texts = [t for t in error_texts if t and t != "*"]
         if error_texts:
             raise RuntimeError(f"Erreur controle : {'; '.join(error_texts)}")
-        # Peut-etre que la page a ete resoumise avec succes mais pas de redirect
-        # On continue
+        # Pas d'erreur visible mais toujours sur /controle/ -> verifier l'occupation
+        occ_val = page.locator('select[name="occupation"]').input_value()
+        if not occ_val:
+            raise RuntimeError("Controle: occupation non selectionnee (timing?)")
 
     result.controle_ok = True
 
@@ -349,8 +355,9 @@ def step_attribution(page, result, index):
 
     # Verifier la redirection
     if "/attribuer/" in page.url:
-        error_msgs = page.locator(".text-danger, .text-red-500").all()
-        error_texts = [e.inner_text() for e in error_msgs if e.is_visible()]
+        error_msgs = page.locator(".text-danger, .errorlist, .alert-danger").all()
+        error_texts = [e.inner_text().strip() for e in error_msgs if e.is_visible()]
+        error_texts = [t for t in error_texts if t and t != "*"]
         if error_texts:
             raise RuntimeError(f"Erreur attribution : {'; '.join(error_texts)}")
 
@@ -478,7 +485,7 @@ def main():
         for index, (bailleur, pdf_name, pdf_path) in enumerate(pdfs):
             result = PDFResult(bailleur, pdf_name)
             start = time.time()
-            print(f"\n[{index + 1:>2}/40] {bailleur} - {pdf_name}")
+            print(f"\n[{index + 1:>2}/{len(pdfs)}] {bailleur} - {pdf_name}")
 
             try:
                 # 1. Upload
