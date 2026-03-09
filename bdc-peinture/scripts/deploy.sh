@@ -12,7 +12,8 @@ echo "=== Déploiement BDC Peinture ==="
 echo "$(date): Début du déploiement"
 
 echo ">>> 1. Récupération du code..."
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
 
 echo ">>> 2. Build et redémarrage des conteneurs..."
 docker compose -f docker-compose.prod.yml up -d --build

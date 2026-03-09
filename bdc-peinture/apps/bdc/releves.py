@@ -21,15 +21,15 @@ def _bdc_eligibles(sous_traitant: SousTraitant):
     Retourne les BDC éligibles pour un nouveau relevé :
     - Attribués à ce ST
     - En statut A_FACTURER ou FACTURE
-    - Non rattachés à un relevé validé
+    - Non rattachés à un relevé existant (brouillon ou validé)
     """
-    bdc_dans_releve_valide = BonDeCommande.objects.filter(
-        releves_facturation__statut=ReleveStatutChoices.VALIDE,
-    )
+    bdc_dans_releve = BonDeCommande.objects.filter(
+        releves_facturation__isnull=False,
+    ).distinct()
     return BonDeCommande.objects.filter(
         sous_traitant=sous_traitant,
         statut__in=[StatutChoices.A_FACTURER, StatutChoices.FACTURE],
-    ).exclude(pk__in=bdc_dans_releve_valide)
+    ).exclude(pk__in=bdc_dans_releve)
 
 
 def _prochain_numero(sous_traitant: SousTraitant) -> int:
@@ -80,13 +80,21 @@ def valider_releve(releve: ReleveFacturation, utilisateur: User) -> ReleveFactur
     Valide un relevé brouillon. Les BDC sont verrouillés.
 
     Raises:
-        ReleveError: Si le relevé est déjà validé ou vide.
+        ReleveError: Si le relevé est déjà validé, vide, ou contient des doublons.
     """
     if releve.statut == ReleveStatutChoices.VALIDE:
         raise ReleveError("Ce relevé est déjà validé.")
 
     if releve.bdc.count() == 0:
         raise ReleveError("Impossible de valider un relevé vide.")
+
+    # Anti-doublon : vérifier qu'aucun BDC n'est déjà dans un autre relevé validé
+    doublons = releve.bdc.filter(
+        releves_facturation__statut=ReleveStatutChoices.VALIDE,
+    ).exclude(releves_facturation=releve).distinct()
+    if doublons.exists():
+        nums = ", ".join(doublons.values_list("numero_bdc", flat=True)[:5])
+        raise ReleveError(f"BDC déjà dans un relevé validé : {nums}")
 
     releve.statut = ReleveStatutChoices.VALIDE
     releve.date_validation = timezone.now()
