@@ -14,6 +14,7 @@ from django.contrib.auth.models import Group
 from django.db import models
 from django.db.models import ProtectedError
 from django.http import HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.crypto import get_random_string
@@ -104,7 +105,9 @@ def modifier_utilisateur(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, f"Profil mis à jour pour {utilisateur.get_full_name() or utilisateur.username}.")
-            return redirect("gestion:liste")
+            response = HttpResponse()
+            response["HX-Redirect"] = reverse("gestion:liste")
+            return response
     else:
         form = ModifierUtilisateurForm(instance=utilisateur)
         if utilisateur == request.user:

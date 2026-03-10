@@ -20,7 +20,17 @@
             <thead>
                 <tr class="border-b border-[var(--color-border)]">
                     <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)]
-                               uppercase tracking-wider">Référence</th>
+                               uppercase tracking-wider">
+                        <button hx-get="{% url 'bdc:bibliotheque' %}?sort={% if sort == 'asc' %}desc{% else %}asc{% endif %}"
+                                hx-target="#bibliotheque-table"
+                                hx-include="#q-input"
+                                hx-on::after-request="document.getElementById('sort-input').value='{% if sort == 'asc' %}desc{% else %}asc{% endif %}'"
+                                class="flex items-center gap-1 hover:text-[var(--color-text)] transition-colors
+                                       uppercase tracking-wider text-xs font-semibold">
+                            Référence
+                            <span class="text-accent">{% if sort == 'desc' %}↓{% else %}↑{% endif %}</span>
+                        </button>
+                    </th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)]
                                uppercase tracking-wider">Désignation</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)]

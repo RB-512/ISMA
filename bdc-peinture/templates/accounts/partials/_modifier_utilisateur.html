@@ -2,7 +2,8 @@
     <h2 class="text-base font-semibold text-[var(--color-text)] mb-4">
         Modifier {{ utilisateur.get_full_name|default:utilisateur.username }}
     </h2>
-    <form method="post" action="{% url 'gestion:modifier' utilisateur.pk %}">
+    <form hx-post="{% url 'gestion:modifier' utilisateur.pk %}"
+          hx-target="#modal-modifier" hx-swap="innerHTML">
         {% csrf_token %}
 
         {% if form.non_field_errors %}

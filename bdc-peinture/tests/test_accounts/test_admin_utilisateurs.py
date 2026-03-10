@@ -111,6 +111,7 @@ class TestModifierUtilisateurForm:
         )
         form = ModifierUtilisateurForm(
             data={
+                "username": utilisateur_secretaire.username,
                 "first_name": "Sophie Modifiee",
                 "last_name": "Martin Modifiee",
                 "email": "sophie.new@example.com",
@@ -132,6 +133,7 @@ class TestModifierUtilisateurForm:
         )
         form = ModifierUtilisateurForm(
             data={
+                "username": utilisateur_secretaire.username,
                 "first_name": "Sophie",
                 "last_name": "Martin",
                 "email": "sophie.updated@example.com",
@@ -149,6 +151,7 @@ class TestModifierUtilisateurForm:
         """If no EmailAddress exists yet, save() creates one."""
         form = ModifierUtilisateurForm(
             data={
+                "username": utilisateur_secretaire.username,
                 "first_name": "Sophie",
                 "last_name": "Martin",
                 "email": "new@example.com",
@@ -164,6 +167,7 @@ class TestModifierUtilisateurForm:
     def test_duplicate_email_rejected(self, utilisateur_secretaire, utilisateur_cdt, groupe_secretaire_accent):
         form = ModifierUtilisateurForm(
             data={
+                "username": utilisateur_secretaire.username,
                 "first_name": "Sophie",
                 "last_name": "Martin",
                 "email": utilisateur_cdt.email,
@@ -223,6 +227,7 @@ class TestVuesGestion:
         resp = client_cdt.post(
             reverse("gestion:modifier", kwargs={"pk": utilisateur_secretaire.pk}),
             {
+                "username": utilisateur_secretaire.username,
                 "first_name": "SophieModif",
                 "last_name": "MartinModif",
                 "email": "sophie.modif@example.com",

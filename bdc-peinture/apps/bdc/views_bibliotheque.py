@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
@@ -11,9 +12,20 @@ from .models import PrixForfaitaire
 @login_required
 @group_required("CDT")
 def bibliotheque_liste(request):
-    """Liste des prix forfaitaires avec ajout inline."""
+    """Liste des prix forfaitaires avec recherche et tri."""
+    q = request.GET.get("q", "").strip()
+    sort = request.GET.get("sort", "asc")
+
     prix = PrixForfaitaire.objects.all()
-    return render(request, "bdc/bibliotheque.html", {"prix_list": prix})
+    if q:
+        prix = prix.filter(Q(reference__icontains=q) | Q(designation__icontains=q))
+    prix = prix.order_by("-reference" if sort == "desc" else "reference")
+
+    ctx = {"prix_list": prix, "q": q, "sort": sort}
+
+    if request.headers.get("HX-Request"):
+        return render(request, "bdc/partials/_bibliotheque_table.html", ctx)
+    return render(request, "bdc/bibliotheque.html", ctx)
 
 
 @login_required
