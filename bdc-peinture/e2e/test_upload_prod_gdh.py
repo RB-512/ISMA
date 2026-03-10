@@ -379,7 +379,7 @@ def step_controle(page, result):
     checks = []
 
     # Aller sur la page de controle
-    page.goto(f"{BASE_URL}/bdc/{result.pk}/controle/", wait_until="domcontentloaded")
+    page.goto(f"{BASE_URL}/{result.pk}/controle/", wait_until="domcontentloaded")
 
     # Verifier qu'on est bien sur la page de controle (pas 404)
     if "404" in page.title() or page.locator("text=Page non").count():
@@ -463,7 +463,7 @@ def step_controle(page, result):
             checks.append(FieldCheck("Message succes", "non trouve", False))
 
     # Verifier le statut final en allant sur la page detail
-    page.goto(f"{BASE_URL}/bdc/{result.pk}/", wait_until="domcontentloaded")
+    page.goto(f"{BASE_URL}/{result.pk}/", wait_until="domcontentloaded")
     p_sub = page.locator("h1 + p").first
     sub_text = p_sub.inner_text() if p_sub.count() else ""
 
