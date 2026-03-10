@@ -31,8 +31,8 @@ def generer_pdf_masque(bdc: BonDeCommande, pages: list[int] | None = None) -> by
         return None
 
     zones = bdc.bailleur.zones_masquage if bdc.bailleur else []
-    if not zones:
-        logger.info("Aucune zone de masquage pour BDC %s (bailleur %s)", bdc.numero_bdc, bdc.bailleur)
+    if not zones and not pages:
+        logger.info("Aucune zone de masquage ni filtre de pages pour BDC %s (bailleur %s)", bdc.numero_bdc, bdc.bailleur)
         return None
 
     try:
