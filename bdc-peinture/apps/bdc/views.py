@@ -176,6 +176,15 @@ def liste_bdc(request):
             Q(numero_bdc__icontains=recherche) | Q(adresse__icontains=recherche) | Q(occupant_nom__icontains=recherche)
         )
 
+    # Filtre alerte (retard / proche)
+    alerte = request.GET.get("alerte", "").strip()
+    if alerte == "retard":
+        from apps.notifications.alertes import get_bdc_en_retard
+        queryset = queryset.filter(pk__in=get_bdc_en_retard().values_list("pk", flat=True))
+    elif alerte == "proche":
+        from apps.notifications.alertes import get_bdc_delai_proche
+        queryset = queryset.filter(pk__in=get_bdc_delai_proche().values_list("pk", flat=True))
+
     # Filtres django-filter
     filtre = BonDeCommandeFilter(request.GET, queryset=queryset)
     queryset_filtre = filtre.qs
