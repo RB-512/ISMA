@@ -17,15 +17,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _obtenir_pdf_masque(bdc: BonDeCommande) -> bytes | None:
-    """Retourne le PDF original avec les champs sensibles masqués et pages filtrées, ou None."""
+def _obtenir_fiche_chantier(bdc: BonDeCommande, commentaire: str = "") -> bytes | None:
+    """Génère la fiche chantier PDF à partir des données en base."""
     try:
-        from apps.bdc.masquage_pdf import generer_pdf_masque
+        from apps.bdc.fiche_chantier import generer_fiche_chantier
 
-        pages = bdc.bailleur.pages_a_envoyer if bdc.bailleur else []
-        return generer_pdf_masque(bdc, pages=pages or None)
+        return generer_fiche_chantier(bdc, commentaire=commentaire)
     except Exception:
-        logger.warning("PDF masqué indisponible pour BDC %s", bdc.numero_bdc, exc_info=True)
+        logger.warning("Fiche chantier indisponible pour BDC %s", bdc.numero_bdc, exc_info=True)
     return None
 
 
@@ -88,9 +87,9 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
         to=[email_st],
     )
 
-    pdf_contenu = _obtenir_pdf_masque(bdc)
+    pdf_contenu = _obtenir_fiche_chantier(bdc, commentaire=commentaire)
     if pdf_contenu:
-        email.attach(f"{bdc.numero_bdc}.pdf", pdf_contenu, "application/pdf")
+        email.attach(f"fiche_chantier_{bdc.numero_bdc}.pdf", pdf_contenu, "application/pdf")
     else:
         email.body += (
             "\n\nNote : le document n'a pas pu être joint. Veuillez le récupérer auprès du conducteur de travaux."

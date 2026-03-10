@@ -1462,27 +1462,20 @@ def _serialiser_pour_session(donnees: dict) -> dict:
     return result
 
 
-# ── Preview PDF masqué (tel qu'envoyé au ST) ──────────────────────────────
+# ── Preview fiche chantier ST (tel qu'envoyée au ST) ─────────────────────
 
 
 @login_required
 def pdf_masque_preview(request, pk: int):
-    """Sert le PDF masqué + filtré par pages, tel qu'il sera envoyé au ST."""
-    from .masquage_pdf import generer_pdf_masque
+    """Sert la fiche chantier PDF générée, telle qu'envoyée au ST."""
+    from .fiche_chantier import generer_fiche_chantier
 
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur"), pk=pk)
-    pages = bdc.bailleur.pages_a_envoyer if bdc.bailleur else []
-    pdf_bytes = generer_pdf_masque(bdc, pages=pages or None)
+    pdf_bytes = generer_fiche_chantier(bdc)
 
     if not pdf_bytes:
-        # Pas de masquage configuré : servir le PDF original tel quel
-        if bdc.pdf_original and bdc.pdf_original.name:
-            bdc.pdf_original.open("rb")
-            pdf_bytes = bdc.pdf_original.read()
-            bdc.pdf_original.close()
-        else:
-            return HttpResponse("Aucun PDF disponible.", status=404)
+        return HttpResponse("Impossible de générer la fiche chantier.", status=500)
 
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f'inline; filename="preview_st_{bdc.numero_bdc}.pdf"'
+    response["Content-Disposition"] = f'inline; filename="fiche_chantier_{bdc.numero_bdc}.pdf"'
     return response

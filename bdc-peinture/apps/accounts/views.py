@@ -489,7 +489,7 @@ def config_extraction_test(request, pk):
 
 @login_required
 def preview_masquage(request, pk):
-    from apps.bdc.masquage_pdf import generer_pdf_masque
+    from apps.bdc.fiche_chantier import generer_fiche_chantier
     from apps.bdc.models import BonDeCommande
 
     bailleur = get_object_or_404(Bailleur, pk=pk)
@@ -500,22 +500,11 @@ def preview_masquage(request, pk):
         return redirect("gestion:config_bailleurs")
 
     bdc = get_object_or_404(BonDeCommande, pk=bdc_pk, bailleur=bailleur)
-    pages = bailleur.pages_a_envoyer or None
-    pdf_bytes = generer_pdf_masque(bdc, pages=pages)
+    pdf_bytes = generer_fiche_chantier(bdc)
 
     if not pdf_bytes:
-        # Pas de zones configurees : servir le PDF original tel quel
-        if bdc.pdf_original and bdc.pdf_original.name:
-            try:
-                bdc.pdf_original.open("rb")
-                pdf_bytes = bdc.pdf_original.read()
-                bdc.pdf_original.close()
-            except Exception:
-                messages.error(request, "Impossible de lire le PDF original.")
-                return redirect("gestion:config_bailleurs")
-        else:
-            messages.error(request, "Aucun PDF disponible pour ce BDC.")
-            return redirect("gestion:config_bailleurs")
+        messages.error(request, "Impossible de générer la fiche chantier.")
+        return redirect("gestion:config_bailleurs")
 
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="masquage_preview_{bdc.numero_bdc}.pdf"'

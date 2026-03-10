@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Fiche chantier — BDC {{ bdc.numero_bdc }}</title>
+<style>
+    @page {
+        size: A4;
+        margin: 15mm 15mm 20mm 15mm;
+    }
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 11pt;
+        color: #1a1a1a;
+        line-height: 1.4;
+        margin: 0;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 3px solid #1e3a5f;
+        padding-bottom: 8px;
+        margin-bottom: 16px;
+    }
+    .header-left {
+        font-size: 20pt;
+        font-weight: bold;
+        color: #1e3a5f;
+        letter-spacing: 2px;
+    }
+    .header-right {
+        text-align: right;
+        font-size: 9pt;
+        color: #666;
+    }
+    .bdc-number {
+        font-size: 14pt;
+        font-weight: bold;
+        color: #1e3a5f;
+        margin-bottom: 12px;
+    }
+    .bdc-number span {
+        font-size: 10pt;
+        color: #888;
+        font-weight: normal;
+        margin-left: 10px;
+    }
+    .section {
+        margin-bottom: 14px;
+    }
+    .section-title {
+        font-size: 9pt;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #1e3a5f;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 3px;
+        margin-bottom: 8px;
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 20px;
+    }
+    .info-row {
+        display: flex;
+        gap: 6px;
+    }
+    .info-label {
+        color: #666;
+        font-size: 9pt;
+        min-width: 80px;
+    }
+    .info-value {
+        font-weight: 500;
+    }
+    table.prestations {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10pt;
+    }
+    table.prestations th {
+        background: #f0f4f8;
+        text-align: left;
+        padding: 6px 8px;
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #1e3a5f;
+        border-bottom: 2px solid #1e3a5f;
+    }
+    table.prestations th.right {
+        text-align: right;
+    }
+    table.prestations td {
+        padding: 5px 8px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    table.prestations td.right {
+        text-align: right;
+    }
+    .consignes-box {
+        background: #fef9e7;
+        border: 1px solid #f0d861;
+        border-radius: 4px;
+        padding: 10px 12px;
+        white-space: pre-wrap;
+        font-size: 10pt;
+    }
+    .footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 7pt;
+        color: #aaa;
+        padding: 4px 0;
+    }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">ISMA</div>
+    <div class="header-right">Fiche chantier<br>Document interne</div>
+</div>
+
+<div class="bdc-number">
+    BDC n°{{ bdc.numero_bdc }}
+    <span>{{ bdc.bailleur.code }}{% if bdc.bailleur.nom %} — {{ bdc.bailleur.nom }}{% endif %}</span>
+</div>
+
+{# ── Localisation ── #}
+<div class="section">
+    <div class="section-title">Localisation</div>
+    <div class="info-grid">
+        {% if bdc.programme_residence %}
+        <div class="info-row">
+            <span class="info-label">Résidence</span>
+            <span class="info-value">{{ bdc.programme_residence }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span class="info-label">Adresse</span>
+            <span class="info-value">{{ bdc.adresse_complete }}</span>
+        </div>
+        {% if bdc.logement_numero %}
+        <div class="info-row">
+            <span class="info-label">Logement</span>
+            <span class="info-value">{{ bdc.logement_numero }}</span>
+        </div>
+        {% endif %}
+        {% if bdc.occupation %}
+        <div class="info-row">
+            <span class="info-label">Occupation</span>
+            <span class="info-value">{{ bdc.get_occupation_display }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Occupant ── #}
+{% if bdc.occupant_nom or bdc.occupant_telephone %}
+<div class="section">
+    <div class="section-title">Occupant</div>
+    <div class="info-grid">
+        {% if bdc.occupant_nom %}
+        <div class="info-row">
+            <span class="info-label">Nom</span>
+            <span class="info-value">{{ bdc.occupant_nom }}</span>
+        </div>
+        {% endif %}
+        {% if bdc.occupant_telephone %}
+        <div class="info-row">
+            <span class="info-label">Tél</span>
+            <span class="info-value">{{ bdc.occupant_telephone }}</span>
+        </div>
+        {% endif %}
+        {% if bdc.occupant_email %}
+        <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value">{{ bdc.occupant_email }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Travaux ── #}
+{% if bdc.objet_travaux %}
+<div class="section">
+    <div class="section-title">Travaux</div>
+    <div>{{ bdc.objet_travaux }}</div>
+</div>
+{% endif %}
+
+{# ── Prestations (sans prix) ── #}
+{% if lignes %}
+<div class="section">
+    <div class="section-title">Prestations</div>
+    <table class="prestations">
+        <thead>
+            <tr>
+                <th>Désignation</th>
+                <th class="right">Qté</th>
+                <th>Unité</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td>{{ ligne.designation }}</td>
+                <td class="right">{{ ligne.quantite|floatformat:2 }}</td>
+                <td>{{ ligne.unite }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{# ── Consignes CDT ── #}
+{% if commentaire %}
+<div class="section">
+    <div class="section-title">Consignes</div>
+    <div class="consignes-box">{{ commentaire }}</div>
+</div>
+{% endif %}
+
+{# ── Planning ── #}
+{% if bdc.rdv_date or bdc.delai_execution %}
+<div class="section">
+    <div class="section-title">Planning</div>
+    <div class="info-grid">
+        {% if bdc.rdv_date %}
+        <div class="info-row">
+            <span class="info-label">RDV</span>
+            <span class="info-value">{{ bdc.rdv_date|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if bdc.delai_execution %}
+        <div class="info-row">
+            <span class="info-label">Délai</span>
+            <span class="info-value">{{ bdc.delai_execution|date:"d/m/Y" }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="footer">
+    ISMA — Fiche chantier BDC {{ bdc.numero_bdc }} — Document confidentiel
+</div>
+
+</body>
+</html>
