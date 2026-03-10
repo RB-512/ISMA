@@ -27,7 +27,7 @@ def generer_fiche_chantier(bdc: BonDeCommande, commentaire: str = "") -> bytes |
         bytes du PDF, ou None en cas d'erreur.
     """
     try:
-        lignes = bdc.lignes.select_related().all()
+        lignes = bdc.lignes_prestation.all()
 
         html_string = render_to_string("bdc/fiche_chantier_st.html", {
             "bdc": bdc,
