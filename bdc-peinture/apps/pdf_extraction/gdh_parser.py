@@ -135,7 +135,12 @@ class GDHParser(PDFParser):
         return lignes
 
     def _trouver_cellule_prestations(self, tables: list) -> str:
-        """Trouve la cellule contenant les lignes de prestation dans la table GDH."""
+        """Trouve les cellules contenant les lignes de prestation dans la table GDH.
+
+        Chaque ligne de prestation peut être dans une row séparée du tableau.
+        On concatène toutes les cellules après le header P.U.H.T.
+        """
+        parts = []
         for table in tables:
             found_header = False
             for row in table:
@@ -146,8 +151,8 @@ class GDHParser(PDFParser):
                     found_header = True
                     continue
                 if found_header and cell0:
-                    return cell0
-        return ""
+                    parts.append(cell0)
+        return "\n".join(parts)
 
     # ── Extraction en-tête ────────────────────────────────────────────────────
 
