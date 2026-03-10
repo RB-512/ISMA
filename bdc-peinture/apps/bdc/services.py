@@ -12,7 +12,15 @@ from django.contrib.auth.models import User
 
 from apps.sous_traitants.models import SousTraitant
 
-from .models import ActionChoices, BonDeCommande, ChecklistItem, HistoriqueAction, StatutChoices, TransitionChoices
+from .models import (
+    ActionChoices,
+    BonDeCommande,
+    ChecklistItem,
+    HistoriqueAction,
+    LigneForfaitAttribution,
+    StatutChoices,
+    TransitionChoices,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -228,9 +236,11 @@ def _calculer_montant_st(bdc: BonDeCommande, pourcentage: Decimal) -> Decimal | 
 def attribuer_st(
     bdc: BonDeCommande,
     sous_traitant: SousTraitant,
-    pourcentage: Decimal,
+    pourcentage: Decimal | None,
     utilisateur: User,
     commentaire: str = "",
+    mode: str = "pourcentage",
+    lignes_forfait: list[dict] | None = None,
 ) -> BonDeCommande:
     """
     Attribue un BDC à un sous-traitant. Le BDC doit être en statut A_FAIRE.
@@ -244,14 +254,39 @@ def attribuer_st(
     _verifier_checklist_transition(bdc, StatutChoices.A_FAIRE, StatutChoices.EN_COURS)
 
     bdc.sous_traitant = sous_traitant
-    bdc.pourcentage_st = pourcentage
-    bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+    bdc.mode_attribution = mode
+
+    if mode == "forfait" and lignes_forfait:
+        # Delete existing forfait lines
+        bdc.lignes_forfait.all().delete()
+        total = Decimal("0")
+        for ligne in lignes_forfait:
+            montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
+            LigneForfaitAttribution.objects.create(
+                bdc=bdc,
+                prix_forfaitaire_id=ligne["prix_id"],
+                quantite=ligne["quantite"],
+                prix_unitaire=ligne["prix_unitaire"],
+                montant=montant_ligne,
+            )
+            total += montant_ligne
+        bdc.montant_st = total
+        # Calculate inverse percentage
+        if bdc.montant_ht and bdc.montant_ht > 0:
+            bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
+        else:
+            bdc.pourcentage_st = None
+    else:
+        bdc.pourcentage_st = pourcentage
+        bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+
     bdc.statut = StatutChoices.EN_COURS
     bdc.save(
         update_fields=[
             "sous_traitant",
             "pourcentage_st",
             "montant_st",
+            "mode_attribution",
             "statut",
             "updated_at",
         ]
@@ -276,9 +311,11 @@ def attribuer_st(
 def reattribuer_st(
     bdc: BonDeCommande,
     nouveau_st: SousTraitant,
-    pourcentage: Decimal,
+    pourcentage: Decimal | None,
     utilisateur: User,
     commentaire: str = "",
+    mode: str = "pourcentage",
+    lignes_forfait: list[dict] | None = None,
 ) -> BonDeCommande:
     """
     Réattribue un BDC en cours à un autre sous-traitant.
@@ -294,13 +331,38 @@ def reattribuer_st(
     ancien_st_email = bdc.sous_traitant.email if bdc.sous_traitant else ""
 
     bdc.sous_traitant = nouveau_st
-    bdc.pourcentage_st = pourcentage
-    bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+    bdc.mode_attribution = mode
+
+    if mode == "forfait" and lignes_forfait:
+        # Delete existing forfait lines
+        bdc.lignes_forfait.all().delete()
+        total = Decimal("0")
+        for ligne in lignes_forfait:
+            montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
+            LigneForfaitAttribution.objects.create(
+                bdc=bdc,
+                prix_forfaitaire_id=ligne["prix_id"],
+                quantite=ligne["quantite"],
+                prix_unitaire=ligne["prix_unitaire"],
+                montant=montant_ligne,
+            )
+            total += montant_ligne
+        bdc.montant_st = total
+        # Calculate inverse percentage
+        if bdc.montant_ht and bdc.montant_ht > 0:
+            bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
+        else:
+            bdc.pourcentage_st = None
+    else:
+        bdc.pourcentage_st = pourcentage
+        bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+
     bdc.save(
         update_fields=[
             "sous_traitant",
             "pourcentage_st",
             "montant_st",
+            "mode_attribution",
             "updated_at",
         ]
     )

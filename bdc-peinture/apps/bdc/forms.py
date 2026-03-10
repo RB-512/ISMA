@@ -83,18 +83,33 @@ class AttributionForm(forms.Form):
         label="Sous-traitant",
         empty_label="— Choisir un sous-traitant —",
     )
+    mode_attribution = forms.ChoiceField(
+        choices=[("pourcentage", "Pourcentage"), ("forfait", "Forfait")],
+        initial="pourcentage",
+        required=False,
+        widget=forms.HiddenInput(),
+    )
     pourcentage_st = forms.DecimalField(
         max_digits=5,
         decimal_places=2,
         label="Pourcentage ST (%)",
         min_value=0,
         max_value=100,
+        required=False,
     )
     commentaire = forms.CharField(
         required=False,
         label="Commentaire pour le sous-traitant",
         widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Commentaire ajouté dans l'email au ST…"}),
     )
+
+    def clean(self):
+        cleaned = super().clean()
+        mode = cleaned.get("mode_attribution") or "pourcentage"
+        cleaned["mode_attribution"] = mode
+        if mode == "pourcentage" and not cleaned.get("pourcentage_st"):
+            self.add_error("pourcentage_st", "Le pourcentage est obligatoire en mode pourcentage.")
+        return cleaned
 
 
 STATUT_EXPORT_CHOICES = [

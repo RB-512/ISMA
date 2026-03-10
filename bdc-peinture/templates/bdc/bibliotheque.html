@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Bibliothèque de prix — ISMA{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <div>
+        <h1 class="text-2xl font-bold text-[var(--color-text)]">Bibliothèque de prix</h1>
+        <p class="text-sm text-[var(--color-text-muted)] mt-1">
+            Gérez les prix forfaitaires utilisés lors des attributions.
+        </p>
+    </div>
+
+    {# Formulaire d'ajout #}
+    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
+        <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+            Ajouter un prix
+        </h2>
+        <form hx-post="{% url 'bdc:bibliotheque_ajouter' %}" hx-target="#bibliotheque-table" hx-swap="innerHTML">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+                <div>
+                    <label for="id_reference">Référence</label>
+                    <input type="text" name="reference" id="id_reference" placeholder="REF-001">
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="id_designation">Désignation</label>
+                    <input type="text" name="designation" id="id_designation"
+                           placeholder="Mise en peinture murs">
+                </div>
+                <div>
+                    <label for="id_unite">Unité</label>
+                    <input type="text" name="unite" id="id_unite" placeholder="m²">
+                </div>
+                <div>
+                    <label for="id_prix_unitaire">PU (€)</label>
+                    <div class="flex gap-2">
+                        <input type="number" name="prix_unitaire" id="id_prix_unitaire"
+                               step="0.01" min="0" placeholder="0.00">
+                        <button type="submit"
+                                class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm
+                                       font-medium rounded-lg transition-colors whitespace-nowrap">
+                            Ajouter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    {# Table des prix #}
+    <div id="bibliotheque-table">
+        {% include "bdc/partials/_bibliotheque_table.html" %}
+    </div>
+
+</div>
+{% endblock %}

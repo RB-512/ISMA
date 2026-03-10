@@ -10,10 +10,24 @@ import pytest
 from django.contrib.messages import get_messages
 from django.urls import reverse
 
-from apps.bdc.models import HistoriqueAction, StatutChoices
+from apps.bdc.models import HistoriqueAction, LigneForfaitAttribution, PrixForfaitaire, StatutChoices
 from apps.bdc.notifications import notifier_st_attribution
 from apps.bdc.services import TransitionInvalide, attribuer_st, reattribuer_st
 from apps.sous_traitants.models import SousTraitant
+
+@pytest.fixture
+def prix_t2(db):
+    return PrixForfaitaire.objects.create(
+        reference="PEINT-T2", designation="Peinture T2", unite="u", prix_unitaire="800.00"
+    )
+
+
+@pytest.fixture
+def prix_t3(db):
+    return PrixForfaitaire.objects.create(
+        reference="PEINT-T3", designation="Peinture T3", unite="u", prix_unitaire="1200.00"
+    )
+
 
 # ─── 7.1 Tests services attribuer_st / reattribuer_st ─────────────────────────
 
@@ -488,3 +502,79 @@ class TestSidebarValidation:
         content = resp.content.decode()
         # Error message should be in the sidebar
         assert "bg-danger" in content
+
+
+# ─── Tests attribution mode forfait ──────────────────────────────────────
+
+
+class TestAttribuerForfait:
+    """Tests unitaires de attribuer_st() en mode forfait."""
+
+    def test_attribution_forfait_cree_lignes(self, bdc_a_faire, sous_traitant, utilisateur_cdt, prix_t2, prix_t3):
+        lignes = [
+            {"prix_id": prix_t2.pk, "quantite": Decimal("2"), "prix_unitaire": Decimal("800.00")},
+            {"prix_id": prix_t3.pk, "quantite": Decimal("1"), "prix_unitaire": Decimal("1200.00")},
+        ]
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, None, utilisateur_cdt, mode="forfait", lignes_forfait=lignes)
+
+        assert bdc.mode_attribution == "forfait"
+        assert bdc.montant_st == Decimal("2800.00")
+        assert bdc.lignes_forfait.count() == 2
+
+    def test_attribution_forfait_pu_modifiable(self, bdc_a_faire, sous_traitant, utilisateur_cdt, prix_t2):
+        lignes = [{"prix_id": prix_t2.pk, "quantite": Decimal("1"), "prix_unitaire": Decimal("750.00")}]
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, None, utilisateur_cdt, mode="forfait", lignes_forfait=lignes)
+
+        assert bdc.montant_st == Decimal("750.00")
+        assert bdc.lignes_forfait.first().prix_unitaire == Decimal("750.00")
+
+    def test_attribution_pourcentage_mode_set(self, bdc_a_faire, sous_traitant, utilisateur_cdt):
+        bdc_a_faire.montant_ht = Decimal("1000.00")
+        bdc_a_faire.save(update_fields=["montant_ht"])
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
+        assert bdc.mode_attribution == "pourcentage"
+        assert bdc.montant_st == Decimal("650.00")
+        assert bdc.lignes_forfait.count() == 0
+
+    def test_forfait_calcule_pourcentage_inverse(self, bdc_a_faire, sous_traitant, utilisateur_cdt, prix_t2):
+        bdc_a_faire.montant_ht = Decimal("2000.00")
+        bdc_a_faire.save(update_fields=["montant_ht"])
+        lignes = [{"prix_id": prix_t2.pk, "quantite": Decimal("1"), "prix_unitaire": Decimal("800.00")}]
+        bdc = attribuer_st(bdc_a_faire, sous_traitant, None, utilisateur_cdt, mode="forfait", lignes_forfait=lignes)
+        assert bdc.pourcentage_st == Decimal("40.00")
+
+
+class TestAttribuerForfaitVue:
+    """Tests vue attribuer_bdc en mode forfait."""
+
+    def test_post_forfait_via_vue(self, client_cdt, bdc_a_faire, sous_traitant, prix_t2):
+        url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
+        resp = client_cdt.post(url, {
+            "sous_traitant": sous_traitant.pk,
+            "mode_attribution": "forfait",
+            "ligne_0_prix": prix_t2.pk,
+            "ligne_0_qty": "3",
+            "ligne_0_pu": "800.00",
+        })
+        assert resp.status_code == 302
+        bdc_a_faire.refresh_from_db()
+        assert bdc_a_faire.mode_attribution == "forfait"
+        assert bdc_a_faire.montant_st == Decimal("2400.00")
+
+    def test_post_pourcentage_reste_compatible(self, client_cdt, bdc_a_faire, sous_traitant):
+        url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
+        resp = client_cdt.post(url, {
+            "sous_traitant": sous_traitant.pk,
+            "mode_attribution": "pourcentage",
+            "pourcentage_st": "65",
+        })
+        assert resp.status_code == 302
+        bdc_a_faire.refresh_from_db()
+        assert bdc_a_faire.mode_attribution == "pourcentage"
+        assert bdc_a_faire.pourcentage_st == Decimal("65")
+
+    def test_get_contient_prix_forfaitaires(self, client_cdt, bdc_a_faire, prix_t2):
+        url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
+        resp = client_cdt.get(url)
+        assert resp.status_code == 200
+        assert "PEINT-T2" in resp.content.decode()

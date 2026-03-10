@@ -105,6 +105,27 @@ class ConfigEmail(models.Model):
         return obj
 
 
+# ─── PrixForfaitaire (bibliothèque de prix) ────────────────────────────────
+
+
+class PrixForfaitaire(models.Model):
+    """Ligne de la bibliothèque de prix forfaitaires du CDT."""
+
+    reference = models.CharField(max_length=50, unique=True, verbose_name="Référence")
+    designation = models.CharField(max_length=200, verbose_name="Désignation")
+    unite = models.CharField(max_length=20, verbose_name="Unité", help_text="u, m², ml, forfait…")
+    prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Prix unitaire (€)")
+    actif = models.BooleanField(default=True, verbose_name="Actif")
+
+    class Meta:
+        verbose_name = "Prix forfaitaire"
+        verbose_name_plural = "Prix forfaitaires"
+        ordering = ["reference"]
+
+    def __str__(self):
+        return f"{self.reference} — {self.designation} ({self.prix_unitaire} €/{self.unite})"
+
+
 # ─── BonDeCommande ────────────────────────────────────────────────────────────
 
 
@@ -232,6 +253,12 @@ class BonDeCommande(models.Model):
         verbose_name="% ST",
         help_text="Pourcentage du BDC attribué au sous-traitant",
     )
+    mode_attribution = models.CharField(
+        max_length=15,
+        choices=[("pourcentage", "Pourcentage"), ("forfait", "Forfait")],
+        blank=True,
+        verbose_name="Mode d'attribution",
+    )
     date_realisation = models.DateField(
         null=True,
         blank=True,
@@ -308,6 +335,40 @@ class LignePrestation(models.Model):
 
     def __str__(self) -> str:
         return f"{self.designation} — {self.quantite} {self.unite} — {self.montant} €"
+
+
+# ─── LigneForfaitAttribution ────────────────────────────────────────────────
+
+
+class LigneForfaitAttribution(models.Model):
+    """Ligne de devis forfaitaire attribuée à un BDC (mode forfait)."""
+
+    bdc = models.ForeignKey(
+        BonDeCommande,
+        on_delete=models.CASCADE,
+        related_name="lignes_forfait",
+        verbose_name="BDC",
+    )
+    prix_forfaitaire = models.ForeignKey(
+        PrixForfaitaire,
+        on_delete=models.PROTECT,
+        verbose_name="Prix forfaitaire",
+    )
+    quantite = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantité")
+    prix_unitaire = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Prix unitaire (€)",
+        help_text="Pré-rempli depuis la bibliothèque, modifiable",
+    )
+    montant = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Montant (€)")
+
+    class Meta:
+        verbose_name = "Ligne forfait attribution"
+        verbose_name_plural = "Lignes forfait attribution"
+
+    def __str__(self):
+        return f"{self.prix_forfaitaire.reference} × {self.quantite} = {self.montant} €"
 
 
 # ─── ChecklistItem / ChecklistResultat ────────────────────────────────────────

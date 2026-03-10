@@ -32,6 +32,7 @@ from .models import (
     ChecklistItem,
     ChecklistResultat,
     LignePrestation,
+    PrixForfaitaire,
     StatutChoices,
     TransitionChoices,
 )
@@ -47,6 +48,20 @@ from .services import (
     valider_facturation,
     valider_realisation,
 )
+
+
+def _parse_lignes_forfait(post_data):
+    """Parse les lignes forfait du POST (format: ligne_N_prix, ligne_N_qty, ligne_N_pu)."""
+    lignes = []
+    i = 0
+    while f"ligne_{i}_prix" in post_data:
+        prix_id = post_data.get(f"ligne_{i}_prix")
+        qty = post_data.get(f"ligne_{i}_qty")
+        pu = post_data.get(f"ligne_{i}_pu")
+        if prix_id and qty and pu:
+            lignes.append({"prix_id": int(prix_id), "quantite": Decimal(qty), "prix_unitaire": Decimal(pu)})
+        i += 1
+    return lignes
 
 
 def _parse_date(value):
@@ -637,7 +652,11 @@ def attribuer_bdc(request, pk: int):
         return redirect("bdc:detail", pk=pk)
 
     checklist_items = _get_checklist_attribution(bdc)
-    ctx = {"bdc": bdc, "checklist_items": checklist_items}
+    ctx = {
+        "bdc": bdc,
+        "checklist_items": checklist_items,
+        "prix_forfaitaires": PrixForfaitaire.objects.filter(actif=True),
+    }
 
     if request.method == "GET":
         ctx["form"] = AttributionForm()
@@ -650,13 +669,18 @@ def attribuer_bdc(request, pk: int):
 
     _save_checklist_from_post(bdc, request, checklist_items)
 
+    mode = form.cleaned_data.get("mode_attribution", "pourcentage")
+    lignes_forfait = _parse_lignes_forfait(request.POST) if mode == "forfait" else None
+
     try:
         attribuer_st(
             bdc,
             form.cleaned_data["sous_traitant"],
-            form.cleaned_data["pourcentage_st"],
+            form.cleaned_data.get("pourcentage_st"),
             request.user,
             commentaire=form.cleaned_data.get("commentaire", ""),
+            mode=mode,
+            lignes_forfait=lignes_forfait,
         )
     except (TransitionInvalide, BDCIncomplet) as e:
         messages.error(request, str(e))
@@ -690,6 +714,7 @@ def reattribuer_bdc(request, pk: int):
                 "bdc": bdc,
                 "form": form,
                 "reattribution": True,
+                "prix_forfaitaires": PrixForfaitaire.objects.filter(actif=True),
             },
         )
 
@@ -702,16 +727,22 @@ def reattribuer_bdc(request, pk: int):
                 "bdc": bdc,
                 "form": form,
                 "reattribution": True,
+                "prix_forfaitaires": PrixForfaitaire.objects.filter(actif=True),
             },
         )
+
+    mode = form.cleaned_data.get("mode_attribution", "pourcentage")
+    lignes_forfait = _parse_lignes_forfait(request.POST) if mode == "forfait" else None
 
     try:
         reattribuer_st(
             bdc,
             form.cleaned_data["sous_traitant"],
-            form.cleaned_data["pourcentage_st"],
+            form.cleaned_data.get("pourcentage_st"),
             request.user,
             commentaire=form.cleaned_data.get("commentaire", ""),
+            mode=mode,
+            lignes_forfait=lignes_forfait,
         )
     except (TransitionInvalide, BDCIncomplet) as e:
         messages.error(request, str(e))
@@ -787,20 +818,39 @@ def attribution_split(request, pk: int):
             "hx_url": reverse("bdc:attribution_split", kwargs={"pk": bdc.pk}),
             "hx_target": "#attribution-panel",
             "checklist_items": checklist_items,
+            "prix_forfaitaires": PrixForfaitaire.objects.filter(actif=True),
         }
 
     if request.method == "POST":
         form = AttributionForm(request.POST)
         if form.is_valid():
             st = form.cleaned_data["sous_traitant"]
-            pct = form.cleaned_data["pourcentage_st"]
+            pct = form.cleaned_data.get("pourcentage_st")
             commentaire = form.cleaned_data.get("commentaire", "")
+            mode = form.cleaned_data.get("mode_attribution", "pourcentage")
+            lignes_forfait = _parse_lignes_forfait(request.POST) if mode == "forfait" else None
             _save_checklist_from_post(bdc, request, checklist_items)
             try:
                 if reattribution:
-                    reattribuer_st(bdc, st, pct, request.user, commentaire=commentaire)
+                    reattribuer_st(
+                        bdc,
+                        st,
+                        pct,
+                        request.user,
+                        commentaire=commentaire,
+                        mode=mode,
+                        lignes_forfait=lignes_forfait,
+                    )
                 else:
-                    attribuer_st(bdc, st, pct, request.user, commentaire=commentaire)
+                    attribuer_st(
+                        bdc,
+                        st,
+                        pct,
+                        request.user,
+                        commentaire=commentaire,
+                        mode=mode,
+                        lignes_forfait=lignes_forfait,
+                    )
             except (TransitionInvalide, BDCIncomplet) as e:
                 messages.error(request, str(e))
                 return redirect("bdc:detail", pk=pk)
@@ -853,20 +903,39 @@ def attribution_partial(request, pk: int):
             "hx_url": reverse("bdc:attribution_partial", kwargs={"pk": bdc.pk}),
             "hx_target": hx_target,
             "checklist_items": checklist_items,
+            "prix_forfaitaires": PrixForfaitaire.objects.filter(actif=True),
         }
 
     if request.method == "POST":
         form = AttributionForm(request.POST)
         if form.is_valid():
             st = form.cleaned_data["sous_traitant"]
-            pct = form.cleaned_data["pourcentage_st"]
+            pct = form.cleaned_data.get("pourcentage_st")
             commentaire = form.cleaned_data.get("commentaire", "")
+            mode = form.cleaned_data.get("mode_attribution", "pourcentage")
+            lignes_forfait = _parse_lignes_forfait(request.POST) if mode == "forfait" else None
             _save_checklist_from_post(bdc, request, checklist_items)
             try:
                 if reattribution:
-                    reattribuer_st(bdc, st, pct, request.user, commentaire=commentaire)
+                    reattribuer_st(
+                        bdc,
+                        st,
+                        pct,
+                        request.user,
+                        commentaire=commentaire,
+                        mode=mode,
+                        lignes_forfait=lignes_forfait,
+                    )
                 else:
-                    attribuer_st(bdc, st, pct, request.user, commentaire=commentaire)
+                    attribuer_st(
+                        bdc,
+                        st,
+                        pct,
+                        request.user,
+                        commentaire=commentaire,
+                        mode=mode,
+                        lignes_forfait=lignes_forfait,
+                    )
             except (TransitionInvalide, BDCIncomplet) as e:
                 messages.error(request, str(e))
                 return redirect("bdc:detail", pk=pk)

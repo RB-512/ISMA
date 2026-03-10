@@ -404,7 +404,9 @@ def generate_report(results, total_duration):
 
     print("-" * 100)
     print()
-    print(f"  Total : {len(results)} PDFs  |  OK : {ok_count}  |  ECHEC : {fail_count}  |  Duree totale : {total_duration:.1f}s")
+    print(
+        f"  Total : {len(results)} PDFs  |  OK : {ok_count}  |  ECHEC : {fail_count}  |  Duree totale : {total_duration:.1f}s"
+    )
     print()
 
     # Sauvegarder dans un fichier
@@ -414,7 +416,9 @@ def generate_report(results, total_duration):
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(f"RAPPORT TEST E2E - 40 PDFs - {now.strftime('%d/%m/%Y %H:%M')}\n")
         f.write("=" * 100 + "\n\n")
-        f.write(f"{'#':>3}  {'Bailleur':<8}  {'PDF':<28}  {'N BDC':<12}  {'Lignes':>6}  {'Duree':>6}  {'Statut':<20}\n")
+        f.write(
+            f"{'#':>3}  {'Bailleur':<8}  {'PDF':<28}  {'N BDC':<12}  {'Lignes':>6}  {'Duree':>6}  {'Statut':<20}\n"
+        )
         f.write("-" * 100 + "\n")
 
         for i, r in enumerate(results, 1):
@@ -428,7 +432,9 @@ def generate_report(results, total_duration):
                 f.write(f"     -> {r.error}\n")
 
         f.write("-" * 100 + "\n\n")
-        f.write(f"Total : {len(results)} PDFs  |  OK : {ok_count}  |  ECHEC : {fail_count}  |  Duree totale : {total_duration:.1f}s\n")
+        f.write(
+            f"Total : {len(results)} PDFs  |  OK : {ok_count}  |  ECHEC : {fail_count}  |  Duree totale : {total_duration:.1f}s\n"
+        )
 
     print(f"  Rapport sauvegarde : {report_path}")
     print()
@@ -490,7 +496,7 @@ def main():
             try:
                 # 1. Upload
                 step_upload(page, pdf_path, result)
-                print(f"    Upload OK")
+                print("    Upload OK")
 
                 # 2. Verify extraction
                 step_verify_extraction(page, result)
@@ -502,11 +508,11 @@ def main():
 
                 # 4. Control
                 step_controle(page, result, index)
-                print(f"    Controle OK")
+                print("    Controle OK")
 
                 # 5. Attribution
                 step_attribution(page, result, index)
-                print(f"    Attribution OK")
+                print("    Attribution OK")
 
             except Exception as e:
                 result.error = str(e)[:200]

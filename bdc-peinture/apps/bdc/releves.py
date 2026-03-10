@@ -89,9 +89,13 @@ def valider_releve(releve: ReleveFacturation, utilisateur: User) -> ReleveFactur
         raise ReleveError("Impossible de valider un relevé vide.")
 
     # Anti-doublon : vérifier qu'aucun BDC n'est déjà dans un autre relevé validé
-    doublons = releve.bdc.filter(
-        releves_facturation__statut=ReleveStatutChoices.VALIDE,
-    ).exclude(releves_facturation=releve).distinct()
+    doublons = (
+        releve.bdc.filter(
+            releves_facturation__statut=ReleveStatutChoices.VALIDE,
+        )
+        .exclude(releves_facturation=releve)
+        .distinct()
+    )
     if doublons.exists():
         nums = ", ".join(doublons.values_list("numero_bdc", flat=True)[:5])
         raise ReleveError(f"BDC déjà dans un relevé validé : {nums}")

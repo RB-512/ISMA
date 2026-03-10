@@ -3,9 +3,18 @@
 {% block content %}
 <div class="space-y-6">
     <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-[var(--color-text)]">Relevé n°{{ releve.numero }}</h1>
-            <p class="text-sm text-[var(--color-text-muted)]">{{ releve.sous_traitant.nom }}</p>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'bdc:releve_historique' releve.sous_traitant.pk %}"
+               class="p-1.5 rounded-lg hover:bg-accent/10 text-[var(--color-text-muted)] hover:text-accent transition-colors"
+               title="Retour aux relevés de {{ releve.sous_traitant.nom }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-[var(--color-text)]">Relevé n°{{ releve.numero }}</h1>
+                <p class="text-sm text-[var(--color-text-muted)]">{{ releve.sous_traitant.nom }}</p>
+            </div>
         </div>
         <div class="flex gap-2">
             {% if releve.statut == "BROUILLON" %}

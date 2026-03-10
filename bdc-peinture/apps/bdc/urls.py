@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, views_bibliotheque
 
 app_name = "bdc"
 
@@ -34,4 +34,17 @@ urlpatterns = [
     path("releves/<int:pk>/pdf/", views.releve_pdf, name="releve_pdf"),
     path("releves/<int:pk>/excel/", views.releve_excel, name="releve_excel"),
     path("releves/st/<int:st_pk>/", views.releve_historique, name="releve_historique"),
+    # ─── Bibliothèque de prix ──────────────────────────────────────────────
+    path("bibliotheque/", views_bibliotheque.bibliotheque_liste, name="bibliotheque"),
+    path("bibliotheque/ajouter/", views_bibliotheque.bibliotheque_ajouter, name="bibliotheque_ajouter"),
+    path(
+        "bibliotheque/<int:pk>/modifier/",
+        views_bibliotheque.bibliotheque_modifier,
+        name="bibliotheque_modifier",
+    ),
+    path(
+        "bibliotheque/<int:pk>/supprimer/",
+        views_bibliotheque.bibliotheque_supprimer,
+        name="bibliotheque_supprimer",
+    ),
 ]

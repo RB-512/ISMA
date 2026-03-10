@@ -1,0 +1,42 @@
+<tr class="bg-accent/5">
+    <td class="px-4 py-2">
+        <input type="text" name="reference" value="{{ prix.reference }}"
+               form="edit-form-{{ prix.pk }}"
+               class="!py-1.5 font-mono">
+    </td>
+    <td class="px-4 py-2">
+        <input type="text" name="designation" value="{{ prix.designation }}"
+               form="edit-form-{{ prix.pk }}">
+    </td>
+    <td class="px-4 py-2">
+        <input type="text" name="unite" value="{{ prix.unite }}"
+               form="edit-form-{{ prix.pk }}"
+               class="!w-24">
+    </td>
+    <td class="px-4 py-2">
+        <input type="number" name="prix_unitaire" value="{{ prix.prix_unitaire }}"
+               step="0.01" min="0" form="edit-form-{{ prix.pk }}"
+               class="!py-1.5 text-right font-mono">
+    </td>
+    <td class="px-4 py-2 text-right">
+        <form id="edit-form-{{ prix.pk }}" class="inline"
+              hx-post="{% url 'bdc:bibliotheque_modifier' prix.pk %}"
+              hx-target="#bibliotheque-table" hx-swap="innerHTML">
+            {% csrf_token %}
+        </form>
+        <div class="flex items-center justify-end gap-2">
+            <button type="submit" form="edit-form-{{ prix.pk }}"
+                    class="text-xs text-success hover:text-success-dark
+                           font-medium transition-colors">
+                Enregistrer
+            </button>
+            <button hx-get="{% url 'bdc:bibliotheque' %}"
+                    hx-target="#bibliotheque-table" hx-swap="innerHTML"
+                    hx-select="#bibliotheque-table > *"
+                    class="text-xs text-[var(--color-text-muted)]
+                           hover:text-[var(--color-text)] font-medium transition-colors">
+                Annuler
+            </button>
+        </div>
+    </td>
+</tr>

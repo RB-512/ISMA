@@ -85,14 +85,114 @@ Context requis : bdc, form, reattribution, repartition, has_n1,
                 <p class="text-xs text-red-600 mt-1">{{ form.sous_traitant.errors.0 }}</p>
                 {% endif %}
             </div>
-            <div>
-                <label for="id_pourcentage_st" class="block text-xs text-[var(--color-text-muted)] mb-1">
-                    {{ form.pourcentage_st.label }}
-                </label>
-                {{ form.pourcentage_st }}
-                {% if form.pourcentage_st.errors %}
-                <p class="text-xs text-red-600 mt-1">{{ form.pourcentage_st.errors.0 }}</p>
-                {% endif %}
+            {# Mode toggle + fields #}
+            <div x-data="{
+                mode: '{{ form.mode_attribution.value|default:'pourcentage' }}',
+                lignes: [],
+                get total() { return this.lignes.reduce((s, l) => s + parseFloat(l.montant || 0), 0).toFixed(2) },
+                addLigne() {
+                    const sel = this.$refs.prixSelect;
+                    const opt = sel.options[sel.selectedIndex];
+                    if (!opt.value || !this.$refs.qtyInput.value) return;
+                    const qty = parseFloat(this.$refs.qtyInput.value);
+                    const pu = parseFloat(opt.dataset.pu);
+                    this.lignes.push({
+                        prix_id: opt.value,
+                        ref: opt.dataset.ref,
+                        des: opt.dataset.des,
+                        qty: qty,
+                        pu: pu,
+                        montant: (qty * pu).toFixed(2)
+                    });
+                    sel.selectedIndex = 0;
+                    this.$refs.qtyInput.value = '';
+                },
+                recalc(l) { l.montant = (parseFloat(l.qty) * parseFloat(l.pu)).toFixed(2) },
+                removeLigne(idx) { this.lignes.splice(idx, 1) }
+            }">
+                <input type="hidden" name="mode_attribution" :value="mode">
+
+                {# Toggle buttons #}
+                <div class="flex rounded-lg border border-[var(--color-border)] overflow-hidden mb-4">
+                    <button type="button" @click="mode = 'pourcentage'"
+                            :class="mode === 'pourcentage' ? 'bg-accent text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-text-muted)]'"
+                            class="flex-1 px-4 py-2 text-xs font-medium transition-colors">Pourcentage</button>
+                    <button type="button" @click="mode = 'forfait'"
+                            :class="mode === 'forfait' ? 'bg-accent text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-text-muted)]'"
+                            class="flex-1 px-4 py-2 text-xs font-medium transition-colors">Forfait</button>
+                </div>
+
+                {# Pourcentage mode #}
+                <div x-show="mode === 'pourcentage'" x-cloak>
+                    <label for="id_pourcentage_st" class="block text-xs text-[var(--color-text-muted)] mb-1">
+                        {{ form.pourcentage_st.label }}
+                    </label>
+                    {{ form.pourcentage_st }}
+                    {% if form.pourcentage_st.errors %}
+                    <p class="text-xs text-red-600 mt-1">{{ form.pourcentage_st.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                {# Forfait mode #}
+                <div x-show="mode === 'forfait'" x-cloak>
+                    <div class="flex gap-2 mb-3 items-end">
+                        <div class="flex-1">
+                            <label class="block text-xs text-[var(--color-text-muted)] mb-1">Prix</label>
+                            <select x-ref="prixSelect" class="w-full px-3 py-2 text-xs border border-[var(--color-border)] rounded-lg bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                                <option value="">— Choisir —</option>
+                                {% for p in prix_forfaitaires %}
+                                <option value="{{ p.pk }}" data-pu="{{ p.prix_unitaire }}" data-ref="{{ p.reference }}" data-des="{{ p.designation }}" data-unite="{{ p.unite }}">{{ p.reference }} — {{ p.designation }} ({{ p.prix_unitaire }} €/{{ p.unite }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="w-24">
+                            <label class="block text-xs text-[var(--color-text-muted)] mb-1">Qté</label>
+                            <input type="number" x-ref="qtyInput" step="0.01" min="0.01" class="w-full px-3 py-2 text-xs border border-[var(--color-border)] rounded-lg bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                        </div>
+                        <button type="button" @click="addLigne()" class="px-3 py-2 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent-dark transition-colors">+</button>
+                    </div>
+
+                    <div x-show="lignes.length > 0">
+                        <table class="min-w-full divide-y divide-[var(--color-border)] text-xs mb-2">
+                            <thead>
+                                <tr class="bg-primary/5 dark:bg-white/5">
+                                    <th class="text-left px-2 py-1.5 text-xs font-semibold text-[var(--color-text-muted)]">Réf</th>
+                                    <th class="text-left px-2 py-1.5 text-xs font-semibold text-[var(--color-text-muted)]">Désignation</th>
+                                    <th class="text-right px-2 py-1.5 text-xs font-semibold text-[var(--color-text-muted)]">Qté</th>
+                                    <th class="text-right px-2 py-1.5 text-xs font-semibold text-[var(--color-text-muted)]">PU (€)</th>
+                                    <th class="text-right px-2 py-1.5 text-xs font-semibold text-[var(--color-text-muted)]">Montant</th>
+                                    <th class="w-8"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[var(--color-border)]">
+                                <template x-for="(l, idx) in lignes" :key="idx">
+                                    <tr>
+                                        <td class="px-2 py-1.5 text-[var(--color-text)]" x-text="l.ref"></td>
+                                        <td class="px-2 py-1.5 text-[var(--color-text)]" x-text="l.des"></td>
+                                        <td class="px-2 py-1.5 text-right">
+                                            <input type="number" :name="'ligne_'+idx+'_qty'" x-model="l.qty" step="0.01" min="0.01" @input="recalc(l)" class="w-16 px-1 py-0.5 text-right text-xs border border-[var(--color-border)] rounded bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                                        </td>
+                                        <td class="px-2 py-1.5 text-right">
+                                            <input type="number" :name="'ligne_'+idx+'_pu'" x-model="l.pu" step="0.01" min="0" @input="recalc(l)" class="w-20 px-1 py-0.5 text-right text-xs border border-[var(--color-border)] rounded bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                                        </td>
+                                        <td class="px-2 py-1.5 text-right font-mono text-[var(--color-text)]" x-text="l.montant + ' €'"></td>
+                                        <td class="px-2 py-1.5">
+                                            <button type="button" @click="removeLigne(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
+                                        </td>
+                                        <input type="hidden" :name="'ligne_'+idx+'_prix'" :value="l.prix_id">
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-primary/5 dark:bg-white/5">
+                                    <td colspan="4" class="px-2 py-1.5 text-right text-xs font-semibold text-[var(--color-text)]">Total :</td>
+                                    <td class="px-2 py-1.5 text-right font-mono font-semibold text-[var(--color-text)]" x-text="total + ' €'"></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
             <div>
                 <label for="id_commentaire" class="block text-xs text-[var(--color-text-muted)] mb-1">
