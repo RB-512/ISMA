@@ -68,6 +68,10 @@ def generer_pdf_masque(bdc: BonDeCommande, pages: list[int] | None = None) -> by
             if 1 <= p <= len(doc):
                 doc_filtre.insert_pdf(doc, from_page=p - 1, to_page=p - 1)
         doc.close()
+        if len(doc_filtre) == 0:
+            logger.warning("Aucune page valide pour BDC %s (pages=%s, PDF a %d page(s))", bdc.numero_bdc, pages, len(doc))
+            doc_filtre.close()
+            return None
         doc = doc_filtre
 
     result = doc.tobytes()
