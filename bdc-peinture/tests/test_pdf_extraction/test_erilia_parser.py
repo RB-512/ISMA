@@ -34,6 +34,16 @@ TEXTE_ERILIA_PAGE1 = (
     "Logement 50 Module E13980050L\n"
     "Réclamation n° 2026 15635 1\n"
     "DÉLAI D'EXÉCUTION 10 JOURS PÉRIODE DU 06-02-2026 AU 15-02-2026\n"
+    "ARTICLE DÉSIGNATION UNITÉ QUANTITÉ PRIX UNITAIRE H.T. TOTAL T.T.C.\n"
+    "PP4-31 Peinture finition A sur murs, plafond, FOR 1,00 180,27 198,30\n"
+    "boiseries et métalleries - WC\n"
+    "EDL : Peinture plafond logement\n"
+    "PP4-33 Peinture finition A sur murs, plafond, FOR 1,00 313,10 344,41\n"
+    "boiseries et métalleries - cuisine\n"
+    "EDL : Peinture cuisine\n"
+    "PP4-43 Peinture finition A sur plafonds - FOR 1,00 578,03 635,83\n"
+    "logement complet T3\n"
+    "EDL : Peinture plafond logement\n"
     "TOTAL H.T. 1.071,40\n"
     "T.V.A. 10,00 % 107,14\n"
     "TOTAL T.T.C. 1.178,54\n"
@@ -171,8 +181,8 @@ def test_extraire_emetteur(mock_open):
 
 @patch("apps.pdf_extraction.erilia_parser.pdfplumber.open")
 def test_extraire_lignes_prestation(mock_open):
-    """Extraction de 3 lignes de prestation ERILIA depuis la table."""
-    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2], TABLES_ERILIA_P1)
+    """Extraction de 3 lignes de prestation ERILIA depuis le texte brut."""
+    mock_open.return_value = _mock_pdf([TEXTE_ERILIA_PAGE1, TEXTE_ERILIA_PAGE2])
     lignes = ERILIAParser(PDF_FICTIF).extraire()["lignes_prestation"]
     assert len(lignes) == 3
     # Première ligne

@@ -34,12 +34,10 @@ class ERILIAParser(PDFParser):
     def extraire(self) -> dict[str, Any]:
         """Extrait les données du PDF ERILIA et retourne un dict normalisé."""
         texte_complet = ""
-        all_tables: list = []
 
         with pdfplumber.open(self.pdf_path) as pdf:
             for page in pdf.pages:
                 texte_complet += (page.extract_text() or "") + "\n"
-                all_tables.extend(page.extract_tables() or [])
 
         return {
             "bailleur_code": self.BAILLEUR_CODE,
@@ -61,85 +59,112 @@ class ERILIAParser(PDFParser):
             "occupant_email": "",
             "emetteur_nom": self._extraire_emetteur_nom(texte_complet),
             "emetteur_telephone": self._extraire_emetteur_telephone(texte_complet),
-            "montant_ht": self._extraire_montant(texte_complet, r"TOTAL\s+H\.T\.\s+([\d.,\s]+?)(?:\n|$)"),
-            "montant_tva": self._extraire_montant(texte_complet, r"T\.V\.A\.\s+[\d,]+\s*%\s+([\d.,\s]+?)(?:\n|$)"),
-            "montant_ttc": self._extraire_montant(texte_complet, r"TOTAL\s+T\.T\.C\.\s+([\d.,\s]+?)(?:\n|$)"),
-            "lignes_prestation": self._extraire_lignes_prestation(all_tables),
+            "montant_ht": self._extraire_montant_ht(texte_complet),
+            "montant_tva": self._extraire_montant(texte_complet, r"T\.V\.A\.\s+.*?%\s+([\d.,\s]+?)(?:\n|$)"),
+            "montant_ttc": self._extraire_montant(texte_complet, r"TOTAL\s+T\.T\.C\S*.*\s([\d.]+,\d{2})(?:\s*\n|$)"),
+            "lignes_prestation": self._extraire_lignes_prestation_texte(texte_complet),
         }
 
     # ── Extraction lignes de prestation ────────────────────────────────────────
 
-    def _extraire_lignes_prestation(self, tables: list) -> list[dict]:
-        """Extrait les lignes de prestation depuis la table ERILIA page 1.
+    # Lignes à ignorer (descriptions de travaux répétées, pied de page, etc.)
+    _LIGNES_IGNOREES = re.compile(
+        r"^(DEPOSE|TAPISSERIE|MEUBLE|EXIS[AT]|COMPLET|Suite\s|ORIGINAL|Voir\s|EDL)",
+        re.IGNORECASE,
+    )
 
-        Format réel pdfplumber (cellule unique multi-lignes dans table 1) :
-            Row 0: ['ARTICLE DÉSIGNATION UNITÉ QUANTITÉ PRIX UNITAIRE H.T. TOTAL T.T.C.']
-            Row 1: ['PP4-31 Peinture finition A sur murs, plafond, FOR 1,00 180,27 198,30\\n
-                     boiseries et métalleries - WC\\nEDL : ...\\n
-                     PP4-33 Peinture finition A ...']
+    def _extraire_lignes_prestation_texte(self, texte: str) -> list[dict]:
+        """Extrait les lignes de prestation depuis le texte brut multi-pages.
+
+        Utilise le texte brut (plus fiable que les tables pdfplumber sur les pages 2+).
+        Format par ligne :
+            PP4-31 Peinture finition A sur murs, plafond, FOR 1,00 180,27 198,30
+        Montants avec points de milliers possibles : 3.985,00
         """
         lignes: list[dict] = []
-        cellule = self._trouver_cellule_prestations_erilia(tables)
-        if not cellule:
-            return lignes
 
-        # Pattern ERILIA : code  désignation  unité  quantité  prix_ht  montant_ttc
-        pattern = re.compile(
-            r"^(\S+)\s+(.+?)\s+(FOR|M2|ML|U|ENS|H|F)\s+"
-            r"([\d]+(?:[.,]\d+)?)\s+"
-            r"([\d]+(?:[.,]\d+)?)\s+"
-            r"([\d]+(?:[.,]\d+)?)$"
-        )
+        # Zone de prestation : entre le header ARTICLE et un marqueur de fin.
+        # Marqueurs de fin : TOTAL H.T., ORIGINAL À CONSERVER, Suite de la description
+        # On collecte toutes les zones (une par page).
+        zones_prestation = []
+        in_zone = False
+        zone_lines: list[str] = []
 
-        ligne_courante: dict | None = None
-        for raw_line in cellule.split("\n"):
+        fin_zone = re.compile(r"^(TOTAL\s+H\.T\.|ORIGINAL\s|Suite\s+de\s)", re.IGNORECASE)
+
+        for raw_line in texte.split("\n"):
             line = raw_line.strip()
             if not line:
                 continue
-            # Ignorer les lignes EDL
-            if line.startswith("EDL"):
+            if "ARTICLE" in line and "SIGNATION" in line:
+                in_zone = True
+                zone_lines = []
                 continue
-            match = pattern.match(line)
-            if match:
-                if ligne_courante is not None:
-                    lignes.append(ligne_courante)
-                prix_unitaire = self._convertir_montant_fr(match.group(5))
-                quantite = self._convertir_montant_fr(match.group(4))
-                montant_ht = (prix_unitaire * quantite).quantize(Decimal("0.01"))
-                ligne_courante = {
-                    "code": match.group(1),
-                    "designation": self._nettoyer_texte(match.group(2)),
-                    "unite": match.group(3),
-                    "quantite": quantite,
-                    "prix_unitaire": prix_unitaire,
-                    "montant_ht": montant_ht,
-                    "ordre": len(lignes),
-                }
-            elif ligne_courante is not None:
-                # Ligne de continuation de désignation
-                ligne_courante["designation"] = self._nettoyer_texte(ligne_courante["designation"] + " " + line)
+            if in_zone and fin_zone.match(line):
+                zones_prestation.append(zone_lines)
+                in_zone = False
+                continue
+            if in_zone:
+                zone_lines.append(line)
+
+        # Dernière zone si pas fermée par un marqueur de fin
+        if in_zone and zone_lines:
+            zones_prestation.append(zone_lines)
+
+        # Pattern : code  désignation  unité  quantité  prix_ht  montant_ttc
+        # Montants peuvent avoir des points de milliers : 3.985,00
+        pattern = re.compile(
+            r"^(\S+)\s+(.+?)\s+(FOR|M2|ML|U|ENS|H|F|%)\s+"
+            r"([\d.]+(?:,\d+)?)\s+"
+            r"([\d.]+(?:,\d+)?)\s+"
+            r"([\d.]+(?:,\d+)?)$"
+        )
+
+        ligne_courante: dict | None = None
+
+        for zone in zones_prestation:
+            for line in zone:
+                # Ignorer les lignes de description répétées et pied de page
+                if self._LIGNES_IGNOREES.match(line):
+                    continue
+                match = pattern.match(line)
+                if match:
+                    if ligne_courante is not None:
+                        lignes.append(ligne_courante)
+                    prix_unitaire = self._convertir_montant_fr(match.group(5))
+                    quantite = self._convertir_montant_fr(match.group(4))
+                    montant_ht = (prix_unitaire * quantite).quantize(Decimal("0.01"))
+                    ligne_courante = {
+                        "code": match.group(1),
+                        "designation": self._nettoyer_texte(match.group(2)),
+                        "unite": match.group(3),
+                        "quantite": quantite,
+                        "prix_unitaire": prix_unitaire,
+                        "montant_ht": montant_ht,
+                        "ordre": len(lignes),
+                    }
+                elif ligne_courante is not None:
+                    # Ligne de continuation de désignation
+                    ligne_courante["designation"] = self._nettoyer_texte(
+                        ligne_courante["designation"] + " " + line
+                    )
 
         if ligne_courante is not None:
             lignes.append(ligne_courante)
 
         return lignes
 
-    def _trouver_cellule_prestations_erilia(self, tables: list) -> str:
-        """Trouve la cellule contenant les lignes de prestation dans la table ERILIA."""
-        for table in tables:
-            for ri, row in enumerate(table):
-                if not row:
-                    continue
-                cell0 = str(row[0] or "")
-                if "ARTICLE" in cell0 and "SIGNATION" in cell0:
-                    # La cellule suivante contient les prestations
-                    if ri + 1 < len(table) and table[ri + 1]:
-                        return str(table[ri + 1][0] or "")
-        return ""
-
     def _convertir_montant_fr(self, valeur: str) -> Decimal:
-        """Convertit un montant au format français (virgule) en Decimal."""
-        return Decimal(valeur.replace(",", ".")).quantize(Decimal("0.01"))
+        """Convertit un montant au format français (virgule décimale, point milliers) en Decimal.
+
+        Ex: "3.985,00" -> Decimal("3985.00"), "1,00" -> Decimal("1.00")
+        """
+        # Supprimer les points de milliers, remplacer la virgule décimale
+        valeur = valeur.replace(" ", "")
+        if "," in valeur:
+            # Format français : point = milliers, virgule = décimale
+            valeur = valeur.replace(".", "").replace(",", ".")
+        return Decimal(valeur).quantize(Decimal("0.01"))
 
     # ── Méthodes privées d'extraction ─────────────────────────────────────────
 
@@ -223,6 +248,19 @@ class ERILIAParser(PDFParser):
             return datetime.strptime(match.group(1), "%d-%m-%Y").date()
         except ValueError:
             return None
+
+    def _extraire_montant_ht(self, texte: str) -> Decimal | None:
+        """Extrait le montant HT. Tente le regex, puis fallback sur la somme des lignes."""
+        # Tentative regex classique
+        montant = self._extraire_montant(texte, r"TOTAL\s+H\.T\.\s+([\d.,\s]+?)(?:\n|$)")
+        if montant:
+            return montant
+        # Fallback : calculer depuis les lignes extraites
+        lignes = self._extraire_lignes_prestation_texte(texte)
+        if lignes:
+            total = sum(l["montant_ht"] for l in lignes)
+            return total.quantize(Decimal("0.01"))
+        return None
 
     def _extraire_montant(self, texte: str, pattern: str) -> Decimal | None:
         """Extrait un montant et le convertit en Decimal (format français)."""
