@@ -27,60 +27,12 @@
     {# ══════════════════════════════════════════════════════════════════════ #}
     <div x-show="tab === 'bailleurs'" x-transition class="space-y-6">
 
-        {# ── Formulaire creation bailleur ── #}
-        <div x-data="{ showCreate: false }" class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
-            <button @click="showCreate = !showCreate"
-                    class="w-full flex items-center justify-between px-6 py-4 hover:bg-accent/5 transition-colors">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                    </div>
-                    <span class="text-sm font-semibold text-[var(--color-text)]">Ajouter un bailleur</span>
-                </div>
-                <svg :class="showCreate && 'rotate-180'" class="w-5 h-5 text-[var(--color-text-muted)] transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </button>
-            <div x-show="showCreate" x-transition class="border-t border-[var(--color-border)] px-6 py-5">
-                <form method="post" action="{% url 'gestion:config_bailleur_creer' %}" class="space-y-4">
-                    {% csrf_token %}
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Nom</label>
-                            <input type="text" name="nom" required placeholder="ICF Habitat"
-                                   class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:ring-2 focus:ring-accent focus:border-accent">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Code</label>
-                            <input type="text" name="code" required placeholder="ICF" maxlength="20"
-                                   class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:ring-2 focus:ring-accent focus:border-accent uppercase">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Marqueur detection</label>
-                            <input type="text" name="marqueur_detection" placeholder="ICF HABITAT"
-                                   class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:ring-2 focus:ring-accent focus:border-accent">
-                        </div>
-                    </div>
-                    <p class="text-xs text-[var(--color-text-muted)]">
-                        Le marqueur est un texte unique present dans les PDF de ce bailleur, utilise pour la detection automatique.
-                    </p>
-                    <button type="submit"
-                            class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
-                        Creer le bailleur
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        {# ── Liste des bailleurs ── #}
+        {# ── Liste des bailleurs (lecture seule) ── #}
         {% if bailleurs %}
         <div class="space-y-4">
             {% for bailleur in bailleurs %}
-            <div x-data="{ open: false }" class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
-                <button @click="open = !open"
-                        class="w-full flex items-center justify-between px-6 py-4 hover:bg-accent/5 transition-colors">
+            <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-4">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-sm font-bold text-accent">
                             {{ bailleur.code }}
@@ -88,27 +40,10 @@
                         <div class="text-left">
                             <p class="text-sm font-semibold text-[var(--color-text)]">{{ bailleur.nom }}</p>
                             <p class="text-xs text-[var(--color-text-muted)]">
-                                {% if bailleur.marqueur_detection %}
-                                    Marqueur : {{ bailleur.marqueur_detection }}
-                                {% endif %}
-                                {% if bailleur.modele_extraction %}
-                                    · Extraction configuree
-                                {% endif %}
-                                · {{ bailleur.bons_de_commande.count }} BDC
+                                {{ bailleur.bons_de_commande.count }} BDC
                             </p>
                         </div>
                     </div>
-                    <svg :class="open && 'rotate-180'" class="w-5 h-5 text-[var(--color-text-muted)] transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                    </svg>
-                </button>
-
-                {# ── Actions bailleur ── #}
-                <div x-show="open" x-transition class="border-t border-[var(--color-border)] px-6 py-3 flex flex-wrap items-center gap-3">
-                    <a href="{% url 'gestion:config_extraction' bailleur.pk %}"
-                       class="text-sm text-accent hover:underline">
-                        Configurer l'extraction PDF
-                    </a>
 
                     {% if bailleur.bons_de_commande.exists %}
                     <div x-data="{ showPreview: false }" class="relative">
@@ -117,7 +52,7 @@
                             Previsualiser la fiche chantier
                         </button>
                         <div x-show="showPreview" @click.away="showPreview = false" x-transition
-                             class="absolute z-10 mt-2 left-0 bg-[var(--color-surface-card)] rounded-lg border border-[var(--color-border)] shadow-lg p-4 min-w-[300px]">
+                             class="absolute z-10 mt-2 right-0 bg-[var(--color-surface-card)] rounded-lg border border-[var(--color-border)] shadow-lg p-4 min-w-[300px]">
                             <p class="text-xs font-medium text-[var(--color-text-muted)] mb-2">Choisir un BDC :</p>
                             <div class="space-y-1 max-h-48 overflow-y-auto">
                                 {% for bdc in bailleur.bons_de_commande.all|slice:":20" %}
@@ -131,23 +66,13 @@
                         </div>
                     </div>
                     {% endif %}
-
-                    <form method="post" action="{% url 'gestion:config_bailleur_supprimer' bailleur.pk %}"
-                          onsubmit="return confirm('Supprimer le bailleur {{ bailleur.nom }} ? Cette action est irreversible.')"
-                          class="ml-auto">
-                        {% csrf_token %}
-                        <button type="submit"
-                                class="text-sm text-red-500 hover:text-red-700 hover:underline">
-                            Supprimer
-                        </button>
-                    </form>
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
         <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] px-6 py-12 text-center text-sm text-[var(--color-text-muted)]">
-            Aucun bailleur configure. Utilisez le formulaire ci-dessus pour creer un bailleur.
+            Aucun bailleur configure.
         </div>
         {% endif %}
 
