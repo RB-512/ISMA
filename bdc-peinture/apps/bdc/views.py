@@ -776,7 +776,7 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
     from apps.sous_traitants.models import SousTraitant
 
     if statuts is None:
-        statuts = [StatutChoices.EN_COURS]
+        statuts = [StatutChoices.EN_COURS, StatutChoices.A_FACTURER, StatutChoices.FACTURE]
 
     filtre = Q(bons_de_commande__statut__in=statuts)
 
@@ -813,13 +813,12 @@ def attribution_split(request, pk: int):
 
     def _panel_context(form):
         repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
-        has_n1 = _attach_n1_data(repartition, date_du_n1, date_au_n1)
         return {
             "bdc": bdc,
             "form": form,
             "reattribution": reattribution,
             "repartition": repartition,
-            "has_n1": has_n1,
+            "has_n1": False,
             "periodes": PERIODES_CHOICES,
             "periode_active": periode_active,
             "date_du": date_du.isoformat() if date_du else "",
@@ -898,13 +897,12 @@ def attribution_partial(request, pk: int):
 
     def _build_context(form):
         repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
-        has_n1 = _attach_n1_data(repartition, date_du_n1, date_au_n1)
         return {
             "bdc": bdc,
             "form": form,
             "reattribution": reattribution,
             "repartition": repartition,
-            "has_n1": has_n1,
+            "has_n1": False,
             "periodes": PERIODES_CHOICES,
             "periode_active": periode_active,
             "date_du": date_du.isoformat() if date_du else "",

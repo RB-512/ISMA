@@ -121,29 +121,35 @@
     </div>
     {% endif %}
 
-    {# ── Barre de recherche ── #}
-    <form method="get" class="relative">
+    {# ── Barre de recherche (live via HTMX) ── #}
+    <div class="relative" x-data="{ q: '{{ q }}' }">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
-        <input type="text" name="q" value="{{ q }}" placeholder="Rechercher par nom, SIRET ou ville..."
+        <input type="text" name="q" x-model="q"
+            hx-get="{% url 'sous_traitants:list' %}"
+            hx-trigger="keyup changed delay:300ms, search"
+            hx-target="#liste-sous-traitants"
+            hx-select="#liste-sous-traitants"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            placeholder="Rechercher par nom, SIRET ou ville..."
             class="!pl-10 w-full sm:w-96">
-        {% if q %}
-        <a href="{% url 'sous_traitants:list' %}"
+        <button x-show="q.length > 0" x-cloak
+            @click="q = ''; $el.previousElementSibling.dispatchEvent(new Event('search'))"
             class="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
             title="Effacer la recherche">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
-        </a>
-        {% endif %}
-    </form>
+        </button>
+    </div>
 
     {# ── Conteneur pour le modal de modification (HTMX) ── #}
     <div id="modal-modifier"></div>
 
     {# ── Liste des sous-traitants ── #}
-    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+    <div id="liste-sous-traitants" class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
         <div class="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
             <h2 class="text-base font-semibold text-[var(--color-text)]">
                 {% if q %}Resultats pour « {{ q }}»{% else %}Tous les sous-traitants{% endif %}
