@@ -31,12 +31,6 @@ class Bailleur(models.Model):
         verbose_name="Code",
         help_text="Code court utilisé dans l'application. Ex: GDH, ERILIA",
     )
-    zones_masquage = models.JSONField(
-        default=list,
-        blank=True,
-        verbose_name="Zones à masquer sur le PDF",
-        help_text="Rectangles de masquage [{x, y, w, h, page, label}]. Coordonnées en points PDF.",
-    )
     marqueur_detection = models.CharField(
         max_length=100,
         blank=True,
@@ -48,12 +42,6 @@ class Bailleur(models.Model):
         blank=True,
         verbose_name="Modèle d'extraction PDF",
         help_text="Mapping champ → label pour extraction automatique",
-    )
-    pages_a_envoyer = models.JSONField(
-        default=list,
-        blank=True,
-        verbose_name="Pages PDF à envoyer au ST",
-        help_text="Liste des numéros de page à inclure (ex: [1]). Vide = toutes les pages.",
     )
     pdf_modele = models.FileField(
         upload_to="bailleurs/modeles/",

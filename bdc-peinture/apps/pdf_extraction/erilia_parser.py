@@ -1,6 +1,6 @@
 """
 Parser PDF pour les BDC ERILIA.
-Format : 2 pages — page 1 = BDC avec prestations et prix, page 2 = récapitulatif avec date d'édition.
+Format multi-pages : prestations sur N pages, récapitulatif + date d'édition en dernière page.
 
 Patterns calibrés sur le PDF modèle réel (docs/Modèle_bdc_ERILIA.pdf).
 Texte pdfplumber réel :
@@ -10,7 +10,7 @@ Texte pdfplumber réel :
   - Programme : "Programme 1398 LES TERRASSES DE MERCURE"
   - Émetteur : "ÉMETTEUR ARCQ GWENAEL Tél 0432743295"
   - Montants : "TOTAL H.T. 1.071,40" (virgule décimale, point milliers)
-  - Date : "Édité le\n06-02-2026" (page 2)
+  - Date : "Édité le\n06-02-2026" (dernière page)
 """
 
 import re
@@ -26,7 +26,7 @@ from .base import PDFParser
 class ERILIAParser(PDFParser):
     """
     Parser pour les BDC ERILIA reçus par email.
-    Extrait les données depuis un PDF 2 pages (page 1 = détail, page 2 = récapitulatif + date).
+    Extrait les données depuis un PDF multi-pages (prestations pouvant s'étaler sur N pages).
     """
 
     BAILLEUR_CODE = "ERILIA"
@@ -34,13 +34,12 @@ class ERILIAParser(PDFParser):
     def extraire(self) -> dict[str, Any]:
         """Extrait les données du PDF ERILIA et retourne un dict normalisé."""
         texte_complet = ""
-        tables_p1: list = []
+        all_tables: list = []
 
         with pdfplumber.open(self.pdf_path) as pdf:
-            for i, page in enumerate(pdf.pages):
+            for page in pdf.pages:
                 texte_complet += (page.extract_text() or "") + "\n"
-                if i == 0:
-                    tables_p1 = page.extract_tables() or []
+                all_tables.extend(page.extract_tables() or [])
 
         return {
             "bailleur_code": self.BAILLEUR_CODE,
@@ -65,7 +64,7 @@ class ERILIAParser(PDFParser):
             "montant_ht": self._extraire_montant(texte_complet, r"TOTAL\s+H\.T\.\s+([\d.,\s]+?)(?:\n|$)"),
             "montant_tva": self._extraire_montant(texte_complet, r"T\.V\.A\.\s+[\d,]+\s*%\s+([\d.,\s]+?)(?:\n|$)"),
             "montant_ttc": self._extraire_montant(texte_complet, r"TOTAL\s+T\.T\.C\.\s+([\d.,\s]+?)(?:\n|$)"),
-            "lignes_prestation": self._extraire_lignes_prestation(tables_p1),
+            "lignes_prestation": self._extraire_lignes_prestation(all_tables),
         }
 
     # ── Extraction lignes de prestation ────────────────────────────────────────

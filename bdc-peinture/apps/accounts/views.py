@@ -232,39 +232,12 @@ def checklist_supprimer(request, pk):
     return redirect(redirect_url)
 
 
-# ── Config masquage PDF par bailleur ─────────────────────────────────────
+# ── Config bailleurs ──────────────────────────────────────────────────────
 
 
 @login_required
 def config_bailleurs(request):
     bailleurs = Bailleur.objects.all()
-
-    if request.method == "POST":
-        import json
-
-        bailleur_id = request.POST.get("bailleur_id")
-        bailleur = get_object_or_404(Bailleur, pk=bailleur_id)
-        zones_json = request.POST.get("zones_masquage", "[]")
-        try:
-            bailleur.zones_masquage = json.loads(zones_json)
-        except (json.JSONDecodeError, TypeError):
-            bailleur.zones_masquage = []
-        pages_raw = request.POST.get("pages_a_envoyer", "").strip()
-        if pages_raw:
-            bailleur.pages_a_envoyer = [int(p.strip()) for p in pages_raw.split(",") if p.strip().isdigit()]
-        else:
-            bailleur.pages_a_envoyer = []
-        bailleur.save(update_fields=["zones_masquage", "pages_a_envoyer"])
-        messages.success(request, f"Configuration de masquage mise à jour pour {bailleur.nom}.")
-        if request.headers.get("HX-Request"):
-            return render(
-                request,
-                "accounts/partials/_config_bailleur_form.html",
-                {
-                    "bailleur": bailleur,
-                },
-            )
-        return redirect("gestion:config_bailleurs")
 
     return render(
         request,
@@ -304,16 +277,6 @@ def config_bailleur_supprimer(request, pk):
     return redirect("gestion:config_bailleurs")
 
 
-@login_required
-def config_bailleur_form(request, pk):
-    bailleur = get_object_or_404(Bailleur, pk=pk)
-    return render(
-        request,
-        "accounts/partials/_config_bailleur_form.html",
-        {
-            "bailleur": bailleur,
-        },
-    )
 
 
 # ── Création bailleur ────────────────────────────────────────────────────
@@ -488,7 +451,7 @@ def config_extraction_test(request, pk):
 
 
 @login_required
-def preview_masquage(request, pk):
+def preview_fiche_chantier(request, pk):
     from apps.bdc.fiche_chantier import generer_fiche_chantier
     from apps.bdc.models import BonDeCommande
 
@@ -507,5 +470,5 @@ def preview_masquage(request, pk):
         return redirect("gestion:config_bailleurs")
 
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f'inline; filename="masquage_preview_{bdc.numero_bdc}.pdf"'
+    response["Content-Disposition"] = f'inline; filename="fiche_chantier_{bdc.numero_bdc}.pdf"'
     return response
