@@ -765,13 +765,14 @@ def reattribuer_bdc(request, pk: int):
 # ─── Attribution inline (HTMX partial) ──────────────────────────────────────
 
 
-def _get_repartition_st(date_du=None, date_au=None, statuts=None):
+def _get_repartition_st(date_du=None, date_au=None, statuts=None, date_field="emission"):
     """
     Retourne tous les ST actifs avec leur charge (nb BDC + montant_st total).
 
     Args:
-        date_du/date_au: bornes de periode (filtre sur Coalesce(date_emission, created_at)).
-        statuts: liste de StatutChoices a filtrer (defaut: [EN_COURS]).
+        date_du/date_au: bornes de periode.
+        statuts: liste de StatutChoices a filtrer.
+        date_field: "emission" (Coalesce date_emission/created_at) ou "created" (created_at).
     """
     from apps.sous_traitants.models import SousTraitant
 
@@ -781,11 +782,17 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None):
     filtre = Q(bons_de_commande__statut__in=statuts)
 
     if date_du and date_au:
-        filtre &= Q(
-            bons_de_commande__in=BonDeCommande.objects.annotate(
-                _date_ref=Coalesce("date_emission", "created_at__date")
-            ).filter(_date_ref__gte=date_du, _date_ref__lte=date_au)
-        )
+        if date_field == "created":
+            filtre &= Q(
+                bons_de_commande__created_at__date__gte=date_du,
+                bons_de_commande__created_at__date__lte=date_au,
+            )
+        else:
+            filtre &= Q(
+                bons_de_commande__in=BonDeCommande.objects.annotate(
+                    _date_ref=Coalesce("date_emission", "created_at__date")
+                ).filter(_date_ref__gte=date_du, _date_ref__lte=date_au)
+            )
 
     return (
         SousTraitant.objects.filter(Q(actif=True) | Q(bons_de_commande__statut__in=statuts))
@@ -812,7 +819,7 @@ def attribution_split(request, pk: int):
     checklist_items = _get_checklist_attribution(bdc)
 
     def _panel_context(form):
-        repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
+        repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au, date_field="created"))
         return {
             "bdc": bdc,
             "form": form,
@@ -896,7 +903,7 @@ def attribution_partial(request, pk: int):
     checklist_items = _get_checklist_attribution(bdc)
 
     def _build_context(form):
-        repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au))
+        repartition = list(_get_repartition_st(date_du=date_du, date_au=date_au, date_field="created"))
         return {
             "bdc": bdc,
             "form": form,
