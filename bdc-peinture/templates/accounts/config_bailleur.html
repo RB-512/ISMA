@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Config — ISMA{% endblock %}
+{% block title %}Configuration — ISMA{% endblock %}
 
 {% block content %}
 <div class="space-y-6" x-data="{ tab: '{{ active_tab }}' }">
@@ -9,6 +9,11 @@
     <div>
         <h1 class="text-2xl font-bold text-[var(--color-text)]">Configuration</h1>
         <div class="mt-4 flex gap-1 border-b border-[var(--color-border)]">
+            <button @click="tab = 'acces'"
+                    :class="tab === 'acces' ? 'border-accent text-accent' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'"
+                    class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px">
+                Acc&egrave;s
+            </button>
             <button @click="tab = 'bailleurs'"
                     :class="tab === 'bailleurs' ? 'border-accent text-accent' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'"
                     class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px">
@@ -28,11 +33,270 @@
     </div>
 
     {# ══════════════════════════════════════════════════════════════════════ #}
+    {# ── Onglet ACCES ── #}
+    {# ══════════════════════════════════════════════════════════════════════ #}
+    <div x-show="tab === 'acces'" x-transition class="space-y-6">
+
+        {# ── En-tete + bouton creer ── #}
+        <div class="flex items-center justify-between">
+            <p class="text-sm text-[var(--color-text-muted)]">Creer et gerer les comptes utilisateurs</p>
+            <button
+                x-data
+                @click="$dispatch('toggle-user-form')"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Creer un utilisateur
+            </button>
+        </div>
+
+        {# ── Formulaire de creation (collapsible Alpine) ── #}
+        <div
+            x-data="{ open: false }"
+            @toggle-user-form.window="open = !open"
+            x-show="open"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-2"
+            class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6">
+            <h2 class="text-base font-semibold text-[var(--color-text)] mb-4">Nouveau compte</h2>
+            <form method="post" action="{% url 'gestion:creer' %}" class="space-y-4">
+                {% csrf_token %}
+
+                {% if form_creer.non_field_errors %}
+                <div class="p-3 rounded-lg bg-danger/10 border border-danger/20 text-sm text-danger">
+                    {% for error in form_creer.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form_creer.first_name.id_for_label }}">{{ form_creer.first_name.label }}</label>
+                        {{ form_creer.first_name }}
+                        {% if form_creer.first_name.errors %}<p class="mt-1 text-xs text-danger">{{ form_creer.first_name.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form_creer.last_name.id_for_label }}">{{ form_creer.last_name.label }}</label>
+                        {{ form_creer.last_name }}
+                        {% if form_creer.last_name.errors %}<p class="mt-1 text-xs text-danger">{{ form_creer.last_name.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form_creer.username.id_for_label }}">{{ form_creer.username.label }}</label>
+                        {{ form_creer.username }}
+                        {% if form_creer.username.errors %}<p class="mt-1 text-xs text-danger">{{ form_creer.username.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form_creer.email.id_for_label }}">{{ form_creer.email.label }}</label>
+                        {{ form_creer.email }}
+                        {% if form_creer.email.errors %}<p class="mt-1 text-xs text-danger">{{ form_creer.email.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form_creer.role.id_for_label }}">{{ form_creer.role.label }}</label>
+                        {{ form_creer.role }}
+                        {% if form_creer.role.errors %}<p class="mt-1 text-xs text-danger">{{ form_creer.role.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form_creer.password1.id_for_label }}">{{ form_creer.password1.label }}</label>
+                        {{ form_creer.password1 }}
+                        {% if form_creer.password1.errors %}<p class="mt-1 text-xs text-danger">{{ form_creer.password1.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form_creer.password2.id_for_label }}">{{ form_creer.password2.label }}</label>
+                        {{ form_creer.password2 }}
+                        {% if form_creer.password2.errors %}<p class="mt-1 text-xs text-danger">{{ form_creer.password2.errors|join:", " }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 pt-2">
+                    <button type="submit"
+                        class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
+                        Creer le compte
+                    </button>
+                    <button type="button" @click="open = false"
+                        class="px-4 py-2 rounded-lg text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+                        Annuler
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {# ── Conteneur pour le modal de modification (HTMX) ── #}
+        <div id="modal-modifier"></div>
+
+        {# ── Conteneur pour le resultat de reset password (HTMX) ── #}
+        <div id="reset-password-result"></div>
+
+        {# ── Liste des utilisateurs ── #}
+        <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+            <div class="px-6 py-4 border-b border-[var(--color-border)]">
+                <h2 class="text-base font-semibold text-[var(--color-text)]">Utilisateurs</h2>
+            </div>
+
+            {% if utilisateurs %}
+            <div class="divide-y divide-[var(--color-border)]">
+                {% for u in utilisateurs %}
+                <div class="flex items-center gap-4 px-6 py-4 {% if not u.is_active %}opacity-50{% endif %}">
+
+                    {# Avatar initiales #}
+                    <div class="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 flex items-center justify-center text-sm font-semibold text-accent">
+                        {{ u.get_full_name|default:u.username|make_list|first|upper }}
+                    </div>
+
+                    {# Infos #}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-[var(--color-text)] truncate">
+                            {{ u.get_full_name|default:u.username }}
+                        </p>
+                        <p class="text-xs text-[var(--color-text-muted)]">{{ u.email|default:u.username }}</p>
+                    </div>
+
+                    {# Role actuel #}
+                    <div class="flex-shrink-0 w-36 text-sm text-[var(--color-text-muted)]">
+                        {% if u.groups.all %}
+                            {{ u.groups.first.name }}
+                        {% else %}
+                            <span class="italic">&mdash;</span>
+                        {% endif %}
+                    </div>
+
+                    {# Statut #}
+                    <div class="flex-shrink-0 w-20">
+                        {% if u.is_active %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
+                            Actif
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger/10 text-danger">
+                            Inactif
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {# Actions #}
+                    <div class="flex items-center gap-2 flex-shrink-0">
+
+                        {% if u.is_active %}
+                        {# ── Modifier ── #}
+                        <button hx-get="{% url 'gestion:modifier' u.pk %}"
+                                hx-target="#modal-modifier" hx-swap="innerHTML"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-accent hover:border-accent transition-colors">
+                            Modifier
+                        </button>
+
+                        {# ── Reset MDP ── #}
+                        {% if u != request.user %}
+                        <button hx-post="{% url 'gestion:reset_password' u.pk %}"
+                                hx-target="#reset-password-result" hx-swap="innerHTML"
+                                hx-confirm="Reinitialiser le mot de passe de {{ u.get_full_name|default:u.username }} ?"
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium border border-warning/30 text-warning hover:bg-warning/10 transition-colors">
+                            Reset MDP
+                        </button>
+                        {% endif %}
+
+                        {# ── Changer de role ── #}
+                        <div x-data="{ open: false }" class="relative">
+                            <button @click="open = !open"
+                                class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-accent transition-colors">
+                                Role
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div x-show="open" @click.outside="open = false" x-transition
+                                class="absolute right-0 mt-1 w-44 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg shadow-lg z-10 py-1">
+                                <form method="post" action="{% url 'gestion:modifier_role' u.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="role" value="Secretaire">
+                                    <button type="submit"
+                                        class="w-full text-left px-4 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-border)]/50 transition-colors">
+                                        Secretaire
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'gestion:modifier_role' u.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="role" value="CDT">
+                                    <button type="submit"
+                                        class="w-full text-left px-4 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-border)]/50 transition-colors">
+                                        Chef de Travaux
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        {# ── Desactiver (sauf soi-meme) ── #}
+                        {% if u != request.user %}
+                        <form method="post" action="{% url 'gestion:desactiver' u.pk %}"
+                            x-data
+                            @submit.prevent="if(confirm('Desactiver le compte de {{ u.get_full_name|default:u.username }} ?')) $el.submit()">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium text-danger border border-danger/20 hover:bg-danger/10 transition-colors">
+                                Desactiver
+                            </button>
+                        </form>
+
+                        {# ── Supprimer ── #}
+                        <form method="post" action="{% url 'gestion:supprimer' u.pk %}"
+                            x-data
+                            @submit.prevent="if(confirm('SUPPRIMER definitivement le compte de {{ u.get_full_name|default:u.username }} ? Cette action est irreversible.')) $el.submit()">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium text-danger/70 border border-danger/10 hover:bg-danger/10 hover:text-danger transition-colors">
+                                Supprimer
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% else %}
+                        {# ── Reactiver (compte inactif) ── #}
+                        <form method="post" action="{% url 'gestion:reactiver' u.pk %}"
+                            x-data
+                            @submit.prevent="if(confirm('Reactiver le compte de {{ u.get_full_name|default:u.username }} ?')) $el.submit()">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium text-success border border-success/20 hover:bg-success/10 transition-colors">
+                                Reactiver
+                            </button>
+                        </form>
+
+                        {# ── Supprimer (compte inactif) ── #}
+                        {% if u != request.user %}
+                        <form method="post" action="{% url 'gestion:supprimer' u.pk %}"
+                            x-data
+                            @submit.prevent="if(confirm('SUPPRIMER definitivement le compte de {{ u.get_full_name|default:u.username }} ? Cette action est irreversible.')) $el.submit()">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium text-danger/70 border border-danger/10 hover:bg-danger/10 hover:text-danger transition-colors">
+                                Supprimer
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% endif %}
+
+                    </div>
+
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="px-6 py-12 text-center text-sm text-[var(--color-text-muted)]">
+                Aucun utilisateur trouve.
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    {# ══════════════════════════════════════════════════════════════════════ #}
     {# ── Onglet BAILLEURS ── #}
     {# ══════════════════════════════════════════════════════════════════════ #}
     <div x-show="tab === 'bailleurs'" x-transition class="space-y-6">
 
-        {# ── Liste des bailleurs (lecture seule) ── #}
         {% if bailleurs %}
         <div class="space-y-4">
             {% for bailleur in bailleurs %}
@@ -99,7 +363,6 @@
             <form method="post" action="{% url 'gestion:config_email_save' %}" class="px-6 py-5 space-y-5">
                 {% csrf_token %}
 
-                {# Sujet #}
                 <div>
                     <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Sujet</label>
                     <input type="text" name="sujet"
@@ -108,7 +371,6 @@
                            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:ring-2 focus:ring-accent focus:border-accent">
                 </div>
 
-                {# Corps #}
                 <div>
                     <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Corps du mail</label>
                     <textarea name="corps" rows="12"
@@ -127,7 +389,6 @@ BDC Peinture"
                               class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:ring-2 focus:ring-accent focus:border-accent font-mono">{{ config_email.corps }}</textarea>
                 </div>
 
-                {# Variables disponibles #}
                 <div class="bg-[var(--color-surface)]/50 rounded-lg border border-[var(--color-border)] px-4 py-3">
                     <p class="text-xs font-medium text-[var(--color-text-muted)] mb-2">Variables disponibles</p>
                     <div class="flex flex-wrap gap-2">
@@ -157,14 +418,11 @@ BDC Peinture"
     {# ══════════════════════════════════════════════════════════════════════ #}
     <div x-show="tab === 'checklist'" x-transition class="space-y-6">
 
-        {# ── En-tete + bouton ajouter ── #}
         <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm text-[var(--color-text-muted)]">Gerer les items de la checklist de controle des BDC</p>
-            </div>
+            <p class="text-sm text-[var(--color-text-muted)]">Gerer les items de la checklist de controle des BDC</p>
             <button
                 x-data
-                @click="$dispatch('toggle-form')"
+                @click="$dispatch('toggle-checklist-form')"
                 class="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -187,7 +445,7 @@ BDC Peinture"
         {# ── Formulaire de creation (collapsible Alpine) ── #}
         <div
             x-data="{ open: false }"
-            @toggle-form.window="open = !open"
+            @toggle-checklist-form.window="open = !open"
             x-show="open"
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0 -translate-y-2"
@@ -218,8 +476,8 @@ BDC Peinture"
             </form>
         </div>
 
-        {# ── Conteneur pour le modal de modification (HTMX) ── #}
-        <div id="modal-modifier"></div>
+        {# ── Conteneur pour le modal de modification checklist (HTMX) ── #}
+        <div id="modal-modifier-checklist"></div>
 
         {# ── Liste des items ── #}
         <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
@@ -232,17 +490,14 @@ BDC Peinture"
                 {% for item in checklist_items %}
                 <div class="flex items-center gap-4 px-6 py-4 {% if not item.actif %}opacity-50{% endif %}">
 
-                    {# Ordre #}
                     <div class="w-8 h-8 flex-shrink-0 rounded-full bg-accent/10 flex items-center justify-center text-sm font-semibold text-accent">
                         {{ item.ordre }}
                     </div>
 
-                    {# Libelle #}
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-[var(--color-text)] truncate">{{ item.libelle }}</p>
                     </div>
 
-                    {# Statut #}
                     <div class="flex-shrink-0 w-20">
                         {% if item.actif %}
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
@@ -255,16 +510,13 @@ BDC Peinture"
                         {% endif %}
                     </div>
 
-                    {# Actions #}
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        {# Modifier #}
                         <button hx-get="{% url 'gestion:checklist_modifier' item.pk %}"
-                                hx-target="#modal-modifier" hx-swap="innerHTML"
+                                hx-target="#modal-modifier-checklist" hx-swap="innerHTML"
                                 class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-accent hover:border-accent transition-colors">
                             Modifier
                         </button>
 
-                        {# Activer/Desactiver #}
                         <form method="post" action="{% url 'gestion:checklist_modifier' item.pk %}">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle">
@@ -275,7 +527,6 @@ BDC Peinture"
                             </button>
                         </form>
 
-                        {# Supprimer #}
                         <form method="post" action="{% url 'gestion:checklist_supprimer' item.pk %}"
                             x-data
                             @submit.prevent="if(confirm('Supprimer le point de controle &laquo; {{ item.libelle }} &raquo; ?')) $el.submit()">

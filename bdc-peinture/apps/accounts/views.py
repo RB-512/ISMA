@@ -34,36 +34,22 @@ class HomeRedirectView(TemplateView):
 
 @login_required
 def liste_utilisateurs(request):
-    utilisateurs = User.objects.prefetch_related("groups").order_by("last_name", "first_name")
-    form_creer = CreerUtilisateurForm()
-    return render(
-        request,
-        "accounts/utilisateurs.html",
-        {
-            "utilisateurs": utilisateurs,
-            "form_creer": form_creer,
-        },
-    )
+    return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
 @login_required
 def creer_utilisateur(request):
+    config_url = f"{reverse('gestion:config_bailleurs')}?tab=acces"
     if request.method != "POST":
-        return redirect("gestion:liste")
+        return redirect(config_url)
     form = CreerUtilisateurForm(request.POST)
     if form.is_valid():
         user = form.save()
         messages.success(request, f"Compte créé pour {user.get_full_name() or user.username}.")
-        return redirect("gestion:liste")
-    utilisateurs = User.objects.prefetch_related("groups").order_by("last_name", "first_name")
-    return render(
-        request,
-        "accounts/utilisateurs.html",
-        {
-            "utilisateurs": utilisateurs,
-            "form_creer": form,
-        },
-    )
+        return redirect(config_url)
+    # Erreur de validation : re-rendre la page config avec le form en erreur
+    messages.error(request, "Erreur dans le formulaire de création.")
+    return redirect(config_url)
 
 
 @login_required
@@ -75,7 +61,7 @@ def modifier_role(request, pk):
             group = Group.objects.get(name=form.cleaned_data["role"])
             utilisateur.groups.set([group])
             messages.success(request, f"Rôle mis à jour pour {utilisateur.get_full_name() or utilisateur.username}.")
-    return redirect("gestion:liste")
+    return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
 @login_required
@@ -83,12 +69,12 @@ def desactiver_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
         messages.error(request, "Vous ne pouvez pas désactiver votre propre compte.")
-        return redirect("gestion:liste")
+        return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
     if request.method == "POST":
         utilisateur.is_active = False
         utilisateur.save()
         messages.success(request, f"Compte de {utilisateur.get_full_name() or utilisateur.username} désactivé.")
-    return redirect("gestion:liste")
+    return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
 @login_required
@@ -103,7 +89,7 @@ def modifier_utilisateur(request, pk):
             form.save()
             messages.success(request, f"Profil mis à jour pour {utilisateur.get_full_name() or utilisateur.username}.")
             response = HttpResponse()
-            response["HX-Redirect"] = reverse("gestion:liste")
+            response["HX-Redirect"] = f"{reverse('gestion:config_bailleurs')}?tab=acces"
             return response
     else:
         form = ModifierUtilisateurForm(instance=utilisateur)
@@ -117,7 +103,7 @@ def reset_password_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
         messages.error(request, "Vous ne pouvez pas réinitialiser votre propre mot de passe ici.")
-        return redirect("gestion:liste")
+        return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
     if request.method == "POST":
         new_password = get_random_string(length=10)
         utilisateur.set_password(new_password)
@@ -127,7 +113,7 @@ def reset_password_utilisateur(request, pk):
             "accounts/partials/_reset_password_result.html",
             {"utilisateur": utilisateur, "new_password": new_password},
         )
-    return redirect("gestion:liste")
+    return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
 @login_required
@@ -137,7 +123,7 @@ def reactiver_utilisateur(request, pk):
         utilisateur.is_active = True
         utilisateur.save()
         messages.success(request, f"Compte de {utilisateur.get_full_name() or utilisateur.username} réactivé.")
-    return redirect("gestion:liste")
+    return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
 @login_required
@@ -145,7 +131,7 @@ def supprimer_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
         messages.error(request, "Vous ne pouvez pas supprimer votre propre compte.")
-        return redirect("gestion:liste")
+        return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
     if request.method == "POST":
         nom = utilisateur.get_full_name() or utilisateur.username
         try:
@@ -157,7 +143,7 @@ def supprimer_utilisateur(request, pk):
                 f"Impossible de supprimer {nom} car ce compte est lié à des bons de commande. "
                 "Désactivez le compte à la place.",
             )
-    return redirect("gestion:liste")
+    return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
 # ── Checklist de contrôle ──────────────────────────────────────────────────
@@ -238,6 +224,10 @@ def config_bailleurs(request):
         transition = TransitionChoices.CONTROLE
     checklist_items = ChecklistItem.objects.filter(transition=transition).order_by("ordre")
 
+    # Accès / utilisateurs (intégrés comme onglet)
+    utilisateurs = User.objects.prefetch_related("groups").order_by("last_name", "first_name")
+    form_creer = CreerUtilisateurForm()
+
     tab = request.GET.get("tab", "bailleurs")
 
     return render(
@@ -249,6 +239,8 @@ def config_bailleurs(request):
             "checklist_items": checklist_items,
             "transitions_list": TransitionChoices.choices,
             "transition_active": transition,
+            "utilisateurs": utilisateurs,
+            "form_creer": form_creer,
             "active_tab": tab,
         },
     )
