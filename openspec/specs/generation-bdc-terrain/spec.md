@@ -87,3 +87,10 @@ Une vue `telecharger_terrain` SHALL servir le fichier PDF terrain en télécharg
 #### Scenario: Bouton visible après attribution
 - **WHEN** un utilisateur voit un BDC avec `pdf_terrain` renseigné
 - **THEN** un bouton "BDC terrain" est affiché sur la fiche détail
+
+### Requirement: Localisation sur fiche chantier sous-traitant
+La fiche chantier ST DOIT afficher étage et porte en plus du numéro de logement.
+
+#### Scenario: Logement avec étage et porte
+- **WHEN** `logement_etage` et `logement_porte` sont renseignés
+- **THEN** afficher "N° — Étage X / Porte Y"

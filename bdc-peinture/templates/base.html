@@ -73,6 +73,14 @@
         color: var(--color-text);
       }
 
+      /* ── Sidebar : masquer scrollbar ── */
+      nav.overflow-y-auto {
+        scrollbar-width: none; /* Firefox */
+      }
+      nav.overflow-y-auto::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Edge */
+      }
+
       /* ── Global widget styles ── */
       input[type="text"], input[type="email"], input[type="password"],
       input[type="number"], input[type="date"], input[type="datetime-local"],

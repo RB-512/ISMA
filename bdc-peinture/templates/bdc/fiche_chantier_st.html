@@ -150,7 +150,7 @@
         {% if bdc.logement_numero %}
         <div class="info-row">
             <span class="info-label">Logement</span>
-            <span class="info-value">{{ bdc.logement_numero }}</span>
+            <span class="info-value">{{ bdc.logement_numero }}{% if bdc.logement_etage %} — Étage {{ bdc.logement_etage }}{% endif %}{% if bdc.logement_porte %} / Porte {{ bdc.logement_porte }}{% endif %}</span>
         </div>
         {% endif %}
         {% if bdc.occupation %}

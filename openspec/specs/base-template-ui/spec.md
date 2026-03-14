@@ -23,6 +23,13 @@ Le système SHALL fournir un template `templates/base.html` avec un layout sideb
 - **WHEN** un utilisateur authentifié consulte une page
 - **THEN** la sidebar affiche son nom, son groupe (badge), et un lien de déconnexion
 
+### Requirement: Sidebar sans scrollbar visible
+La scrollbar de la sidebar DOIT être masquée visuellement tout en gardant le scroll fonctionnel.
+
+#### Scenario: Écran court
+- **WHEN** la hauteur du viewport est insuffisante
+- **THEN** le scroll fonctionne mais aucune scrollbar n'est visible
+
 ### Requirement: Page de login stylisée
 Le système SHALL fournir un template `templates/accounts/login.html` avec un formulaire de connexion centré, le logo "ISMA" en grand, des champs email et mot de passe stylisés avec le design system, et un fond utilisant la palette Isma.
 

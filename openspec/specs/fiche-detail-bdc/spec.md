@@ -21,3 +21,10 @@ La fiche détail SHALL afficher un formulaire d'édition pour les champs manuels
 #### Scenario: Formulaire masqué pour un non-secrétaire
 - **WHEN** un utilisateur authentifié hors groupe "Secretaire" accède à la fiche détail
 - **THEN** les champs manuels sont affichés en lecture seule, sans formulaire d'édition
+
+### Requirement: Affichage contacts occupant
+Le système NE DOIT PAS afficher le bloc contact "Occupant" lorsque le champ Occupation est vide.
+
+#### Scenario: Occupation non renseignée avec données occupant
+- **WHEN** `occupation` est vide mais `occupant_nom` contient une valeur
+- **THEN** le bloc "Occupant" NE DOIT PAS être affiché

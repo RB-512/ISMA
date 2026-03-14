@@ -67,12 +67,14 @@ def generer_releve_pdf(releve: ReleveFacturation) -> HttpResponse:
     col_bdc = _MARGE_G
     col_bailleur = _MARGE_G + 65
     col_adresse = _MARGE_G + 115
+    col_ville = _MARGE_G + 280
     col_attrib = width - _MARGE_D - 140
     col_montant = width - _MARGE_D - 70
     header_color = (0.4, 0.4, 0.4)
     page.insert_text((col_bdc, y), "N\u00b0 BDC", fontsize=8, fontname="helv", color=header_color)
     page.insert_text((col_bailleur, y), "Bailleur", fontsize=8, fontname="helv", color=header_color)
     page.insert_text((col_adresse, y), "Adresse", fontsize=8, fontname="helv", color=header_color)
+    page.insert_text((col_ville, y), "Ville", fontsize=8, fontname="helv", color=header_color)
     page.insert_text((col_attrib, y), "Attribution", fontsize=8, fontname="helv", color=header_color)
     page.insert_text((col_montant, y), "Montant ST", fontsize=8, fontname="helv", color=header_color)
     y += 4
@@ -91,9 +93,13 @@ def generer_releve_pdf(releve: ReleveFacturation) -> HttpResponse:
         page.insert_text((col_bdc, y), bdc.numero_bdc, fontsize=8, fontname="helv")
         page.insert_text((col_bailleur, y), bdc.bailleur.code, fontsize=8, fontname="helv")
         adresse = bdc.adresse
-        if len(adresse) > 35:
-            adresse = adresse[:32] + "..."
+        if len(adresse) > 25:
+            adresse = adresse[:22] + "..."
         page.insert_text((col_adresse, y), adresse, fontsize=8, fontname="helv")
+        ville = bdc.ville or ""
+        if len(ville) > 20:
+            ville = ville[:17] + "..."
+        page.insert_text((col_ville, y), ville, fontsize=8, fontname="helv")
         date_attr = attributions.get(bdc.pk)
         attr_str = date_attr.strftime("%d/%m/%Y") if date_attr else "\u2014"
         page.insert_text((col_attrib, y), attr_str, fontsize=8, fontname="helv")

@@ -60,3 +60,10 @@ Le fichier exporté SHALL avoir un nom au format `export_facturation_YYYY-MM-DD.
 #### Scenario: Nom du fichier
 - **WHEN** le CDT télécharge l'export le 28/02/2026
 - **THEN** le fichier se nomme `export_facturation_2026-02-28.xlsx`
+
+### Requirement: Colonne adresse du relevé de facturation
+Le relevé de facturation DOIT afficher la ville dans l'export PDF, en plus de l'adresse.
+
+#### Scenario: Export PDF avec ville
+- **WHEN** un utilisateur exporte le relevé en PDF
+- **THEN** la colonne "Ville" DOIT être présente avec la valeur du champ `ville` du BDC

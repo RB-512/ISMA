@@ -2,6 +2,7 @@
 Vues du workflow BDC Peinture.
 """
 
+import logging
 import os
 import tempfile
 import uuid
@@ -9,6 +10,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
+
+logger = logging.getLogger(__name__)
 from django.contrib.auth.decorators import login_required
 from django.core.files import File
 from django.core.files.base import ContentFile
@@ -1004,10 +1007,17 @@ def valider_facturation_bdc(request, pk: int):
 
     try:
         valider_facturation(bdc, request.user)
-    except TransitionInvalide as e:
+    except (TransitionInvalide, BDCIncomplet) as e:
         if request.headers.get("HX-Request"):
             return _render_sidebar(request, bdc, error_message=str(e))
         messages.error(request, str(e))
+        return redirect("bdc:detail", pk=pk)
+    except Exception:
+        logger.exception("Erreur inattendue lors de la facturation du BDC n°%s", bdc.numero_bdc)
+        msg = f"Erreur lors du passage en facturation du BDC n°{bdc.numero_bdc}. Veuillez réessayer."
+        if request.headers.get("HX-Request"):
+            return _render_sidebar(request, bdc, error_message=msg)
+        messages.error(request, msg)
         return redirect("bdc:detail", pk=pk)
 
     if request.headers.get("HX-Request"):
