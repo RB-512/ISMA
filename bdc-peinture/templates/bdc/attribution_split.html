@@ -5,13 +5,13 @@
 {% block content %}
 <div>
     {# ── Header ── #}
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-3">
             <a href="{% url 'bdc:detail' pk=bdc.pk %}"
-               class="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]/50 transition-colors">
+               class="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]/50 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
             </a>
-            <h1 class="text-xl font-bold font-mono text-[var(--color-text)]">BDC {{ bdc.numero_bdc }}</h1>
+            <h1 class="text-lg font-bold font-mono text-[var(--color-text)]">BDC {{ bdc.numero_bdc }}</h1>
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
                 {% if bdc.statut == 'A_FAIRE' %}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300
                 {% elif bdc.statut == 'EN_COURS' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300
@@ -23,7 +23,7 @@
     </div>
 
     {# ── Split-screen layout ── #}
-    <div class="flex gap-4" style="height: calc(100vh - 140px);">
+    <div class="flex gap-3" style="height: calc(100vh - 110px);">
 
         {# ── Left panel: PDF viewer (60%) ── #}
         <div class="w-3/5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)] overflow-hidden flex flex-col"

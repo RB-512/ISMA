@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bdc_filters %}
 
 {% block title %}BDC {{ bdc.numero_bdc }} — ISMA{% endblock %}
 
@@ -221,8 +222,8 @@
                     <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ ligne.designation }}</td>
                     <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.quantite }}</td>
                     <td class="px-3 py-2 text-sm text-[var(--color-text)]">{{ ligne.unite }}</td>
-                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.prix_unitaire|floatformat:2 }} &euro;</td>
-                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)]">{{ ligne.montant|floatformat:2 }} &euro;</td>
+                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)] whitespace-nowrap">{{ ligne.prix_unitaire|montant }}</td>
+                    <td class="px-3 py-2 text-sm text-right font-mono text-[var(--color-text)] whitespace-nowrap">{{ ligne.montant|montant }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -230,7 +231,7 @@
             <tfoot>
                 <tr class="bg-primary/5 dark:bg-white/5">
                     <td colspan="4" class="px-3 py-2 text-sm font-semibold text-right text-[var(--color-text)]">Total HT</td>
-                    <td class="px-3 py-2 text-sm text-right font-mono font-semibold text-[var(--color-text)]">{{ bdc.montant_ht|floatformat:2 }} &euro;</td>
+                    <td class="px-3 py-2 text-sm text-right font-mono font-semibold text-[var(--color-text)] whitespace-nowrap">{{ bdc.montant_ht|montant }}</td>
                 </tr>
             </tfoot>
             {% endif %}
@@ -240,18 +241,18 @@
             <dl class="text-sm space-y-1">
                 <div class="flex justify-between gap-8">
                     <dt class="text-[var(--color-text-muted)]">Total HT</dt>
-                    <dd class="font-mono font-semibold text-[var(--color-text)]">{{ bdc.montant_ht|floatformat:2 }} &euro;</dd>
+                    <dd class="font-mono font-semibold text-[var(--color-text)] whitespace-nowrap">{{ bdc.montant_ht|montant }}</dd>
                 </div>
                 {% if bdc.montant_tva %}
                 <div class="flex justify-between gap-8">
                     <dt class="text-[var(--color-text-muted)]">TVA</dt>
-                    <dd class="font-mono text-[var(--color-text)]">{{ bdc.montant_tva|floatformat:2 }} &euro;</dd>
+                    <dd class="font-mono text-[var(--color-text)] whitespace-nowrap">{{ bdc.montant_tva|montant }}</dd>
                 </div>
                 {% endif %}
                 {% if bdc.montant_ttc %}
                 <div class="flex justify-between gap-8 border-t border-[var(--color-border)] pt-1">
                     <dt class="text-[var(--color-text-muted)] font-semibold">Total TTC</dt>
-                    <dd class="font-mono font-bold text-[var(--color-text)]">{{ bdc.montant_ttc|floatformat:2 }} &euro;</dd>
+                    <dd class="font-mono font-bold text-[var(--color-text)] whitespace-nowrap">{{ bdc.montant_ttc|montant }}</dd>
                 </div>
                 {% endif %}
             </dl>

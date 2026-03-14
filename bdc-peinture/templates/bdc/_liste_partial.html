@@ -1,3 +1,4 @@
+{% load bdc_filters %}
 {# HTMX-swappable partial: compteurs + alertes + filtres + tableau + pagination #}
 <div id="isma-dashboard-content" x-data="{ sidebarOpen: false, selectedBdc: null }"
      hx-trigger="bdc-updated from:body"
@@ -167,13 +168,13 @@
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.adresse|truncatechars:40 }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.ville }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.sous_traitant.nom|default:"—" }}</td>
-                <td class="px-4 py-3 text-sm font-mono text-right text-[var(--color-text)]">
-                    {% if bdc.montant_ht_total %}{{ bdc.montant_ht_total|floatformat:2 }} €{% else %}—{% endif %}
+                <td class="px-4 py-3 text-sm font-mono text-right text-[var(--color-text)] whitespace-nowrap">
+                    {{ bdc.montant_ht_total|montant }}
                 </td>
-                <td class="px-4 py-3 text-sm font-mono text-right text-[var(--color-text)]">
-                    {% if bdc.sous_traitant and bdc.montant_st %}{{ bdc.montant_st|floatformat:2 }} €{% else %}—{% endif %}
+                <td class="px-4 py-3 text-sm font-mono text-right text-[var(--color-text)] whitespace-nowrap">
+                    {% if bdc.sous_traitant %}{{ bdc.montant_st|montant }}{% else %}—{% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm">
+                <td class="px-4 py-3 text-sm whitespace-nowrap">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
                         {% if bdc.statut == 'A_TRAITER' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300
                         {% elif bdc.statut == 'A_FAIRE' %}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300
