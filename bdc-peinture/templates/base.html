@@ -19,6 +19,10 @@
           (!localStorage.getItem('isma-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
       }
+      // Pre-render sidebar state to avoid slide on page load
+      if (localStorage.getItem('isma-sidebar') === 'collapsed') {
+        document.documentElement.classList.add('sidebar-collapsed');
+      }
     </script>
 
     {# ── Google Fonts ── #}
@@ -73,6 +77,17 @@
         color: var(--color-text);
       }
 
+      /* ── Sidebar : pre-render position (avant Alpine) ── */
+      .sidebar-collapsed .isma-sidebar { width: 4rem; }    /* w-16 */
+      .sidebar-collapsed .isma-main   { margin-left: 4rem; }
+      :not(.sidebar-collapsed) .isma-sidebar { width: 15rem; } /* w-60 */
+      :not(.sidebar-collapsed) .isma-main   { margin-left: 15rem; }
+
+      /* Pas de transition tant qu'Alpine n'a pas init */
+      .isma-sidebar, .isma-main { transition: none !important; }
+      .sidebar-ready .isma-sidebar { transition: width 300ms ease-in-out !important; }
+      .sidebar-ready .isma-main   { transition: margin 300ms ease-in-out !important; }
+
       /* ── Sidebar : masquer scrollbar ── */
       nav.overflow-y-auto {
         scrollbar-width: none; /* Firefox */
@@ -123,6 +138,10 @@
             localStorage.setItem('isma-sidebar', this.collapsed ? 'collapsed' : 'expanded');
           }
         });
+        // Enable transitions only after Alpine has applied its classes
+        requestAnimationFrame(() => {
+          document.documentElement.classList.add('sidebar-ready');
+        });
       });
     </script>
 
@@ -136,8 +155,8 @@
         {# ── Sidebar ─────────────────────────────────────────────────────────── #}
         <aside
           :class="$store.sidebar.collapsed ? 'w-16' : 'w-60'"
-          class="fixed inset-y-0 left-0 z-30 flex flex-col
-                 bg-primary text-white transition-[width] duration-300 ease-in-out"
+          class="isma-sidebar fixed inset-y-0 left-0 z-30 flex flex-col
+                 bg-primary text-white"
         >
             {# Logo #}
             <div class="flex items-center h-16 px-4 border-b border-white/10">
@@ -254,7 +273,7 @@
 
         {# ── Main content ────────────────────────────────────────────────────── #}
         <div :class="$store.sidebar.collapsed ? 'ml-16' : 'ml-60'"
-             class="flex-1 transition-[margin] duration-300 ease-in-out">
+             class="isma-main flex-1">
 
             {# ── Messages flash ── #}
             {% if messages %}
