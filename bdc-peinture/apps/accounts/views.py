@@ -180,24 +180,20 @@ def checklist_liste(request):
             messages.success(request, f"Point de contrôle « {libelle} » ajouté.")
         else:
             messages.error(request, "Le libellé ne peut pas être vide.")
-        return redirect(f"{reverse('gestion:checklist_liste')}?transition={post_transition}")
+        return redirect(
+            f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={post_transition}"
+        )
 
-    items = ChecklistItem.objects.filter(transition=transition).order_by("ordre")
-    return render(
-        request,
-        "accounts/checklist.html",
-        {
-            "items": items,
-            "transitions_list": TransitionChoices.choices,
-            "transition_active": transition,
-        },
+    # Fallback: redirect vers config avec onglet checklist
+    return redirect(
+        f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={transition}"
     )
 
 
 @login_required
 def checklist_modifier(request, pk):
     item = get_object_or_404(ChecklistItem, pk=pk)
-    redirect_url = f"{reverse('gestion:checklist_liste')}?transition={item.transition}"
+    redirect_url = f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={item.transition}"
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "toggle":
@@ -221,7 +217,7 @@ def checklist_modifier(request, pk):
 @login_required
 def checklist_supprimer(request, pk):
     item = get_object_or_404(ChecklistItem, pk=pk)
-    redirect_url = f"{reverse('gestion:checklist_liste')}?transition={item.transition}"
+    redirect_url = f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={item.transition}"
     if request.method == "POST":
         libelle = item.libelle
         item.delete()
@@ -236,12 +232,24 @@ def checklist_supprimer(request, pk):
 def config_bailleurs(request):
     bailleurs = Bailleur.objects.all()
 
+    # Checklist data (intégrée comme onglet)
+    transition = request.GET.get("transition", TransitionChoices.CONTROLE)
+    if transition not in TransitionChoices.values:
+        transition = TransitionChoices.CONTROLE
+    checklist_items = ChecklistItem.objects.filter(transition=transition).order_by("ordre")
+
+    tab = request.GET.get("tab", "bailleurs")
+
     return render(
         request,
         "accounts/config_bailleur.html",
         {
             "bailleurs": bailleurs,
             "config_email": ConfigEmail.get(),
+            "checklist_items": checklist_items,
+            "transitions_list": TransitionChoices.choices,
+            "transition_active": transition,
+            "active_tab": tab,
         },
     )
 
