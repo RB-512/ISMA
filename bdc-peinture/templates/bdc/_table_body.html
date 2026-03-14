@@ -1,0 +1,114 @@
+{% load bdc_filters %}
+{# Table des BDC + pagination + état vide — zone de swap HTMX #}
+{% if page_obj %}
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+    <table class="min-w-full divide-y divide-[var(--color-border)]">
+        <thead>
+            <tr class="bg-primary/5 dark:bg-white/5">
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">N° BDC</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Bailleur</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Adresse</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Ville</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Sous-traitant</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Montant HT</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Montant ST</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Statut</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Date</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-[var(--color-border)]">
+            {% for bdc in page_obj %}
+            <tr class="hover:bg-accent/5 dark:hover:bg-accent/10 cursor-pointer transition-colors duration-100"
+                :class="{ 'bg-accent/10 dark:bg-accent/15': selectedBdc == {{ bdc.pk }} }"
+                hx-get="{% url 'bdc:detail_sidebar' pk=bdc.pk %}"
+                hx-target="#sidebar-content"
+                hx-swap="innerHTML"
+                @click="selectedBdc = {{ bdc.pk }}">
+                <td class="px-4 py-3 text-sm font-medium font-mono text-accent">{{ bdc.numero_bdc }}</td>
+                <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.bailleur.code }}</td>
+                <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.adresse|truncatechars:40 }}</td>
+                <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.ville }}</td>
+                <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.sous_traitant.nom|default:"—" }}</td>
+                <td class="px-4 py-3 text-sm font-mono text-right text-[var(--color-text)] whitespace-nowrap">
+                    {{ bdc.montant_ht_total|montant }}
+                </td>
+                <td class="px-4 py-3 text-sm font-mono text-right text-[var(--color-text)] whitespace-nowrap">
+                    {% if bdc.sous_traitant %}{{ bdc.montant_st|montant }}{% else %}—{% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                        {% if bdc.statut == 'A_TRAITER' %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300
+                        {% elif bdc.statut == 'A_FAIRE' %}bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300
+                        {% elif bdc.statut == 'EN_COURS' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300
+                        {% elif bdc.statut == 'A_FACTURER' %}bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300
+                        {% elif bdc.statut == 'FACTURE' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300
+                        {% endif %}">
+                        {{ bdc.get_statut_display }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-sm font-mono text-[var(--color-text-muted)]">{{ bdc.created_at|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {# ── Pagination ────────────────────────────────────────────────────── #}
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="px-4 py-3 border-t border-[var(--color-border)] flex items-center justify-between">
+        <div class="text-sm text-[var(--color-text-muted)]">
+            <span class="font-mono">{{ page_obj.paginator.count }}</span> résultat{{ page_obj.paginator.count|pluralize }}
+            — page <span class="font-mono">{{ page_obj.number }}</span> / <span class="font-mono">{{ page_obj.paginator.num_pages }}</span>
+        </div>
+        <div class="flex space-x-1">
+            {% if page_obj.has_previous %}
+            <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+               hx-get="{% url 'bdc:index' %}?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+               hx-target="#isma-table-content"
+               hx-swap="outerHTML"
+               hx-push-url="true"
+               class="px-3 py-1 border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text)] hover:bg-accent/10 transition-colors">Précédent</a>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                <span class="px-3 py-1 bg-accent text-white rounded-lg text-sm font-mono">{{ num }}</span>
+                {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ num }}"
+                   hx-get="{% url 'bdc:index' %}?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ num }}"
+                   hx-target="#isma-table-content"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   class="px-3 py-1 border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text)] hover:bg-accent/10 transition-colors font-mono">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+               hx-get="{% url 'bdc:index' %}?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+               hx-target="#isma-table-content"
+               hx-swap="outerHTML"
+               hx-push-url="true"
+               class="px-3 py-1 border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text)] hover:bg-accent/10 transition-colors">Suivant</a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</div>
+
+{% else %}
+{# ── Liste vide ────────────────────────────────────────────────────────── #}
+<div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-12 text-center">
+    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/10 text-accent mb-4">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    </div>
+    {% if not filtre.form.statut.value %}
+    <p class="text-[var(--color-text-muted)] text-lg mb-4">Aucun bon de commande trouvé</p>
+    <a href="{% url 'bdc:upload' %}"
+       class="inline-flex items-center px-5 py-2.5 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm font-medium transition-all duration-150 shadow-sm hover:shadow-md">
+        Uploader un PDF
+    </a>
+    {% else %}
+    <p class="text-sm text-[var(--color-text-muted)]">Aucun BDC avec ce statut</p>
+    {% endif %}
+</div>
+{% endif %}

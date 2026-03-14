@@ -1,0 +1,8 @@
+{# HTMX partial response: table swap + OOB tabs update #}
+<div id="isma-table-content">
+{% include "bdc/_table_body.html" %}
+</div>
+
+<div id="isma-tabs" hx-swap-oob="outerHTML">
+{% include "bdc/_tabs_nav.html" %}
+</div>

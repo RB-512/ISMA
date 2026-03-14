@@ -230,8 +230,13 @@ def liste_bdc(request):
         "nb_filtres": nb_filtres,
     }
 
-    # HTMX: return only the dashboard fragment, not the full layout
+    # HTMX: return only the relevant fragment
     if request.headers.get("HX-Request"):
+        hx_target = request.headers.get("HX-Target", "")
+        if hx_target == "isma-table-content":
+            # Tab/search/pagination click — swap table + OOB tabs update
+            return render(request, "bdc/_htmx_table.html", context)
+        # Full dashboard refresh (bdc-updated event)
         return render(request, "bdc/_liste_partial.html", context)
 
     return render(request, "bdc/liste.html", context)
