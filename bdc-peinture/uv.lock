@@ -51,7 +51,6 @@ dependencies = [
     { name = "requests" },
     { name = "weasyprint" },
     { name = "whitenoise" },
-    { name = "xhtml2pdf" },
 ]
 
 [package.optional-dependencies]
@@ -60,6 +59,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-django" },
     { name = "ruff" },
+    { name = "xhtml2pdf" },
 ]
 
 [package.dev-dependencies]
@@ -90,7 +90,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9" },
     { name = "weasyprint", specifier = ">=63.0" },
     { name = "whitenoise", specifier = ">=6.7" },
-    { name = "xhtml2pdf", specifier = ">=0.2.17" },
+    { name = "xhtml2pdf", marker = "extra == 'dev'", specifier = ">=0.2.17" },
 ]
 provides-extras = ["dev"]
 
