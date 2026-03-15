@@ -164,7 +164,10 @@ class ERILIAParser(PDFParser):
         if "," in valeur:
             # Format français : point = milliers, virgule = décimale
             valeur = valeur.replace(".", "").replace(",", ".")
-        return Decimal(valeur).quantize(Decimal("0.01"))
+        try:
+            return Decimal(valeur).quantize(Decimal("0.01"))
+        except Exception:
+            return Decimal("0")
 
     # ── Méthodes privées d'extraction ─────────────────────────────────────────
 

@@ -50,6 +50,7 @@
                     <td class="px-4 py-3 text-right font-mono text-[var(--color-text)]">
                         {{ prix.prix_unitaire }}
                     </td>
+                    {% if is_cdt %}
                     <td class="px-4 py-3 text-right">
                         <div class="flex items-center justify-end gap-2">
                             <button hx-get="{% url 'bdc:bibliotheque_modifier' prix.pk %}"
@@ -67,6 +68,11 @@
                             </button>
                         </div>
                     </td>
+                    {% else %}
+                    <td class="px-4 py-3 text-right text-xs text-[var(--color-text-muted)] italic">
+                        Lecture seule
+                    </td>
+                    {% endif %}
                 </tr>
                 {% empty %}
                 <tr>

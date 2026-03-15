@@ -21,9 +21,9 @@ class TestBibliothequeAcces:
         resp = client_cdt.get(reverse("bdc:bibliotheque"))
         assert resp.status_code == 200
 
-    def test_secretaire_refuse(self, client_secretaire):
+    def test_secretaire_peut_consulter(self, client_secretaire):
         resp = client_secretaire.get(reverse("bdc:bibliotheque"))
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
 
 class TestBibliothequeAjouter:

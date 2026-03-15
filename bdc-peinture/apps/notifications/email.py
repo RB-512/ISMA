@@ -6,6 +6,7 @@ Les emails ne contiennent JAMAIS de prix.
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -50,8 +51,10 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
         return False
 
     # Variables de substitution
+    nom_st = bdc.sous_traitant.nom if bdc.sous_traitant else ""
     variables = {
         "numero_bdc": bdc.numero_bdc,
+        "nom_st": nom_st,
         "adresse": bdc.adresse or "",
         "ville": bdc.ville or "",
         "travaux": bdc.objet_travaux or "Non précisé",
@@ -64,10 +67,11 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
 
     config = ConfigEmail.get()
     if config.sujet and config.corps:
-        sujet = config.sujet.format_map(variables)
-        corps = config.corps.format_map(variables)
+        safe_variables = defaultdict(str, variables)
+        sujet = config.sujet.format_map(safe_variables)
+        corps = config.corps.format_map(safe_variables)
     else:
-        sujet = f"BDC {bdc.numero_bdc} — Attribution"
+        sujet = f"BDC {bdc.numero_bdc} — Attribution — {nom_st}"
         corps = (
             f"Bonjour,\n\n"
             f"Le BDC n°{bdc.numero_bdc} vous a été attribué.\n\n"
@@ -95,7 +99,11 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
             "\n\nNote : le document n'a pas pu être joint. Veuillez le récupérer auprès du conducteur de travaux."
         )
 
-    email.send(fail_silently=False)
+    try:
+        email.send(fail_silently=False)
+    except Exception:
+        logger.warning("Échec envoi email attribution à %s pour BDC %s", email_st, bdc.numero_bdc, exc_info=True)
+        return False
     logger.info("Email attribution envoyé à %s pour BDC %s", email_st, bdc.numero_bdc)
     return True
 

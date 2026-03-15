@@ -9,6 +9,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.db import transaction
 
 from apps.sous_traitants.models import SousTraitant
 
@@ -101,24 +102,25 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             )
         _verifier_checklist_transition(bdc, ancien_statut, nouveau_statut)
 
-    # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation à null
-    if ancien_statut == StatutChoices.A_FACTURER and nouveau_statut == StatutChoices.EN_COURS:
-        bdc.date_realisation = None
+    with transaction.atomic():
+        # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation à null
+        if ancien_statut == StatutChoices.A_FACTURER and nouveau_statut == StatutChoices.EN_COURS:
+            bdc.date_realisation = None
 
-    # Application du changement
-    bdc.statut = nouveau_statut
-    bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
+        # Application du changement
+        bdc.statut = nouveau_statut
+        bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
 
-    # Traçabilité
-    HistoriqueAction.objects.create(
-        bdc=bdc,
-        utilisateur=utilisateur,
-        action=ActionChoices.STATUT_CHANGE,
-        details={
-            "ancien_statut": ancien_statut,
-            "nouveau_statut": nouveau_statut,
-        },
-    )
+        # Traçabilité
+        HistoriqueAction.objects.create(
+            bdc=bdc,
+            utilisateur=utilisateur,
+            action=ActionChoices.STATUT_CHANGE,
+            details={
+                "ancien_statut": ancien_statut,
+                "nouveau_statut": nouveau_statut,
+            },
+        )
 
     return bdc
 
@@ -164,16 +166,17 @@ def valider_realisation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
 
     _verifier_checklist_transition(bdc, StatutChoices.EN_COURS, StatutChoices.A_FACTURER)
 
-    bdc.statut = StatutChoices.A_FACTURER
-    bdc.date_realisation = date.today()
-    bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
+    with transaction.atomic():
+        bdc.statut = StatutChoices.A_FACTURER
+        bdc.date_realisation = date.today()
+        bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
 
-    HistoriqueAction.objects.create(
-        bdc=bdc,
-        utilisateur=utilisateur,
-        action=ActionChoices.VALIDATION,
-        details={"date_realisation": str(bdc.date_realisation)},
-    )
+        HistoriqueAction.objects.create(
+            bdc=bdc,
+            utilisateur=utilisateur,
+            action=ActionChoices.VALIDATION,
+            details={"date_realisation": str(bdc.date_realisation)},
+        )
 
     return bdc
 
@@ -190,14 +193,15 @@ def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
 
     _verifier_checklist_transition(bdc, StatutChoices.A_FACTURER, StatutChoices.FACTURE)
 
-    bdc.statut = StatutChoices.FACTURE
-    bdc.save(update_fields=["statut", "updated_at"])
+    with transaction.atomic():
+        bdc.statut = StatutChoices.FACTURE
+        bdc.save(update_fields=["statut", "updated_at"])
 
-    HistoriqueAction.objects.create(
-        bdc=bdc,
-        utilisateur=utilisateur,
-        action=ActionChoices.FACTURATION,
-    )
+        HistoriqueAction.objects.create(
+            bdc=bdc,
+            utilisateur=utilisateur,
+            action=ActionChoices.FACTURATION,
+        )
 
     return bdc
 
@@ -211,15 +215,16 @@ def renvoyer_controle(bdc: BonDeCommande, commentaire: str, utilisateur: User) -
             f"Renvoi impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'À attribuer'."
         )
 
-    bdc.statut = StatutChoices.A_TRAITER
-    bdc.save(update_fields=["statut", "updated_at"])
+    with transaction.atomic():
+        bdc.statut = StatutChoices.A_TRAITER
+        bdc.save(update_fields=["statut", "updated_at"])
 
-    HistoriqueAction.objects.create(
-        bdc=bdc,
-        utilisateur=utilisateur,
-        action=ActionChoices.RENVOI,
-        details={"commentaire": commentaire},
-    )
+        HistoriqueAction.objects.create(
+            bdc=bdc,
+            utilisateur=utilisateur,
+            action=ActionChoices.RENVOI,
+            details={"commentaire": commentaire},
+        )
 
     return bdc
 
@@ -253,55 +258,54 @@ def attribuer_st(
 
     _verifier_checklist_transition(bdc, StatutChoices.A_FAIRE, StatutChoices.EN_COURS)
 
-    bdc.sous_traitant = sous_traitant
-    bdc.mode_attribution = mode
+    with transaction.atomic():
+        bdc.sous_traitant = sous_traitant
+        bdc.mode_attribution = mode
 
-    if mode == "forfait" and lignes_forfait:
-        # Delete existing forfait lines
-        bdc.lignes_forfait.all().delete()
-        total = Decimal("0")
-        for ligne in lignes_forfait:
-            montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
-            LigneForfaitAttribution.objects.create(
-                bdc=bdc,
-                prix_forfaitaire_id=ligne["prix_id"],
-                quantite=ligne["quantite"],
-                prix_unitaire=ligne["prix_unitaire"],
-                montant=montant_ligne,
-            )
-            total += montant_ligne
-        bdc.montant_st = total
-        # Calculate inverse percentage
-        if bdc.montant_ht and bdc.montant_ht > 0:
-            bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
+        if mode == "forfait" and lignes_forfait:
+            bdc.lignes_forfait.all().delete()
+            total = Decimal("0")
+            for ligne in lignes_forfait:
+                montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
+                LigneForfaitAttribution.objects.create(
+                    bdc=bdc,
+                    prix_forfaitaire_id=ligne["prix_id"],
+                    quantite=ligne["quantite"],
+                    prix_unitaire=ligne["prix_unitaire"],
+                    montant=montant_ligne,
+                )
+                total += montant_ligne
+            bdc.montant_st = total
+            if bdc.montant_ht and bdc.montant_ht > 0:
+                bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
+            else:
+                bdc.pourcentage_st = None
         else:
-            bdc.pourcentage_st = None
-    else:
-        bdc.pourcentage_st = pourcentage
-        bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+            bdc.pourcentage_st = pourcentage
+            bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
 
-    bdc.statut = StatutChoices.EN_COURS
-    bdc.save(
-        update_fields=[
-            "sous_traitant",
-            "pourcentage_st",
-            "montant_st",
-            "mode_attribution",
-            "statut",
-            "updated_at",
-        ]
-    )
+        bdc.statut = StatutChoices.EN_COURS
+        bdc.save(
+            update_fields=[
+                "sous_traitant",
+                "pourcentage_st",
+                "montant_st",
+                "mode_attribution",
+                "statut",
+                "updated_at",
+            ]
+        )
 
-    HistoriqueAction.objects.create(
-        bdc=bdc,
-        utilisateur=utilisateur,
-        action=ActionChoices.ATTRIBUTION,
-        details={
-            "sous_traitant": str(sous_traitant),
-            "pourcentage": str(pourcentage),
-            "montant_st": str(bdc.montant_st) if bdc.montant_st else None,
-        },
-    )
+        HistoriqueAction.objects.create(
+            bdc=bdc,
+            utilisateur=utilisateur,
+            action=ActionChoices.ATTRIBUTION,
+            details={
+                "sous_traitant": str(sous_traitant),
+                "pourcentage": str(pourcentage),
+                "montant_st": str(bdc.montant_st) if bdc.montant_st else None,
+            },
+        )
 
     _notifier_st_si_possible(bdc, commentaire=commentaire)
 
@@ -330,53 +334,52 @@ def reattribuer_st(
     ancien_st_telephone = bdc.sous_traitant.telephone if bdc.sous_traitant else ""
     ancien_st_email = bdc.sous_traitant.email if bdc.sous_traitant else ""
 
-    bdc.sous_traitant = nouveau_st
-    bdc.mode_attribution = mode
+    with transaction.atomic():
+        bdc.sous_traitant = nouveau_st
+        bdc.mode_attribution = mode
 
-    if mode == "forfait" and lignes_forfait:
-        # Delete existing forfait lines
-        bdc.lignes_forfait.all().delete()
-        total = Decimal("0")
-        for ligne in lignes_forfait:
-            montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
-            LigneForfaitAttribution.objects.create(
-                bdc=bdc,
-                prix_forfaitaire_id=ligne["prix_id"],
-                quantite=ligne["quantite"],
-                prix_unitaire=ligne["prix_unitaire"],
-                montant=montant_ligne,
-            )
-            total += montant_ligne
-        bdc.montant_st = total
-        # Calculate inverse percentage
-        if bdc.montant_ht and bdc.montant_ht > 0:
-            bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
+        if mode == "forfait" and lignes_forfait:
+            bdc.lignes_forfait.all().delete()
+            total = Decimal("0")
+            for ligne in lignes_forfait:
+                montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
+                LigneForfaitAttribution.objects.create(
+                    bdc=bdc,
+                    prix_forfaitaire_id=ligne["prix_id"],
+                    quantite=ligne["quantite"],
+                    prix_unitaire=ligne["prix_unitaire"],
+                    montant=montant_ligne,
+                )
+                total += montant_ligne
+            bdc.montant_st = total
+            if bdc.montant_ht and bdc.montant_ht > 0:
+                bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
+            else:
+                bdc.pourcentage_st = None
         else:
-            bdc.pourcentage_st = None
-    else:
-        bdc.pourcentage_st = pourcentage
-        bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+            bdc.pourcentage_st = pourcentage
+            bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
 
-    bdc.save(
-        update_fields=[
-            "sous_traitant",
-            "pourcentage_st",
-            "montant_st",
-            "mode_attribution",
-            "updated_at",
-        ]
-    )
+        bdc.save(
+            update_fields=[
+                "sous_traitant",
+                "pourcentage_st",
+                "montant_st",
+                "mode_attribution",
+                "updated_at",
+            ]
+        )
 
-    HistoriqueAction.objects.create(
-        bdc=bdc,
-        utilisateur=utilisateur,
-        action=ActionChoices.REATTRIBUTION,
-        details={
-            "ancien_st": ancien_st,
-            "nouveau_st": str(nouveau_st),
-            "pourcentage": str(pourcentage),
-        },
-    )
+        HistoriqueAction.objects.create(
+            bdc=bdc,
+            utilisateur=utilisateur,
+            action=ActionChoices.REATTRIBUTION,
+            details={
+                "ancien_st": ancien_st,
+                "nouveau_st": str(nouveau_st),
+                "pourcentage": str(pourcentage),
+            },
+        )
 
     _notifier_reattribution_si_possible(bdc, ancien_st_telephone, ancien_st_email, commentaire=commentaire)
 

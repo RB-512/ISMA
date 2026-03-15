@@ -120,7 +120,7 @@ def generer_releve_pdf(releve: ReleveFacturation) -> HttpResponse:
     safe_nom = releve.sous_traitant.nom.replace(" ", "_")
     filename = f"releve_{safe_nom}_{releve.numero}.pdf"
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f"attachment; filename={filename}"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
 
@@ -176,6 +176,6 @@ def generer_releve_excel(releve: ReleveFacturation) -> HttpResponse:
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    response["Content-Disposition"] = f"attachment; filename={filename}"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response

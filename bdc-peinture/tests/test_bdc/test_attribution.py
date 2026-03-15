@@ -167,10 +167,10 @@ class TestAttribuerBDCView:
         resp = client_cdt.get(url)
         assert resp.status_code == 200
 
-    def test_secretaire_can_access_attribuer(self, client_secretaire, bdc_a_faire):
+    def test_secretaire_cannot_access_attribuer(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
         resp = client_secretaire.get(url)
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
     def test_statut_incorrect_redirige(self, client_cdt, bdc_a_traiter):
         url = reverse("bdc:attribuer", args=[bdc_a_traiter.pk])
@@ -367,10 +367,10 @@ class TestAttributionPartial:
         assert "Semaine" in content  # period selector present
         assert "Mois" in content
 
-    def test_secretaire_can_access_attribution_partial(self, client_secretaire, bdc_a_faire):
+    def test_secretaire_cannot_access_attribution_partial(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:attribution_partial", kwargs={"pk": bdc_a_faire.pk})
         resp = client_secretaire.get(url)
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
 
 # ─── Tests vue attribution_split (page split-screen) ────────────────────────
@@ -424,10 +424,10 @@ class TestAttributionSplit:
         content = resp.content.decode()
         assert "<html" not in content.lower()
 
-    def test_secretaire_can_access_attribution_split(self, client_secretaire, bdc_a_faire):
+    def test_secretaire_cannot_access_attribution_split(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})
         resp = client_secretaire.get(url)
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
     def test_repartition_st_presente(self, client_cdt, bdc_a_faire, sous_traitant):
         url = reverse("bdc:attribution_split", kwargs={"pk": bdc_a_faire.pk})

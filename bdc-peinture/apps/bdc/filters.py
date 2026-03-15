@@ -18,11 +18,11 @@ class BonDeCommandeFilter(django_filters.FilterSet):
     )
     date_du = django_filters.DateFilter(
         field_name="created_at",
-        lookup_expr="gte",
+        lookup_expr="date__gte",
     )
     date_au = django_filters.DateFilter(
         field_name="created_at",
-        lookup_expr="lte",
+        lookup_expr="date__lte",
     )
 
     class Meta:

@@ -512,6 +512,7 @@ class ReleveFacturation(models.Model):
         verbose_name = "Relevé de facturation"
         verbose_name_plural = "Relevés de facturation"
         ordering = ["-date_creation"]
+        unique_together = [("sous_traitant", "numero")]
 
     def __str__(self):
         return f"Relevé n°{self.numero} — {self.sous_traitant.nom}"

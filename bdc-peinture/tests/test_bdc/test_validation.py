@@ -123,10 +123,10 @@ class TestVueValiderRealisation:
         response = client.get(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
         assert response.status_code == 302
 
-    def test_secretaire_can_access(self, client, utilisateur_secretaire, bdc_en_cours):
+    def test_secretaire_cannot_access(self, client, utilisateur_secretaire, bdc_en_cours):
         client.force_login(utilisateur_secretaire)
         response = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
-        assert response.status_code == 302
+        assert response.status_code == 403
 
 
 class TestVueValiderFacturation:
@@ -142,10 +142,10 @@ class TestVueValiderFacturation:
         response = client.get(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
         assert response.status_code == 302
 
-    def test_secretaire_can_access(self, client, utilisateur_secretaire, bdc_a_facturer):
+    def test_secretaire_cannot_access(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
         response = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
-        assert response.status_code == 302
+        assert response.status_code == 403
 
 
 # ─── 6.5 Tests template detail — boutons conditionnels ─────────────────────
@@ -240,3 +240,44 @@ class TestRecoupementDetail:
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:recoupement_detail", kwargs={"st_pk": sous_traitant.pk}))
         assert response.status_code == 200
+
+
+# ─── RBAC : Secretaire gets 403 on CDT-only workflow views ───────────────
+
+
+class TestRBACSecretaireBloquee:
+    """Verify that Secretaire gets 403 on CDT-only workflow views."""
+
+    def test_secretaire_403_valider_realisation(self, client, utilisateur_secretaire, bdc_en_cours):
+        client.force_login(utilisateur_secretaire)
+        resp = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
+        assert resp.status_code == 403
+
+    def test_secretaire_403_valider_facturation(self, client, utilisateur_secretaire, bdc_a_facturer):
+        client.force_login(utilisateur_secretaire)
+        resp = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
+        assert resp.status_code == 403
+
+    def test_secretaire_can_renvoyer_controle(self, client, utilisateur_secretaire, bdc_a_facturer):
+        client.force_login(utilisateur_secretaire)
+        from apps.bdc.models import BonDeCommande
+
+        bdc_a_faire = BonDeCommande.objects.create(
+            numero_bdc="RBAC-001",
+            bailleur=bdc_a_facturer.bailleur,
+            adresse="1 Rue RBAC",
+            statut=StatutChoices.A_FAIRE,
+            cree_par=bdc_a_facturer.cree_par,
+        )
+        resp = client.post(reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk}), {"commentaire": "Test"})
+        assert resp.status_code == 302  # renvoi OK, redirect
+
+    def test_cdt_can_access_valider_realisation(self, client, utilisateur_cdt, bdc_en_cours):
+        client.force_login(utilisateur_cdt)
+        resp = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
+        assert resp.status_code == 302
+
+    def test_cdt_can_access_valider_facturation(self, client, utilisateur_cdt, bdc_a_facturer):
+        client.force_login(utilisateur_cdt)
+        resp = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
+        assert resp.status_code == 302

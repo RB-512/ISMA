@@ -21,16 +21,15 @@ def client_secretaire(client, utilisateur_secretaire):
 class TestListeUtilisateurs:
     def test_acces_cdt(self, client_cdt):
         resp = client_cdt.get(reverse("gestion:liste"))
-        assert resp.status_code == 200
+        assert resp.status_code == 302  # redirects to config_bailleurs
 
-    def test_secretaire_can_access(self, client_secretaire):
+    def test_secretaire_cannot_access(self, client_secretaire):
         resp = client_secretaire.get(reverse("gestion:liste"))
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
-    def test_liste_affiche_utilisateurs(self, client_cdt, utilisateur_secretaire):
-        resp = client_cdt.get(reverse("gestion:liste"))
-        content = resp.content.decode()
-        assert utilisateur_secretaire.get_full_name() in content or utilisateur_secretaire.email in content
+    def test_liste_redirects_to_config_bailleurs(self, client_cdt, utilisateur_secretaire):
+        resp = client_cdt.get(reverse("gestion:liste"), follow=True)
+        assert resp.status_code == 200
 
 
 class TestCreerUtilisateur:
@@ -68,10 +67,9 @@ class TestCreerUtilisateur:
         user = User.objects.get(username="cdt.user")
         assert user.groups.filter(name="CDT").exists()
 
-    def test_creer_formulaire_invalide_reaffiche(self, client_cdt):
+    def test_creer_formulaire_invalide_redirige(self, client_cdt):
         resp = client_cdt.post(reverse("gestion:creer"), {})
-        assert resp.status_code == 200
-        assert "form_creer" in resp.context
+        assert resp.status_code == 302  # redirects to config_bailleurs with error message
 
 
 class TestModifierRole:

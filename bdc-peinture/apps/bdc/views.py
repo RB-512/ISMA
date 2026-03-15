@@ -22,8 +22,9 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
+from apps.accounts.decorators import group_required
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
 
 from .filters import BonDeCommandeFilter
@@ -62,7 +63,14 @@ def _parse_lignes_forfait(post_data):
         qty = post_data.get(f"ligne_{i}_qty")
         pu = post_data.get(f"ligne_{i}_pu")
         if prix_id and qty and pu:
-            lignes.append({"prix_id": int(prix_id), "quantite": Decimal(qty), "prix_unitaire": Decimal(pu)})
+            try:
+                lignes.append({
+                    "prix_id": int(prix_id),
+                    "quantite": Decimal(qty),
+                    "prix_unitaire": Decimal(pu),
+                })
+            except (ValueError, ArithmeticError):
+                logger.warning("Ligne forfait %d invalide: prix=%s qty=%s pu=%s", i, prix_id, qty, pu)
         i += 1
     return lignes
 
@@ -264,6 +272,10 @@ def upload_pdf(request):
         messages.error(request, "Seuls les fichiers PDF sont acceptés.")
         return render(request, "bdc/upload.html")
 
+    if pdf_file.size > 10 * 1024 * 1024:
+        messages.error(request, "Fichier trop volumineux (max 10 Mo).")
+        return render(request, "bdc/upload.html")
+
     # Écriture dans un fichier temporaire (pdfplumber nécessite un chemin)
     tmp_fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
     try:
@@ -373,56 +385,59 @@ def creer_bdc(request):
     date_emission = _parse_date(donnees.get("date_emission"))
     delai_execution = _parse_date(donnees.get("delai_execution"))
 
-    bdc = BonDeCommande(
-        numero_bdc=numero_bdc,
-        numero_marche=donnees.get("numero_marche", ""),
-        bailleur=bailleur,
-        date_emission=date_emission,
-        programme_residence=donnees.get("programme_residence", ""),
-        adresse=donnees.get("adresse", ""),
-        code_postal=donnees.get("code_postal", ""),
-        ville=donnees.get("ville", ""),
-        logement_numero=donnees.get("logement_numero", ""),
-        logement_type=donnees.get("logement_type", ""),
-        logement_etage=donnees.get("logement_etage", ""),
-        logement_porte=donnees.get("logement_porte", ""),
-        objet_travaux=donnees.get("objet_travaux", ""),
-        delai_execution=delai_execution,
-        occupant_nom=donnees.get("occupant_nom", ""),
-        occupant_telephone=donnees.get("occupant_telephone", ""),
-        occupant_email=donnees.get("occupant_email", ""),
-        emetteur_nom=donnees.get("emetteur_nom", ""),
-        emetteur_telephone=donnees.get("emetteur_telephone", ""),
-        montant_ht=_parse_decimal(donnees.get("montant_ht")),
-        montant_tva=_parse_decimal(donnees.get("montant_tva")),
-        montant_ttc=_parse_decimal(donnees.get("montant_ttc")),
-        cree_par=request.user,
-        statut=StatutChoices.A_TRAITER,
-    )
-    bdc.save()
+    from django.db import transaction
 
-    # Lignes de prestation depuis la session
-    for i, ligne_data in enumerate(lignes_session):
-        LignePrestation.objects.create(
-            bdc=bdc,
-            designation=ligne_data.get("designation", ""),
-            quantite=Decimal(str(ligne_data.get("quantite", "0"))),
-            unite=ligne_data.get("unite", ""),
-            prix_unitaire=Decimal(str(ligne_data.get("prix_unitaire", "0"))),
-            montant=Decimal(str(ligne_data.get("montant_ht") or ligne_data.get("montant") or "0")),
-            ordre=i,
+    with transaction.atomic():
+        bdc = BonDeCommande(
+            numero_bdc=numero_bdc,
+            numero_marche=donnees.get("numero_marche", ""),
+            bailleur=bailleur,
+            date_emission=date_emission,
+            programme_residence=donnees.get("programme_residence", ""),
+            adresse=donnees.get("adresse", ""),
+            code_postal=donnees.get("code_postal", ""),
+            ville=donnees.get("ville", ""),
+            logement_numero=donnees.get("logement_numero", ""),
+            logement_type=donnees.get("logement_type", ""),
+            logement_etage=donnees.get("logement_etage", ""),
+            logement_porte=donnees.get("logement_porte", ""),
+            objet_travaux=donnees.get("objet_travaux", ""),
+            delai_execution=delai_execution,
+            occupant_nom=donnees.get("occupant_nom", ""),
+            occupant_telephone=donnees.get("occupant_telephone", ""),
+            occupant_email=donnees.get("occupant_email", ""),
+            emetteur_nom=donnees.get("emetteur_nom", ""),
+            emetteur_telephone=donnees.get("emetteur_telephone", ""),
+            montant_ht=_parse_decimal(donnees.get("montant_ht")),
+            montant_tva=_parse_decimal(donnees.get("montant_tva")),
+            montant_ttc=_parse_decimal(donnees.get("montant_ttc")),
+            cree_par=request.user,
+            statut=StatutChoices.A_TRAITER,
         )
+        bdc.save()
 
-    # PDF original depuis la session
-    tmp_path = request.session.get("bdc_pdf_temp")
-    pdf_name = request.session.get("bdc_pdf_name", "bdc.pdf")
-    if tmp_path and default_storage.exists(tmp_path):
-        with default_storage.open(tmp_path) as f:
-            bdc.pdf_original.save(pdf_name, File(f), save=True)
-        default_storage.delete(tmp_path)
+        # Lignes de prestation depuis la session
+        for i, ligne_data in enumerate(lignes_session):
+            LignePrestation.objects.create(
+                bdc=bdc,
+                designation=ligne_data.get("designation", ""),
+                quantite=Decimal(str(ligne_data.get("quantite", "0"))),
+                unite=ligne_data.get("unite", ""),
+                prix_unitaire=Decimal(str(ligne_data.get("prix_unitaire", "0"))),
+                montant=Decimal(str(ligne_data.get("montant_ht") or ligne_data.get("montant") or "0")),
+                ordre=i,
+            )
 
-    # Traçabilité
-    enregistrer_action(bdc, request.user, ActionChoices.CREATION)
+        # PDF original depuis la session
+        tmp_path = request.session.get("bdc_pdf_temp")
+        pdf_name = request.session.get("bdc_pdf_name", "bdc.pdf")
+        if tmp_path and default_storage.exists(tmp_path):
+            with default_storage.open(tmp_path) as f:
+                bdc.pdf_original.save(pdf_name, File(f), save=True)
+            default_storage.delete(tmp_path)
+
+        # Traçabilité
+        enregistrer_action(bdc, request.user, ActionChoices.CREATION)
 
     # Nettoyage session
     for cle in ("bdc_extrait", "bdc_pdf_name", "bdc_pdf_temp"):
@@ -454,6 +469,8 @@ def _render_sidebar(request, bdc, error_message=None, success_message=None):
             actif=True, transition=TransitionChoices.FACTURATION
         ).exists()
 
+    is_cdt = request.user.groups.filter(name="CDT").exists()
+
     response = render(
         request,
         "bdc/_detail_sidebar.html",
@@ -466,6 +483,7 @@ def _render_sidebar(request, bdc, error_message=None, success_message=None):
             "error_message": error_message,
             "success_message": success_message,
             "checklist_transitions": checklist_transitions,
+            "is_cdt": is_cdt,
         },
     )
     response["HX-Trigger"] = "bdc-updated"
@@ -519,6 +537,8 @@ def detail_bdc(request, pk: int):
     form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
     transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
 
+    is_cdt = request.user.groups.filter(name="CDT").exists()
+
     return render(
         request,
         "bdc/detail.html",
@@ -528,6 +548,7 @@ def detail_bdc(request, pk: int):
             "historique": historique,
             "form_edition": form_edition,
             "transitions": transitions,
+            "is_cdt": is_cdt,
         },
     )
 
@@ -539,6 +560,9 @@ def modifier_bdc(request, pk: int):
         return redirect("bdc:detail", pk=pk)
 
     bdc = get_object_or_404(BonDeCommande, pk=pk)
+    if bdc.statut not in (StatutChoices.A_TRAITER, StatutChoices.A_FAIRE):
+        messages.error(request, "Modification impossible : le BDC n'est plus en contrôle.")
+        return redirect("bdc:detail", pk=pk)
     form = BDCEditionForm(request.POST, instance=bdc)
     if form.is_valid():
         form.save()
@@ -571,6 +595,9 @@ def sidebar_save_and_transition(request, pk: int):
                 changer_statut(bdc, nouveau_statut, request.user)
             except (TransitionInvalide, BDCIncomplet) as e:
                 error_message = str(e)
+    else:
+        erreurs = "; ".join(f"{champ}: {', '.join(msgs)}" for champ, msgs in form.errors.items())
+        error_message = f"Erreur de validation : {erreurs}"
 
     # Rebuild sidebar context
 
@@ -636,8 +663,11 @@ def _msg_attribution(bdc, reattribution=False):
     base = f"BDC n°{bdc.numero_bdc} {verbe} à {bdc.sous_traitant}. "
     if bdc.sous_traitant and bdc.sous_traitant.email:
         base += "Un email lui a été adressé. "
-    lien = f'<a href="{lien_retour}" class="underline font-medium">Continuer les attributions →</a>'
-    return mark_safe(base + lien)
+    return format_html(
+        '{}<a href="{}" class="underline font-medium">Continuer les attributions →</a>',
+        base,
+        lien_retour,
+    )
 
 
 # ─── Attribution / Réattribution ─────────────────────────────────────────
@@ -659,7 +689,7 @@ def _save_checklist_from_post(bdc, request, items):
         ChecklistResultat.objects.update_or_create(bdc=bdc, item=item, defaults={"coche": coche})
 
 
-@login_required
+@group_required("CDT")
 def attribuer_bdc(request, pk: int):
     """GET : formulaire d'attribution — POST : attribue le BDC à un ST."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur"), pk=pk)
@@ -708,7 +738,7 @@ def attribuer_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
-@login_required
+@group_required("CDT")
 def reattribuer_bdc(request, pk: int):
     """GET : formulaire pré-rempli — POST : réattribue le BDC à un autre ST."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
@@ -813,7 +843,7 @@ def _get_repartition_st(date_du=None, date_au=None, statuts=None, date_field="em
     )
 
 
-@login_required
+@group_required("CDT")
 def attribution_split(request, pk: int):
     """Page split-screen d'attribution : PDF a gauche, panneau d'action a droite."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
@@ -897,7 +927,7 @@ def attribution_split(request, pk: int):
     return render(request, "bdc/attribution_split.html", ctx)
 
 
-@login_required
+@group_required("CDT")
 def attribution_partial(request, pk: int):
     """Partial HTMX : tableau repartition ST + formulaire attribution/reattribution."""
     bdc = get_object_or_404(BonDeCommande, pk=pk)
@@ -979,7 +1009,7 @@ def attribution_partial(request, pk: int):
 # ─── Validation réalisation / Facturation ────────────────────────────────────
 
 
-@login_required
+@group_required("CDT")
 def valider_realisation_bdc(request, pk: int):
     """POST-only : le CDT valide la réalisation (EN_COURS → A_FACTURER)."""
     if request.method != "POST":
@@ -1002,7 +1032,7 @@ def valider_realisation_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
-@login_required
+@group_required("CDT")
 def valider_facturation_bdc(request, pk: int):
     """POST-only : le CDT passe le BDC en facturation (A_FACTURER → FACTURE)."""
     if request.method != "POST":
@@ -1039,7 +1069,7 @@ _TRANSITION_ACTIONS = {
 }
 
 
-@login_required
+@group_required("CDT")
 def sidebar_checklist(request, pk: int):
     """GET: affiche la checklist pour une transition. POST: sauvegarde + tente la transition."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
@@ -1087,19 +1117,21 @@ def sidebar_checklist(request, pk: int):
 
         return _render_sidebar(request, bdc)
 
-    # GET: si pas d'items, faire la transition directement
+    # GET: si pas d'items, afficher un formulaire de confirmation POST
     if not items:
         action_info = _TRANSITION_ACTIONS.get(transition_key)
         if action_info:
-            try:
-                action_info[0](bdc, request.user)
-                return _render_sidebar(
-                    request,
-                    bdc,
-                    success_message=f"BDC n°{bdc.numero_bdc} : {action_info[1]}.",
-                )
-            except (TransitionInvalide, BDCIncomplet) as e:
-                return _render_sidebar(request, bdc, error_message=str(e))
+            return render(
+                request,
+                "bdc/partials/_checklist_transition.html",
+                {
+                    "bdc": bdc,
+                    "checklist_items": [],
+                    "transition_key": transition_key,
+                    "items_deja_coches": set(),
+                    "confirm_only": True,
+                },
+            )
 
     items_deja_coches = set(
         bdc.checklist_resultats.filter(item__transition=transition_key, coche=True).values_list("item_id", flat=True)
@@ -1205,7 +1237,8 @@ def export_facturation(request):
     from .exports import generer_export_excel
     from .forms import ExportFacturationForm
 
-    form = ExportFacturationForm(request.GET or None)
+    form_data = request.POST if request.method == "POST" else (request.GET or None)
+    form = ExportFacturationForm(form_data)
 
     # Queryset de base : BDC à facturer + facturés
     queryset = BonDeCommande.objects.filter(
@@ -1320,7 +1353,7 @@ def controle_bdc(request, pk: int):
 # ─── Relevés de facturation ─────────────────────────────────────────────────
 
 
-@login_required
+@group_required("CDT")
 def releve_creer(request, st_pk: int):
     """POST-only : crée un relevé brouillon pour un ST."""
     from apps.sous_traitants.models import SousTraitant
@@ -1375,7 +1408,7 @@ def releve_detail(request, pk: int):
     )
 
 
-@login_required
+@group_required("CDT")
 def releve_valider(request, pk: int):
     """POST-only : valide un relevé brouillon."""
     from .models import ReleveFacturation
@@ -1394,7 +1427,7 @@ def releve_valider(request, pk: int):
     return redirect("bdc:releve_detail", pk=pk)
 
 
-@login_required
+@group_required("CDT")
 def releve_retirer_bdc(request, pk: int, bdc_pk: int):
     """POST-only : retire un BDC d'un relevé brouillon."""
     from .models import ReleveFacturation

@@ -142,6 +142,7 @@ class TestDetailBDCEnrichi:
     def test_contacts_occupant_affiches(self, client, utilisateur_secretaire, bdc_a_traiter):
         bdc_a_traiter.occupant_nom = "Mme Dupont"
         bdc_a_traiter.occupant_telephone = "0612345678"
+        bdc_a_traiter.occupation = "OCCUPE"
         bdc_a_traiter.save()
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:detail", kwargs={"pk": bdc_a_traiter.pk}))

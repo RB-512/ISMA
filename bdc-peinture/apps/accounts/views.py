@@ -11,12 +11,12 @@ from django.contrib.auth.models import Group
 from django.db import models
 from django.db.models import ProtectedError
 from django.http import HttpResponse
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.crypto import get_random_string
 from django.views.generic import TemplateView
 
+from apps.accounts.decorators import group_required
 from apps.accounts.forms import CreerUtilisateurForm, ModifierRoleForm, ModifierUtilisateurForm
 from apps.bdc.models import Bailleur, ChecklistItem, ConfigEmail, TransitionChoices
 
@@ -32,12 +32,12 @@ class HomeRedirectView(TemplateView):
         return redirect("account_login")
 
 
-@login_required
+@group_required("CDT")
 def liste_utilisateurs(request):
     return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
-@login_required
+@group_required("CDT")
 def creer_utilisateur(request):
     config_url = f"{reverse('gestion:config_bailleurs')}?tab=acces"
     if request.method != "POST":
@@ -52,7 +52,7 @@ def creer_utilisateur(request):
     return redirect(config_url)
 
 
-@login_required
+@group_required("CDT")
 def modifier_role(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if request.method == "POST":
@@ -64,7 +64,7 @@ def modifier_role(request, pk):
     return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
-@login_required
+@group_required("CDT")
 def desactiver_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
@@ -77,7 +77,7 @@ def desactiver_utilisateur(request, pk):
     return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
-@login_required
+@group_required("CDT")
 def modifier_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if request.method == "POST":
@@ -98,7 +98,7 @@ def modifier_utilisateur(request, pk):
     return render(request, "accounts/partials/_modifier_utilisateur.html", {"form": form, "utilisateur": utilisateur})
 
 
-@login_required
+@group_required("CDT")
 def reset_password_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
@@ -116,7 +116,7 @@ def reset_password_utilisateur(request, pk):
     return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
-@login_required
+@group_required("CDT")
 def reactiver_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if request.method == "POST":
@@ -126,7 +126,7 @@ def reactiver_utilisateur(request, pk):
     return redirect(f"{reverse('gestion:config_bailleurs')}?tab=acces")
 
 
-@login_required
+@group_required("CDT")
 def supprimer_utilisateur(request, pk):
     utilisateur = get_object_or_404(User, pk=pk)
     if utilisateur == request.user:
@@ -149,7 +149,7 @@ def supprimer_utilisateur(request, pk):
 # ── Checklist de contrôle ──────────────────────────────────────────────────
 
 
-@login_required
+@group_required("CDT")
 def checklist_liste(request):
     transition = request.GET.get("transition", TransitionChoices.CONTROLE)
     if transition not in TransitionChoices.values:
@@ -176,7 +176,7 @@ def checklist_liste(request):
     )
 
 
-@login_required
+@group_required("CDT")
 def checklist_modifier(request, pk):
     item = get_object_or_404(ChecklistItem, pk=pk)
     redirect_url = f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={item.transition}"
@@ -200,7 +200,7 @@ def checklist_modifier(request, pk):
     return render(request, "accounts/partials/_modifier_checklist.html", {"item": item})
 
 
-@login_required
+@group_required("CDT")
 def checklist_supprimer(request, pk):
     item = get_object_or_404(ChecklistItem, pk=pk)
     redirect_url = f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={item.transition}"
@@ -246,7 +246,7 @@ def config_bailleurs(request):
     )
 
 
-@login_required
+@group_required("CDT")
 def config_email_save(request):
     if request.method != "POST":
         return redirect("gestion:config_bailleurs")
@@ -257,8 +257,6 @@ def config_email_save(request):
     messages.success(request, "Template email mis à jour.")
     return redirect("gestion:config_bailleurs")
 
-
-@login_required
 
 # ── Prévisualisation fiche chantier ──────────────────────────────────────
 

@@ -20,7 +20,9 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 elif not getattr(settings, "USE_NGINX_MEDIA", True):
-    # LAN sans nginx : forcer le serving des media (static() refuse si DEBUG=False)
+    from django.contrib.auth.decorators import login_required
+
+    # LAN sans nginx : forcer le serving des media avec authentification
     urlpatterns += [
-        re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
+        re_path(r"^media/(?P<path>.*)$", login_required(serve), {"document_root": settings.MEDIA_ROOT}),
     ]

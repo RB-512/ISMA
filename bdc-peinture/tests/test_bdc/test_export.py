@@ -201,10 +201,10 @@ class TestVueExportTelechargement:
         assert response.status_code == 200
         assert "spreadsheetml" in response["Content-Type"]
 
-    def test_post_avec_filtres_get(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
+    def test_post_avec_filtres(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
         client.force_login(utilisateur_cdt)
-        url = reverse(URL_EXPORT) + "?statut=A_FACTURER"
-        response = client.post(url)
+        url = reverse(URL_EXPORT)
+        response = client.post(url, {"statut": "A_FACTURER"})
         wb = _load_wb(response)
         ws = wb.active
         assert ws.max_row == 2  # En-tête + 1 ligne A_FACTURER

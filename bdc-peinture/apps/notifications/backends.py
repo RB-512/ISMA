@@ -76,8 +76,12 @@ class OvhSmsBackend(BaseSmsBackend):
             "X-Ovh-Signature": signature,
         }
 
-        response = requests.post(url, json=body, headers=headers, timeout=10)
-        response.raise_for_status()
+        try:
+            response = requests.post(url, json=body, headers=headers, timeout=10)
+            response.raise_for_status()
+        except Exception:
+            logger.warning("Échec envoi SMS OVH à %s", telephone, exc_info=True)
+            return False
         logger.info("SMS OVH envoyé à %s (service: %s)", telephone, service_name)
         return True
 

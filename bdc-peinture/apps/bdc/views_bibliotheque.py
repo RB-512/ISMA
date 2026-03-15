@@ -10,7 +10,6 @@ from .models import PrixForfaitaire
 
 
 @login_required
-@group_required("CDT")
 def bibliotheque_liste(request):
     """Liste des prix forfaitaires avec recherche et tri."""
     q = request.GET.get("q", "").strip()
@@ -21,7 +20,8 @@ def bibliotheque_liste(request):
         prix = prix.filter(Q(reference__icontains=q) | Q(designation__icontains=q))
     prix = prix.order_by("-reference" if sort == "desc" else "reference")
 
-    ctx = {"prix_list": prix, "q": q, "sort": sort}
+    is_cdt = request.user.groups.filter(name="CDT").exists()
+    ctx = {"prix_list": prix, "q": q, "sort": sort, "is_cdt": is_cdt}
 
     if request.headers.get("HX-Request"):
         return render(request, "bdc/partials/_bibliotheque_table.html", ctx)
@@ -80,7 +80,20 @@ def bibliotheque_modifier(request, pk):
     prix.reference = request.POST.get("reference", prix.reference).strip()
     prix.designation = request.POST.get("designation", prix.designation).strip()
     prix.unite = request.POST.get("unite", prix.unite).strip()
-    prix.prix_unitaire = request.POST.get("prix_unitaire", prix.prix_unitaire)
+    prix_unitaire_str = request.POST.get("prix_unitaire", "").strip()
+    if prix_unitaire_str:
+        try:
+            from decimal import Decimal, InvalidOperation
+
+            prix.prix_unitaire = Decimal(prix_unitaire_str)
+        except InvalidOperation:
+            messages.error(request, "Prix unitaire invalide.")
+            prix_list = PrixForfaitaire.objects.all()
+            return render(request, "bdc/partials/_bibliotheque_table.html", {"prix_list": prix_list})
+    if not prix.reference or not prix.designation or not prix.unite:
+        messages.error(request, "Référence, désignation et unité sont obligatoires.")
+        prix_list = PrixForfaitaire.objects.all()
+        return render(request, "bdc/partials/_bibliotheque_table.html", {"prix_list": prix_list})
     prix.save()
 
     prix_list = PrixForfaitaire.objects.all()

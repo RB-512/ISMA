@@ -189,13 +189,13 @@ class TestModifierUtilisateurForm:
 
 @pytest.mark.django_db
 class TestVuesGestion:
-    def test_secretaire_can_access_gestion(self, client_secretaire):
+    def test_secretaire_cannot_access_gestion(self, client_secretaire):
         resp = client_secretaire.get(reverse("gestion:liste"))
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
     def test_cdt_can_access_liste(self, client_cdt):
         resp = client_cdt.get(reverse("gestion:liste"))
-        assert resp.status_code == 200
+        assert resp.status_code == 302  # redirects to config_bailleurs
 
     def test_creer_utilisateur_with_email(self, client_cdt, groupe_secretaire_accent):
         resp = client_cdt.post(
@@ -234,7 +234,8 @@ class TestVuesGestion:
                 "role": "Secretaire",
             },
         )
-        assert resp.status_code == 302
+        assert resp.status_code == 200  # HTMX response with HX-Redirect header
+        assert "HX-Redirect" in resp.headers
         utilisateur_secretaire.refresh_from_db()
         assert utilisateur_secretaire.first_name == "SophieModif"
         assert utilisateur_secretaire.email == "sophie.modif@example.com"

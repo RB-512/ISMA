@@ -441,7 +441,7 @@ class TestRenvoiControle:
     def test_renvoi_accessible_for_secretaire(self, client_secretaire, bdc_a_faire):
         url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
         resp = client_secretaire.post(url, {"commentaire": "Test"})
-        assert resp.status_code == 302
+        assert resp.status_code == 302  # redirect after renvoi
 
     def test_renvoi_get_not_allowed(self, client_cdt, bdc_a_faire):
         url = reverse("bdc:renvoyer_controle", kwargs={"pk": bdc_a_faire.pk})
@@ -588,13 +588,14 @@ class TestSidebarChecklistTransition:
         content = resp.content.decode()
         assert "Photos avant" in content
 
-    def test_get_sans_items_fait_transition_directe(self, client_cdt, bdc_en_cours):
-        """Si pas d'items pour cette transition, la transition passe directement."""
+    def test_get_sans_items_affiche_confirmation(self, client_cdt, bdc_en_cours):
+        """Si pas d'items pour cette transition, affiche un formulaire de confirmation (pas de transition directe)."""
         url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})
         resp = client_cdt.get(url + "?transition=EN_COURS__A_FACTURER")
         assert resp.status_code == 200
         bdc_en_cours.refresh_from_db()
-        assert bdc_en_cours.statut == StatutChoices.A_FACTURER
+        assert bdc_en_cours.statut == StatutChoices.EN_COURS  # pas encore transitionné
+        assert "confirm_only" in resp.content.decode() or "Confirmer" in resp.content.decode()
 
     def test_post_checklist_complete_valide_transition(self, client_cdt, bdc_en_cours, checklist_items_realisation):
         url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})

@@ -12,7 +12,8 @@
         </p>
     </div>
 
-    {# Formulaire d'ajout #}
+    {# Formulaire d'ajout (CDT uniquement) #}
+    {% if is_cdt %}
     <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
         <h2 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             Ajouter un prix
@@ -48,6 +49,7 @@
             </div>
         </form>
     </section>
+    {% endif %}
 
     {# Barre de recherche #}
     <div class="flex items-center gap-3">

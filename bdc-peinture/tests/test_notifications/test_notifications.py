@@ -215,7 +215,7 @@ class TestEnvoyerEmailAttribution:
         assert result is False
         assert len(mail.outbox) == 0
 
-    def test_email_sans_pdf_si_masquage_absent(self, bdc_a_faire, sous_traitant):
+    def test_email_avec_fiche_chantier(self, bdc_a_faire, sous_traitant):
         bdc_a_faire.sous_traitant = sous_traitant
         bdc_a_faire.save()
 
@@ -223,8 +223,9 @@ class TestEnvoyerEmailAttribution:
 
         assert result is True
         email_sent = mail.outbox[0]
-        assert len(email_sent.attachments) == 0
-        assert "document" in email_sent.body
+        # La fiche chantier est generee depuis les donnees en base
+        assert len(email_sent.attachments) == 1
+        assert "fiche_chantier" in email_sent.attachments[0][0]
 
 
 class TestEnvoyerEmailReattribution:

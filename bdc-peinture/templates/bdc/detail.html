@@ -43,10 +43,14 @@
             {% if bdc.statut == "A_FAIRE" %}
             <div x-data="{ showRenvoi: false }">
                 <div class="flex items-center gap-2">
+                    {% if is_cdt %}
                     <a href="{% url 'bdc:attribution_split' bdc.pk %}"
                        class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                         Attribuer
                     </a>
+                    {% else %}
+                    <span class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-sm font-medium rounded-lg whitespace-nowrap cursor-not-allowed" title="Action reservee au conducteur de travaux">Attribuer</span>
+                    {% endif %}
                     <button type="button" @click="showRenvoi = !showRenvoi"
                             class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                         Renvoyer au contr&ocirc;le
@@ -64,6 +68,7 @@
             </div>
             {% endif %}
             {% if bdc.statut == "EN_COURS" %}
+            {% if is_cdt %}
             <a href="{% url 'bdc:attribution_split' bdc.pk %}"
                class="px-4 py-2 bg-warning hover:bg-warning-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                 Réattribuer
@@ -74,8 +79,16 @@
                     Valider réalisation
                 </button>
             </form>
+            {% else %}
+            <div class="flex items-center gap-2">
+                <span class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-sm font-medium rounded-lg whitespace-nowrap cursor-not-allowed" title="Action reservee au conducteur de travaux">Réattribuer</span>
+                <span class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-sm font-medium rounded-lg whitespace-nowrap cursor-not-allowed" title="Action reservee au conducteur de travaux">Valider réalisation</span>
+            </div>
+            <p class="text-xs text-[var(--color-text-muted)] mt-1 italic">Actions reservees au conducteur de travaux</p>
+            {% endif %}
             {% endif %}
             {% if bdc.statut == "A_FACTURER" %}
+            {% if is_cdt %}
             <form method="POST" action="{% url 'bdc:valider_facturation' bdc.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
@@ -89,6 +102,13 @@
                     Annuler validation
                 </button>
             </form>
+            {% else %}
+            <div class="flex items-center gap-2">
+                <span class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-sm font-medium rounded-lg whitespace-nowrap cursor-not-allowed" title="Action reservee au conducteur de travaux">Passer en facturation</span>
+                <span class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-sm font-medium rounded-lg whitespace-nowrap cursor-not-allowed" title="Action reservee au conducteur de travaux">Annuler validation</span>
+            </div>
+            <p class="text-xs text-[var(--color-text-muted)] mt-1 italic">Actions reservees au conducteur de travaux</p>
+            {% endif %}
             {% endif %}
             {% if bdc.statut == "A_TRAITER" %}
             <a href="{% url 'bdc:controle' pk=bdc.pk %}"

@@ -17,6 +17,7 @@ dependencies = [
     "openpyxl>=3.1",
     "requests>=2.31",
     "whitenoise>=6.7",
+    "xhtml2pdf>=0.2.17",
 ]
 
 [project.optional-dependencies]
