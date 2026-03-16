@@ -55,6 +55,19 @@
       }
     </script>
 
+    {# ── Sidebar pre-render (CSS pur, hors Tailwind CDN) ── #}
+    <style>
+      .sidebar-collapsed .isma-sidebar { width: 4rem !important; }
+      .sidebar-collapsed .isma-main   { margin-left: 4rem !important; }
+      :not(.sidebar-collapsed) .isma-sidebar { width: 15rem; }
+      :not(.sidebar-collapsed) .isma-main   { margin-left: 15rem; }
+      .isma-sidebar, .isma-main { transition: none; }
+      .sidebar-ready .isma-sidebar { transition: width 300ms ease-in-out; }
+      .sidebar-ready .isma-main   { transition: margin 300ms ease-in-out; }
+      nav.overflow-y-auto { scrollbar-width: none; }
+      nav.overflow-y-auto::-webkit-scrollbar { display: none; }
+    </style>
+
     {# ── Design System CSS Variables + Global Styles ── #}
     <style type="text/tailwindcss">
       :root {
@@ -75,25 +88,6 @@
       body {
         background-color: var(--color-surface);
         color: var(--color-text);
-      }
-
-      /* ── Sidebar : pre-render position (avant Alpine) ── */
-      .sidebar-collapsed .isma-sidebar { width: 4rem; }    /* w-16 */
-      .sidebar-collapsed .isma-main   { margin-left: 4rem; }
-      :not(.sidebar-collapsed) .isma-sidebar { width: 15rem; } /* w-60 */
-      :not(.sidebar-collapsed) .isma-main   { margin-left: 15rem; }
-
-      /* Pas de transition tant qu'Alpine n'a pas init */
-      .isma-sidebar, .isma-main { transition: none !important; }
-      .sidebar-ready .isma-sidebar { transition: width 300ms ease-in-out !important; }
-      .sidebar-ready .isma-main   { transition: margin 300ms ease-in-out !important; }
-
-      /* ── Sidebar : masquer scrollbar ── */
-      nav.overflow-y-auto {
-        scrollbar-width: none; /* Firefox */
-      }
-      nav.overflow-y-auto::-webkit-scrollbar {
-        display: none; /* Chrome, Safari, Edge */
       }
 
       /* ── Global widget styles ── */
@@ -136,6 +130,7 @@
           toggle() {
             this.collapsed = !this.collapsed;
             localStorage.setItem('isma-sidebar', this.collapsed ? 'collapsed' : 'expanded');
+            document.documentElement.classList.toggle('sidebar-collapsed', this.collapsed);
           }
         });
         // Enable transitions only after Alpine has applied its classes
@@ -154,7 +149,6 @@
 
         {# ── Sidebar ─────────────────────────────────────────────────────────── #}
         <aside
-          :class="$store.sidebar.collapsed ? 'w-16' : 'w-60'"
           class="isma-sidebar fixed inset-y-0 left-0 z-30 flex flex-col
                  bg-primary text-white"
         >
@@ -265,8 +259,7 @@
         </aside>
 
         {# ── Main content ────────────────────────────────────────────────────── #}
-        <div :class="$store.sidebar.collapsed ? 'ml-16' : 'ml-60'"
-             class="isma-main flex-1">
+        <div class="isma-main flex-1">
 
             {# ── Messages flash ── #}
             {% if messages %}
