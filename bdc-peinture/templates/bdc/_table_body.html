@@ -25,7 +25,14 @@
                 hx-target="#sidebar-content"
                 hx-swap="innerHTML"
                 @click="selectedBdc = {{ bdc.pk }}">
-                <td class="px-4 py-3 text-sm font-medium font-mono text-accent">{{ bdc.numero_bdc }}</td>
+                <td class="px-4 py-3 text-sm font-medium font-mono text-accent whitespace-nowrap">
+                    {{ bdc.numero_bdc }}
+                    {% if bdc.statut == 'A_TRAITER' and bdc.notes %}
+                    <svg class="w-3.5 h-3.5 ml-1 inline-block text-amber-500 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Commentaire">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11l4-4h6a2 2 0 002-2v-1M18 9V7a2 2 0 00-2-2h-1M15 5V3a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2h1"/>
+                    </svg>
+                    {% endif %}
+                </td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.bailleur.code }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.adresse|truncatechars:40 }}</td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text)]">{{ bdc.ville }}</td>
@@ -47,11 +54,6 @@
                         {% endif %}">
                         {{ bdc.get_statut_display }}
                     </span>
-                    {% if bdc.statut == 'A_TRAITER' and bdc.notes %}
-                    <svg class="w-3.5 h-3.5 ml-1.5 inline-block text-amber-600/60 dark:text-amber-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Commentaire">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                    </svg>
-                    {% endif %}
                 </td>
                 <td class="px-4 py-3 text-sm font-mono text-[var(--color-text-muted)]">{{ bdc.created_at|date:"d/m/Y" }}</td>
             </tr>
