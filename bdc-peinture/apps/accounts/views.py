@@ -149,7 +149,7 @@ def supprimer_utilisateur(request, pk):
 # ── Checklist de contrôle ──────────────────────────────────────────────────
 
 
-@group_required("CDT")
+@group_required("CDT", "Secretaire")
 def checklist_liste(request):
     transition = request.GET.get("transition", TransitionChoices.CONTROLE)
     if transition not in TransitionChoices.values:
@@ -176,7 +176,7 @@ def checklist_liste(request):
     )
 
 
-@group_required("CDT")
+@group_required("CDT", "Secretaire")
 def checklist_modifier(request, pk):
     item = get_object_or_404(ChecklistItem, pk=pk)
     redirect_url = f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={item.transition}"
@@ -200,7 +200,7 @@ def checklist_modifier(request, pk):
     return render(request, "accounts/partials/_modifier_checklist.html", {"item": item})
 
 
-@group_required("CDT")
+@group_required("CDT", "Secretaire")
 def checklist_supprimer(request, pk):
     item = get_object_or_404(ChecklistItem, pk=pk)
     redirect_url = f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={item.transition}"
