@@ -129,12 +129,13 @@
                                     <option value="">---------</option>
                                     <option value="BADGE_CODE" {% if bdc.type_acces == 'BADGE_CODE' %}selected{% endif %}>Badge / Code</option>
                                     <option value="CLE" {% if bdc.type_acces == 'CLE' %}selected{% endif %}>Clé à récupérer</option>
+                                    <option value="PASS_CHANTIER" {% if bdc.type_acces == 'PASS_CHANTIER' %}selected{% endif %}>Pass chantier</option>
                                 </select>
                                 {% if form_edition.type_acces.errors %}<p class="mt-1 text-xs text-red-500">{{ form_edition.type_acces.errors|join:", " }}</p>{% endif %}
                             </div>
 
-                            {# Vacant : détail accès #}
-                            <div x-show="occupation === 'VACANT' && typeAcces !== ''" x-transition>
+                            {# Vacant : détail accès (pas pour Pass chantier) #}
+                            <div x-show="occupation === 'VACANT' && typeAcces !== '' && typeAcces !== 'PASS_CHANTIER'" x-transition>
                                 <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.acces_complement.label }} <span class="text-red-500">*</span></label>
                                 {{ form_edition.acces_complement }}
                                 {% if form_edition.acces_complement.errors %}<p class="mt-1 text-xs text-red-500">{{ form_edition.acces_complement.errors|join:", " }}</p>{% endif %}

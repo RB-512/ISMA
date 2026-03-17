@@ -133,6 +133,7 @@ class OccupationChoices(models.TextChoices):
 class TypeAccesChoices(models.TextChoices):
     BADGE_CODE = "BADGE_CODE", "Badge / Code"
     CLE = "CLE", "Clé à récupérer"
+    PASS_CHANTIER = "PASS_CHANTIER", "Pass chantier"
 
 
 class TypeBonChoices(models.TextChoices):

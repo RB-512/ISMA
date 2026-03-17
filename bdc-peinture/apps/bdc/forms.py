@@ -187,9 +187,10 @@ class BDCEditionForm(forms.ModelForm):
             if not occupation:
                 self.add_error("occupation", "Ce champ est obligatoire pour valider le contrôle.")
             elif occupation == "VACANT":
-                if not cleaned.get("type_acces"):
+                type_acces = cleaned.get("type_acces")
+                if not type_acces:
                     self.add_error("type_acces", "Ce champ est obligatoire pour un logement vacant.")
-                if not cleaned.get("acces_complement"):
+                elif type_acces != "PASS_CHANTIER" and not cleaned.get("acces_complement"):
                     self.add_error("acces_complement", "Ce champ est obligatoire pour un logement vacant.")
             elif occupation == "OCCUPE":
                 if not cleaned.get("rdv_date"):
