@@ -312,3 +312,28 @@ class TestSidebarSaveAndTransition:
         client.force_login(utilisateur_secretaire)
         resp = client.get(reverse("bdc:sidebar_action", args=[bdc_a_traiter.pk]))
         assert resp.status_code == 302
+
+
+class TestIndicateurCommentaire:
+    """Icône commentaire visible uniquement pour BDC A_TRAITER avec notes."""
+
+    def test_icone_presente_si_a_traiter_avec_notes(self, client, utilisateur_secretaire, bdc_a_traiter):
+        bdc_a_traiter.notes = "Appel passé, personne ne répond"
+        bdc_a_traiter.save()
+        client.force_login(utilisateur_secretaire)
+        resp = client.get(reverse("bdc:index"))
+        assert 'title="Commentaire"' in resp.content.decode()
+
+    def test_icone_absente_si_a_traiter_sans_notes(self, client, utilisateur_secretaire, bdc_a_traiter):
+        bdc_a_traiter.notes = ""
+        bdc_a_traiter.save()
+        client.force_login(utilisateur_secretaire)
+        resp = client.get(reverse("bdc:index"))
+        assert 'title="Commentaire"' not in resp.content.decode()
+
+    def test_icone_absente_si_autre_statut_avec_notes(self, client, utilisateur_secretaire, bdc_a_faire):
+        bdc_a_faire.notes = "Quelque chose"
+        bdc_a_faire.save()
+        client.force_login(utilisateur_secretaire)
+        resp = client.get(reverse("bdc:index"), {"statut": "A_FAIRE"})
+        assert 'title="Commentaire"' not in resp.content.decode()
