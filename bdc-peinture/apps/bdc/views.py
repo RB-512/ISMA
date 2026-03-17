@@ -1241,10 +1241,8 @@ def export_facturation(request):
     form_data = request.POST if request.method == "POST" else (request.GET or None)
     form = ExportFacturationForm(form_data)
 
-    # Queryset de base : BDC à facturer + facturés
-    queryset = BonDeCommande.objects.filter(
-        statut__in=[StatutChoices.A_FACTURER, StatutChoices.FACTURE]
-    ).select_related("bailleur", "sous_traitant")
+    # Queryset de base : tous les BDC
+    queryset = BonDeCommande.objects.select_related("bailleur", "sous_traitant").all()
 
     # Appliquer les filtres
     if form.is_valid():

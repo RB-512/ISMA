@@ -168,10 +168,10 @@ class TestVueExportFiltres:
         response = client.get(reverse(URL_EXPORT), {"statut": "FACTURE"})
         assert response.context["count"] == 1
 
-    def test_filtre_tous_statuts(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture):
+    def test_filtre_tous_statuts(self, client, utilisateur_cdt, bdc_a_facturer, bdc_facture, bdc_en_cours):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse(URL_EXPORT))
-        assert response.context["count"] == 2
+        assert response.context["count"] == 3  # tous les statuts inclus
 
     def test_filtre_sous_traitant(self, client, utilisateur_cdt, bdc_a_facturer, sous_traitant):
         client.force_login(utilisateur_cdt)
@@ -188,10 +188,19 @@ class TestVueExportFiltres:
         response = client.get(reverse(URL_EXPORT), {"date_au": "2026-01-31"})
         assert response.context["count"] == 1  # Seulement EXP-002
 
-    def test_en_cours_exclus_par_defaut(self, client, utilisateur_cdt, bdc_en_cours):
+    def test_en_cours_inclus_par_defaut(self, client, utilisateur_cdt, bdc_en_cours):
         client.force_login(utilisateur_cdt)
         response = client.get(reverse(URL_EXPORT))
-        assert response.context["count"] == 0
+        assert response.context["count"] == 1
+
+    def test_filtre_a_traiter(self, client, utilisateur_cdt, bdc_a_facturer):
+        """Un BDC A_TRAITER est exportable via le filtre statut."""
+        from apps.bdc.models import BonDeCommande
+        bdc_a_facturer.statut = StatutChoices.A_TRAITER
+        bdc_a_facturer.save()
+        client.force_login(utilisateur_cdt)
+        response = client.get(reverse(URL_EXPORT), {"statut": "A_TRAITER"})
+        assert response.context["count"] == 1
 
 
 class TestVueExportTelechargement:

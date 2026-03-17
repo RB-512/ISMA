@@ -2,7 +2,7 @@ from django import forms
 
 from apps.sous_traitants.models import SousTraitant
 
-from .models import BonDeCommande
+from .models import BonDeCommande, StatutChoices
 
 
 class BonDeCommandeForm(forms.ModelForm):
@@ -112,11 +112,7 @@ class AttributionForm(forms.Form):
         return cleaned
 
 
-STATUT_EXPORT_CHOICES = [
-    ("", "Tous (à facturer + facturé)"),
-    ("A_FACTURER", "À facturer"),
-    ("FACTURE", "Facturé"),
-]
+STATUT_EXPORT_CHOICES = [("", "Tous les statuts")] + list(StatutChoices.choices)
 
 
 class ExportFacturationForm(forms.Form):
