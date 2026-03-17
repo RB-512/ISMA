@@ -174,21 +174,25 @@ class BDCEditionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["occupation"].required = True
         self.fields["notes"].required = False
         self.fields["type_bon"].required = False
 
     def clean(self):
         cleaned = super().clean()
-        occupation = cleaned.get("occupation")
+        nouveau_statut = cleaned.get("nouveau_statut")
 
-        if occupation == "VACANT":
-            if not cleaned.get("type_acces"):
-                self.add_error("type_acces", "Ce champ est obligatoire pour un logement vacant.")
-            if not cleaned.get("acces_complement"):
-                self.add_error("acces_complement", "Ce champ est obligatoire pour un logement vacant.")
-        elif occupation == "OCCUPE":
-            if not cleaned.get("rdv_date"):
-                self.add_error("rdv_date", "La date de RDV est obligatoire pour un logement occupé.")
+        # Validations obligatoires seulement lors d'une transition
+        if nouveau_statut:
+            occupation = cleaned.get("occupation")
+            if not occupation:
+                self.add_error("occupation", "Ce champ est obligatoire pour valider le contrôle.")
+            elif occupation == "VACANT":
+                if not cleaned.get("type_acces"):
+                    self.add_error("type_acces", "Ce champ est obligatoire pour un logement vacant.")
+                if not cleaned.get("acces_complement"):
+                    self.add_error("acces_complement", "Ce champ est obligatoire pour un logement vacant.")
+            elif occupation == "OCCUPE":
+                if not cleaned.get("rdv_date"):
+                    self.add_error("rdv_date", "La date de RDV est obligatoire pour un logement occupé.")
 
         return cleaned

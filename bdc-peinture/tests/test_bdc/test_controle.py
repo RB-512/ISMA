@@ -32,21 +32,27 @@ class TestBDCEditionForm:
         form = BDCEditionForm(instance=bdc_a_traiter)
         assert form.fields["notes"].label == "Commentaires"
 
-    def test_occupation_required(self, bdc_a_traiter):
-        form = BDCEditionForm(data={"occupation": ""}, instance=bdc_a_traiter)
+    def test_occupation_required_for_transition(self, bdc_a_traiter):
+        """occupation obligatoire seulement lors d'une transition."""
+        form = BDCEditionForm(data={"occupation": "", "nouveau_statut": "A_FAIRE"}, instance=bdc_a_traiter)
         assert not form.is_valid()
         assert "occupation" in form.errors
 
+    def test_occupation_not_required_for_save(self, bdc_a_traiter):
+        """occupation pas obligatoire pour un simple enregistrement."""
+        form = BDCEditionForm(data={"occupation": ""}, instance=bdc_a_traiter)
+        assert form.is_valid()
+
     def test_notes_not_required(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": "Code 1234"},
+            data={"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": "Code 1234", "nouveau_statut": "A_FAIRE"},
             instance=bdc_a_traiter,
         )
         assert form.is_valid()
 
     def test_vacant_requires_type_acces(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "VACANT", "type_acces": "", "acces_complement": ""},
+            data={"occupation": "VACANT", "type_acces": "", "acces_complement": "", "nouveau_statut": "A_FAIRE"},
             instance=bdc_a_traiter,
         )
         assert not form.is_valid()
@@ -54,7 +60,7 @@ class TestBDCEditionForm:
 
     def test_vacant_requires_acces_complement(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": ""},
+            data={"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": "", "nouveau_statut": "A_FAIRE"},
             instance=bdc_a_traiter,
         )
         assert not form.is_valid()
@@ -62,7 +68,7 @@ class TestBDCEditionForm:
 
     def test_occupe_requires_rdv_date(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "OCCUPE", "rdv_date": ""},
+            data={"occupation": "OCCUPE", "rdv_date": "", "nouveau_statut": "A_FAIRE"},
             instance=bdc_a_traiter,
         )
         assert not form.is_valid()
@@ -70,7 +76,7 @@ class TestBDCEditionForm:
 
     def test_occupe_valid_with_rdv(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "OCCUPE", "rdv_date": "2026-03-15T10:00"},
+            data={"occupation": "OCCUPE", "rdv_date": "2026-03-15T10:00", "nouveau_statut": "A_FAIRE"},
             instance=bdc_a_traiter,
         )
         assert form.is_valid()
