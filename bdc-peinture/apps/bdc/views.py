@@ -1314,6 +1314,18 @@ def controle_bdc(request, pk: int):
             except (TransitionInvalide, BDCIncomplet) as e:
                 messages.error(request, str(e))
 
+        # Toast de confirmation si enregistrement sans transition
+        if not nouveau_statut and form_valid:
+            messages.success(
+                request,
+                format_html(
+                    'BDC n°{} — informations enregistrées. '
+                    '<a href="{}" class="underline font-medium">Retour au dashboard →</a>',
+                    bdc.numero_bdc,
+                    reverse("bdc:index"),
+                ),
+            )
+
         bdc.refresh_from_db()
         # form conservé avec ses erreurs (pas remplacé par un formulaire vierge)
     else:

@@ -243,6 +243,22 @@ class TestControlePost:
         assert bdc_a_traiter.occupation == "VACANT"
         assert bdc_a_traiter.notes == "RAS"
 
+    def test_enregistrement_sans_transition_affiche_toast(self, client_secretaire, bdc_a_traiter):
+        """POST sans nouveau_statut → toast de succès avec lien dashboard."""
+        url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
+        data = {
+            "occupation": "VACANT",
+            "type_acces": "BADGE_CODE",
+            "acces_complement": "Code 1234",
+            "notes": "Test partiel",
+            "nouveau_statut": "",
+        }
+        resp = client_secretaire.post(url, data)
+        assert resp.status_code == 200
+        messages_list = list(resp.context["messages"])
+        assert any("enregistr" in str(m) for m in messages_list)
+        assert any("dashboard" in str(m).lower() for m in messages_list)
+
     def test_transition_sans_checklist_complete_echoue(self, client_secretaire, bdc_a_traiter, checklist_items):
         """POST transition sans checklist complète → reste A_TRAITER, message d'erreur."""
         url = reverse("bdc:controle", kwargs={"pk": bdc_a_traiter.pk})
