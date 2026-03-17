@@ -135,6 +135,11 @@ class TypeAccesChoices(models.TextChoices):
     CLE = "CLE", "Clé à récupérer"
 
 
+class TypeBonChoices(models.TextChoices):
+    SIMPLE = "SIMPLE", "Simple"
+    MIXTE = "MIXTE", "Mixte"
+
+
 class BonDeCommande(models.Model):
     """
     Bon de commande émis par un bailleur pour des travaux de peinture.
@@ -183,6 +188,12 @@ class BonDeCommande(models.Model):
     )
 
     # ── Infos manuelles (saisies par la secrétaire) ──────────────────────────
+    type_bon = models.CharField(
+        max_length=10,
+        choices=TypeBonChoices.choices,
+        default=TypeBonChoices.SIMPLE,
+        verbose_name="Type de bon",
+    )
     occupation = models.CharField(
         max_length=10,
         choices=OccupationChoices.choices,

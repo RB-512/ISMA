@@ -59,6 +59,12 @@
                            class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]">
                 </div>
             </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label for="id_type_bon" class="text-xs text-[var(--color-text-muted)]">Type</label>
+                    {{ filtre.form.type_bon }}
+                </div>
+            </div>
             <div class="flex items-end gap-3">
                 <div>
                     <label for="id_date_du" class="text-xs text-[var(--color-text-muted)]">Du</label>

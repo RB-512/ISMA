@@ -223,6 +223,7 @@ def liste_bdc(request):
             bool(request.GET.get("ville")),
             bool(request.GET.get("date_du")),
             bool(request.GET.get("date_au")),
+            bool(request.GET.get("type_bon")),
         ]
     )
 

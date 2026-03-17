@@ -157,6 +157,7 @@ class BDCEditionForm(forms.ModelForm):
     class Meta:
         model = BonDeCommande
         fields = [
+            "type_bon",
             "occupation",
             "type_acces",
             "acces_complement",
@@ -175,6 +176,7 @@ class BDCEditionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["occupation"].required = True
         self.fields["notes"].required = False
+        self.fields["type_bon"].required = False
 
     def clean(self):
         cleaned = super().clean()

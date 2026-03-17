@@ -99,6 +99,16 @@
                     <div>
                         <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Informations compl&eacute;mentaires</h3>
                         <div class="space-y-3">
+                            {# Type de bon #}
+                            <div>
+                                <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.type_bon.label }}</label>
+                                <select name="type_bon"
+                                        class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                                    <option value="SIMPLE" {% if bdc.type_bon == 'SIMPLE' %}selected{% endif %}>Simple</option>
+                                    <option value="MIXTE" {% if bdc.type_bon == 'MIXTE' %}selected{% endif %}>Mixte</option>
+                                </select>
+                            </div>
+
                             {# Occupation #}
                             <div>
                                 <label class="text-xs text-[var(--color-text-muted)]">{{ form_edition.occupation.label }} <span class="text-red-500">*</span></label>
@@ -189,6 +199,10 @@
                 <div>
                     <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Informations</h3>
                     <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-[var(--color-text-muted)]">Type de bon</span>
+                            <span class="text-[var(--color-text)]">{{ bdc.get_type_bon_display }}</span>
+                        </div>
                         {% if bdc.occupation %}
                         <div class="flex justify-between">
                             <span class="text-[var(--color-text-muted)]">Occupation</span>

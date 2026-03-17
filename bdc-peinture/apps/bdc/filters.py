@@ -1,6 +1,6 @@
 import django_filters
 
-from .models import Bailleur, BonDeCommande, StatutChoices
+from .models import Bailleur, BonDeCommande, StatutChoices, TypeBonChoices
 
 
 class BonDeCommandeFilter(django_filters.FilterSet):
@@ -24,7 +24,11 @@ class BonDeCommandeFilter(django_filters.FilterSet):
         field_name="created_at",
         lookup_expr="date__lte",
     )
+    type_bon = django_filters.ChoiceFilter(
+        choices=TypeBonChoices.choices,
+        empty_label="Tous les types",
+    )
 
     class Meta:
         model = BonDeCommande
-        fields = ["statut", "bailleur", "ville", "date_du", "date_au"]
+        fields = ["statut", "bailleur", "ville", "date_du", "date_au", "type_bon"]
