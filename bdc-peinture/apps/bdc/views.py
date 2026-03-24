@@ -513,6 +513,8 @@ def detail_sidebar(request, pk: int):
             actif=True, transition=TransitionChoices.FACTURATION
         ).exists()
 
+    is_cdt = request.user.groups.filter(name="CDT").exists()
+
     return render(
         request,
         "bdc/_detail_sidebar.html",
@@ -523,6 +525,7 @@ def detail_sidebar(request, pk: int):
             "transitions": transitions,
             "form_edition": form_edition,
             "checklist_transitions": checklist_transitions,
+            "is_cdt": is_cdt,
         },
     )
 
@@ -620,6 +623,8 @@ def sidebar_save_and_transition(request, pk: int):
             actif=True, transition=TransitionChoices.FACTURATION
         ).exists()
 
+    is_cdt = request.user.groups.filter(name="CDT").exists()
+
     response = render(
         request,
         "bdc/_detail_sidebar.html",
@@ -631,6 +636,7 @@ def sidebar_save_and_transition(request, pk: int):
             "form_edition": form_edition,
             "error_message": error_message,
             "checklist_transitions": checklist_transitions,
+            "is_cdt": is_cdt,
         },
     )
     response["HX-Trigger"] = "bdc-updated"
