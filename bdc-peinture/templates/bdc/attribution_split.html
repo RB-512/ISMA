@@ -23,11 +23,12 @@
     </div>
 
     {# ── Split-screen layout ── #}
-    <div class="flex gap-3" style="height: calc(100vh - 98px);">
+    <div class="flex gap-3" style="height: calc(100vh - 98px);" x-data="{ joindre: true }">
 
         {# ── Left panel: PDF viewer (60%) ── #}
         <div class="w-3/5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)] overflow-hidden flex flex-col"
-             {% if bdc.pdf_original %}x-data="{ vueST: false, urlOriginal: '{{ bdc.pdf_original.url }}', urlST: '{% url 'bdc:pdf_masque_preview' pk=bdc.pk %}' }"{% endif %}>
+             {% if bdc.pdf_original %}x-data="{ vueST: false, urlOriginal: '{{ bdc.pdf_original.url }}', urlST: '{% url 'bdc:pdf_masque_preview' pk=bdc.pk %}' }"
+             x-effect="if (!joindre) vueST = false"{% endif %}>
             {% if bdc.pdf_original %}
             <div class="flex items-center gap-2 px-3 py-2 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
                 <button type="button" @click="vueST = false"
@@ -36,13 +37,23 @@
                     PDF original
                 </button>
                 <button type="button" @click="vueST = true"
+                        x-show="joindre"
                         :class="vueST ? 'bg-amber-500 text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'"
                         class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors">
                     Vue sous-traitant
                 </button>
-                <span x-show="vueST" class="text-xs text-amber-600 dark:text-amber-400 ml-1">
+                <span x-show="vueST && joindre" class="text-xs text-amber-600 dark:text-amber-400 ml-1">
                     Tel qu'envoye au ST
                 </span>
+                <div class="ml-auto flex items-center gap-2">
+                    <span class="text-xs text-[var(--color-text-muted)]">Joindre le BDC</span>
+                    <button type="button" @click="joindre = !joindre"
+                            :class="joindre ? 'bg-accent' : 'bg-[var(--color-border)]'"
+                            class="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors duration-200 focus:outline-none">
+                        <span :class="joindre ? 'translate-x-4' : 'translate-x-0.5'"
+                              class="inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow transform transition-transform duration-200"></span>
+                    </button>
+                </div>
             </div>
             <iframe :src="vueST ? urlST : urlOriginal" class="w-full flex-1" title="PDF du BDC {{ bdc.numero_bdc }}"></iframe>
             {% else %}
@@ -60,6 +71,7 @@
             <form method="POST" class="h-full flex flex-col"
                   x-data="{ allChecked: {{ checklist_items|length }} === 0, checkAll() { this.allChecked = document.querySelectorAll('.checklist-cb:not(:checked)').length === 0 } }">
                 {% csrf_token %}
+                <input type="hidden" name="joindre_bdc" :value="joindre ? 'on' : ''" value="on">
 
                 {# ── Scrollable panel content (HTMX reloadable) ── #}
                 <div id="attribution-panel" class="flex-1 overflow-hidden flex flex-col min-h-0">

@@ -250,7 +250,7 @@ class TestBranchementAttribution:
     @patch("apps.bdc.services._notifier_st_si_possible")
     def test_attribution_appelle_notifications(self, mock_notif, bdc_a_faire, sous_traitant, utilisateur_cdt):
         attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
-        mock_notif.assert_called_once_with(bdc_a_faire, commentaire="")
+        mock_notif.assert_called_once_with(bdc_a_faire, commentaire="", joindre_bdc=True)
 
     @patch("apps.notifications.sms.envoyer_sms_attribution", side_effect=Exception("SMS crash"))
     def test_attribution_ok_meme_si_notification_echoue(self, mock_sms, bdc_a_faire, sous_traitant, utilisateur_cdt):

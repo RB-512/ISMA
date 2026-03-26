@@ -246,6 +246,7 @@ def attribuer_st(
     commentaire: str = "",
     mode: str = "pourcentage",
     lignes_forfait: list[dict] | None = None,
+    joindre_bdc: bool = True,
 ) -> BonDeCommande:
     """
     Attribue un BDC à un sous-traitant. Le BDC doit être en statut A_FAIRE.
@@ -307,7 +308,7 @@ def attribuer_st(
             },
         )
 
-    _notifier_st_si_possible(bdc, commentaire=commentaire)
+    _notifier_st_si_possible(bdc, commentaire=commentaire, joindre_bdc=joindre_bdc)
 
     return bdc
 
@@ -320,6 +321,7 @@ def reattribuer_st(
     commentaire: str = "",
     mode: str = "pourcentage",
     lignes_forfait: list[dict] | None = None,
+    joindre_bdc: bool = True,
 ) -> BonDeCommande:
     """
     Réattribue un BDC en cours à un autre sous-traitant.
@@ -381,12 +383,12 @@ def reattribuer_st(
             },
         )
 
-    _notifier_reattribution_si_possible(bdc, ancien_st_telephone, ancien_st_email, commentaire=commentaire)
+    _notifier_reattribution_si_possible(bdc, ancien_st_telephone, ancien_st_email, commentaire=commentaire, joindre_bdc=joindre_bdc)
 
     return bdc
 
 
-def _notifier_st_si_possible(bdc: BonDeCommande, commentaire: str = "") -> None:
+def _notifier_st_si_possible(bdc: BonDeCommande, commentaire: str = "", joindre_bdc: bool = True) -> None:
     """Envoie les notifications SMS et email au ST, non-bloquant."""
     try:
         from apps.notifications.sms import envoyer_sms_attribution
@@ -398,13 +400,13 @@ def _notifier_st_si_possible(bdc: BonDeCommande, commentaire: str = "") -> None:
     try:
         from apps.notifications.email import envoyer_email_attribution
 
-        envoyer_email_attribution(bdc, commentaire=commentaire)
+        envoyer_email_attribution(bdc, commentaire=commentaire, joindre_bdc=joindre_bdc)
     except Exception:
         logger.warning("Échec email attribution BDC %s", bdc.numero_bdc, exc_info=True)
 
 
 def _notifier_reattribution_si_possible(
-    bdc: BonDeCommande, ancien_st_telephone: str, ancien_st_email: str, commentaire: str = ""
+    bdc: BonDeCommande, ancien_st_telephone: str, ancien_st_email: str, commentaire: str = "", joindre_bdc: bool = True
 ) -> None:
     """Envoie les notifications de réattribution, non-bloquant."""
     try:
@@ -417,6 +419,6 @@ def _notifier_reattribution_si_possible(
     try:
         from apps.notifications.email import envoyer_email_reattribution
 
-        envoyer_email_reattribution(bdc, ancien_st_email, commentaire=commentaire)
+        envoyer_email_reattribution(bdc, ancien_st_email, commentaire=commentaire, joindre_bdc=joindre_bdc)
     except Exception:
         logger.warning("Échec email réattribution BDC %s", bdc.numero_bdc, exc_info=True)

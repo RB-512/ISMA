@@ -29,7 +29,7 @@ def _obtenir_fiche_chantier(bdc: BonDeCommande, commentaire: str = "") -> bytes 
     return None
 
 
-def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool:
+def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "", joindre_bdc: bool = True) -> bool:
     """
     Envoie un email d'attribution au sous-traitant avec le PDF terrain en pièce jointe.
     Ne bloque jamais l'attribution en cas d'erreur.
@@ -60,6 +60,8 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
         "travaux": bdc.objet_travaux or "Non précisé",
         "delai": bdc.delai_execution.strftime("%d/%m/%Y") if bdc.delai_execution else "Non précisé",
         "commentaire": f"Commentaire :\n{commentaire}" if commentaire else "",
+        "etage": bdc.logement_etage or "",
+        "porte": bdc.logement_porte or "",
     }
 
     # Utiliser le template personnalisé si configuré
@@ -76,8 +78,10 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
             f"Bonjour,\n\n"
             f"Le BDC n°{bdc.numero_bdc} vous a été attribué.\n\n"
             f"Adresse : {bdc.adresse}, {bdc.ville}\n"
-            f"Travaux : {bdc.objet_travaux or 'Non précisé'}\n"
         )
+        if bdc.logement_etage or bdc.logement_porte:
+            corps += f"Étage / Porte : {bdc.logement_etage or ''} / {bdc.logement_porte or ''}\n"
+        corps += f"Travaux : {bdc.objet_travaux or 'Non précisé'}\n"
         if bdc.delai_execution:
             corps += f"Délai : {bdc.delai_execution.strftime('%d/%m/%Y')}\n"
         if commentaire:
@@ -91,13 +95,14 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
         to=[email_st],
     )
 
-    pdf_contenu = _obtenir_fiche_chantier(bdc, commentaire=commentaire)
-    if pdf_contenu:
-        email.attach(f"fiche_chantier_{bdc.numero_bdc}.pdf", pdf_contenu, "application/pdf")
-    else:
-        email.body += (
-            "\n\nNote : le document n'a pas pu être joint. Veuillez le récupérer auprès du conducteur de travaux."
-        )
+    if joindre_bdc:
+        pdf_contenu = _obtenir_fiche_chantier(bdc, commentaire=commentaire)
+        if pdf_contenu:
+            email.attach(f"fiche_chantier_{bdc.numero_bdc}.pdf", pdf_contenu, "application/pdf")
+        else:
+            email.body += (
+                "\n\nNote : le document n'a pas pu être joint. Veuillez le récupérer auprès du conducteur de travaux."
+            )
 
     try:
         email.send(fail_silently=False)
@@ -108,7 +113,7 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "") -> bool
     return True
 
 
-def envoyer_email_reattribution(bdc: BonDeCommande, ancien_st_email: str, commentaire: str = "") -> bool:
+def envoyer_email_reattribution(bdc: BonDeCommande, ancien_st_email: str, commentaire: str = "", joindre_bdc: bool = True) -> bool:
     """
     Envoie un email d'annulation à l'ancien ST et un email d'attribution au nouveau.
 
@@ -140,7 +145,7 @@ def envoyer_email_reattribution(bdc: BonDeCommande, ancien_st_email: str, commen
             succes = False
 
     # Email d'attribution au nouveau ST
-    if not envoyer_email_attribution(bdc, commentaire=commentaire):
+    if not envoyer_email_attribution(bdc, commentaire=commentaire, joindre_bdc=joindre_bdc):
         succes = False
 
     return succes

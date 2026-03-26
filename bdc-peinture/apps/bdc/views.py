@@ -889,6 +889,7 @@ def attribution_split(request, pk: int):
             commentaire = form.cleaned_data.get("commentaire", "")
             mode = form.cleaned_data.get("mode_attribution", "pourcentage")
             lignes_forfait = _parse_lignes_forfait(request.POST) if mode == "forfait" else None
+            joindre_bdc = request.POST.get("joindre_bdc") == "on"
             _save_checklist_from_post(bdc, request, checklist_items)
             try:
                 if reattribution:
@@ -900,6 +901,7 @@ def attribution_split(request, pk: int):
                         commentaire=commentaire,
                         mode=mode,
                         lignes_forfait=lignes_forfait,
+                        joindre_bdc=joindre_bdc,
                     )
                 else:
                     attribuer_st(
@@ -910,6 +912,7 @@ def attribution_split(request, pk: int):
                         commentaire=commentaire,
                         mode=mode,
                         lignes_forfait=lignes_forfait,
+                        joindre_bdc=joindre_bdc,
                     )
             except (TransitionInvalide, BDCIncomplet) as e:
                 messages.error(request, str(e))

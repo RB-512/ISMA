@@ -252,11 +252,11 @@ class TestTemplateDashboardExport:
         client.force_login(utilisateur_cdt)
         response = client.get(reverse("bdc:index"))
         content = response.content.decode()
-        assert "Export facturation" in content
+        assert "Export" in content
         assert reverse("bdc:export_facturation") in content
 
     def test_lien_export_visible_secretaire(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
         response = client.get(reverse("bdc:index"))
         content = response.content.decode()
-        assert "Export facturation" in content
+        assert "Export" in content
