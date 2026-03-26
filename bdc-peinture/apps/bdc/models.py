@@ -68,12 +68,12 @@ class ConfigEmail(models.Model):
         max_length=200,
         blank=True,
         verbose_name="Sujet du mail",
-        help_text="Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}",
+        help_text="Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}, {etage}, {porte}",
     )
     corps = models.TextField(
         blank=True,
         verbose_name="Corps du mail",
-        help_text="Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}, {commentaire}",
+        help_text="Variables : {numero_bdc}, {adresse}, {ville}, {travaux}, {delai}, {etage}, {porte}, {commentaire}",
     )
 
     class Meta:
