@@ -44,3 +44,44 @@ EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 # Fichiers statiques servis par Nginx
 STATIC_ROOT = "/data/static/"
 MEDIA_ROOT = "/data/media/"
+
+# Notifications d'erreurs aux administrateurs
+ADMINS = [("Admin ISMA", "bybondecommande@gmail.com")]
+SERVER_EMAIL = config("EMAIL_HOST_USER")
+
+# Logging : fichier rotatif + email sur erreur 500
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "/data/logs/django.log",
+            "maxBytes": 10 * 1024 * 1024,  # 10 Mo
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+        "mail_admins": {
+            "class": "django.utils.log.AdminEmailHandler",
+            "level": "ERROR",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["file", "mail_admins"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "apps": {
+            "handlers": ["file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
+}
