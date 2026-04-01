@@ -233,7 +233,7 @@ def renvoyer_controle(bdc: BonDeCommande, commentaire: str, utilisateur: User) -
 
 
 def _calculer_montant_st(bdc: BonDeCommande, pourcentage: Decimal) -> Decimal | None:
-    if bdc.montant_ht is None:
+    if bdc.montant_ht is None or pourcentage is None:
         return None
     return (bdc.montant_ht * pourcentage / Decimal("100")).quantize(Decimal("0.01"))
 
