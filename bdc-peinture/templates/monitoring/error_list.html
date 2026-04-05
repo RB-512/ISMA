@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Erreurs applicatives — ISMA{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div>
+        <h1 class="text-2xl font-bold text-[var(--color-text)]">Erreurs applicatives</h1>
+        <p class="text-sm text-[var(--color-text-muted)] mt-1">
+            Exceptions non gérées capturées en production.
+        </p>
+    </div>
+
+    {% if page_obj.object_list %}
+    <section class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-[var(--color-surface)] border-b border-[var(--color-border)]">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-[var(--color-text-muted)] uppercase tracking-wider text-xs">Type</th>
+                    <th class="px-4 py-3 text-left font-semibold text-[var(--color-text-muted)] uppercase tracking-wider text-xs">Message</th>
+                    <th class="px-4 py-3 text-left font-semibold text-[var(--color-text-muted)] uppercase tracking-wider text-xs">URL</th>
+                    <th class="px-4 py-3 text-center font-semibold text-[var(--color-text-muted)] uppercase tracking-wider text-xs">Occurrences</th>
+                    <th class="px-4 py-3 text-left font-semibold text-[var(--color-text-muted)] uppercase tracking-wider text-xs">Dernière fois</th>
+                    <th class="px-4 py-3 text-left font-semibold text-[var(--color-text-muted)] uppercase tracking-wider text-xs">Première fois</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--color-border)]">
+                {% for report in page_obj %}
+                <tr class="hover:bg-[var(--color-surface)] transition-colors">
+                    <td class="px-4 py-3">
+                        <a href="{% url 'monitoring:error_detail' report.pk %}"
+                           class="font-mono text-xs font-semibold text-red-500 hover:underline">
+                            {{ report.error_type }}
+                        </a>
+                    </td>
+                    <td class="px-4 py-3 text-[var(--color-text)] max-w-xs truncate">
+                        {{ report.message|truncatechars:80 }}
+                    </td>
+                    <td class="px-4 py-3 text-[var(--color-text-muted)] font-mono text-xs max-w-xs truncate">
+                        {{ report.url|truncatechars:60 }}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        {% if report.count > 1 %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                            {{ report.count }}x
+                        </span>
+                        {% else %}
+                        <span class="text-[var(--color-text-muted)] text-xs">1x</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-[var(--color-text-muted)] text-xs whitespace-nowrap">
+                        {{ report.last_seen|date:"d/m/Y H:i" }}
+                    </td>
+                    <td class="px-4 py-3 text-[var(--color-text-muted)] text-xs whitespace-nowrap">
+                        {{ report.first_seen|date:"d/m/Y H:i" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}"
+           class="px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface)] text-[var(--color-text)]">
+            ← Précédent
+        </a>
+        {% endif %}
+        <span class="px-3 py-1.5 text-sm text-[var(--color-text-muted)]">
+            Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}"
+           class="px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface)] text-[var(--color-text)]">
+            Suivant →
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-12 text-center">
+        <p class="text-[var(--color-text-muted)]">Aucune erreur enregistrée.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

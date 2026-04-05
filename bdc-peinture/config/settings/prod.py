@@ -45,11 +45,7 @@ EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 STATIC_ROOT = "/data/static/"
 MEDIA_ROOT = "/data/media/"
 
-# Notifications d'erreurs aux administrateurs
-ADMINS = [("Admin ISMA", "bybondecommande@gmail.com")]
-SERVER_EMAIL = config("EMAIL_HOST_USER")
-
-# Logging : fichier rotatif + email sur erreur 500
+# Logging : fichier rotatif uniquement (les erreurs sont tracées via le dashboard /erreurs/)
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -67,15 +63,15 @@ LOGGING = {
             "backupCount": 5,
             "formatter": "verbose",
         },
-        "mail_admins": {
-            "class": "django.utils.log.AdminEmailHandler",
-            "level": "ERROR",
-        },
     },
     "loggers": {
         "django": {
-            "handlers": ["file", "mail_admins"],
+            "handlers": ["file"],
             "level": "ERROR",
+            "propagate": False,
+        },
+        "django.security.DisallowedHost": {
+            "handlers": [],
             "propagate": False,
         },
         "apps": {
