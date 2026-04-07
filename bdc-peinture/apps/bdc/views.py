@@ -471,6 +471,7 @@ def _render_sidebar(request, bdc, error_message=None, success_message=None):
         ).exists()
 
     is_cdt = request.user.groups.filter(name="CDT").exists()
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
 
     response = render(
         request,
@@ -485,6 +486,7 @@ def _render_sidebar(request, bdc, error_message=None, success_message=None):
             "success_message": success_message,
             "checklist_transitions": checklist_transitions,
             "is_cdt": is_cdt,
+            "is_secretaire": is_secretaire,
         },
     )
     response["HX-Trigger"] = "bdc-updated"
@@ -514,6 +516,7 @@ def detail_sidebar(request, pk: int):
         ).exists()
 
     is_cdt = request.user.groups.filter(name="CDT").exists()
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
 
     return render(
         request,
@@ -526,6 +529,7 @@ def detail_sidebar(request, pk: int):
             "form_edition": form_edition,
             "checklist_transitions": checklist_transitions,
             "is_cdt": is_cdt,
+            "is_secretaire": is_secretaire,
         },
     )
 
@@ -542,6 +546,7 @@ def detail_bdc(request, pk: int):
     transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
 
     is_cdt = request.user.groups.filter(name="CDT").exists()
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
 
     return render(
         request,
@@ -553,6 +558,7 @@ def detail_bdc(request, pk: int):
             "form_edition": form_edition,
             "transitions": transitions,
             "is_cdt": is_cdt,
+            "is_secretaire": is_secretaire,
         },
     )
 
@@ -624,6 +630,7 @@ def sidebar_save_and_transition(request, pk: int):
         ).exists()
 
     is_cdt = request.user.groups.filter(name="CDT").exists()
+    is_secretaire = request.user.groups.filter(name="Secretaire").exists()
 
     response = render(
         request,
@@ -637,6 +644,7 @@ def sidebar_save_and_transition(request, pk: int):
             "error_message": error_message,
             "checklist_transitions": checklist_transitions,
             "is_cdt": is_cdt,
+            "is_secretaire": is_secretaire,
         },
     )
     response["HX-Trigger"] = "bdc-updated"
@@ -1022,9 +1030,9 @@ def attribution_partial(request, pk: int):
 # ─── Validation réalisation / Facturation ────────────────────────────────────
 
 
-@group_required("CDT")
+@group_required("CDT", "Secretaire")
 def valider_realisation_bdc(request, pk: int):
-    """POST-only : le CDT valide la réalisation (EN_COURS → A_FACTURER)."""
+    """POST-only : le CDT ou la Secrétaire valide la réalisation (EN_COURS → A_FACTURER)."""
     if request.method != "POST":
         return redirect("bdc:detail", pk=pk)
 
@@ -1045,9 +1053,9 @@ def valider_realisation_bdc(request, pk: int):
     return redirect("bdc:detail", pk=pk)
 
 
-@group_required("CDT")
+@group_required("CDT", "Secretaire")
 def valider_facturation_bdc(request, pk: int):
-    """POST-only : le CDT passe le BDC en facturation (A_FACTURER → FACTURE)."""
+    """POST-only : le CDT ou la Secrétaire passe le BDC en facturation (A_FACTURER → FACTURE)."""
     if request.method != "POST":
         return redirect("bdc:detail", pk=pk)
 
@@ -1082,7 +1090,7 @@ _TRANSITION_ACTIONS = {
 }
 
 
-@group_required("CDT")
+@group_required("CDT", "Secretaire")
 def sidebar_checklist(request, pk: int):
     """GET: affiche la checklist pour une transition. POST: sauvegarde + tente la transition."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)

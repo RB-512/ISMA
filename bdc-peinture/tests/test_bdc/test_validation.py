@@ -123,10 +123,12 @@ class TestVueValiderRealisation:
         response = client.get(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
         assert response.status_code == 302
 
-    def test_secretaire_cannot_access(self, client, utilisateur_secretaire, bdc_en_cours):
+    def test_secretaire_can_access(self, client, utilisateur_secretaire, bdc_en_cours):
         client.force_login(utilisateur_secretaire)
         response = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
-        assert response.status_code == 403
+        assert response.status_code == 302
+        bdc_en_cours.refresh_from_db()
+        assert bdc_en_cours.statut == StatutChoices.A_FACTURER
 
 
 class TestVueValiderFacturation:
@@ -142,10 +144,12 @@ class TestVueValiderFacturation:
         response = client.get(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
         assert response.status_code == 302
 
-    def test_secretaire_cannot_access(self, client, utilisateur_secretaire, bdc_a_facturer):
+    def test_secretaire_can_access(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
         response = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
-        assert response.status_code == 403
+        assert response.status_code == 302
+        bdc_a_facturer.refresh_from_db()
+        assert bdc_a_facturer.statut == StatutChoices.FACTURE
 
 
 # ─── 6.5 Tests template detail — boutons conditionnels ─────────────────────
@@ -246,17 +250,21 @@ class TestRecoupementDetail:
 
 
 class TestRBACSecretaireBloquee:
-    """Verify that Secretaire gets 403 on CDT-only workflow views."""
+    """Verify RBAC: Secretaire can perform final workflow transitions, CDT-only actions remain blocked."""
 
-    def test_secretaire_403_valider_realisation(self, client, utilisateur_secretaire, bdc_en_cours):
+    def test_secretaire_peut_valider_realisation(self, client, utilisateur_secretaire, bdc_en_cours):
         client.force_login(utilisateur_secretaire)
         resp = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
-        assert resp.status_code == 403
+        assert resp.status_code == 302
+        bdc_en_cours.refresh_from_db()
+        assert bdc_en_cours.statut == StatutChoices.A_FACTURER
 
-    def test_secretaire_403_valider_facturation(self, client, utilisateur_secretaire, bdc_a_facturer):
+    def test_secretaire_peut_valider_facturation(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
         resp = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
-        assert resp.status_code == 403
+        assert resp.status_code == 302
+        bdc_a_facturer.refresh_from_db()
+        assert bdc_a_facturer.statut == StatutChoices.FACTURE
 
     def test_secretaire_can_renvoyer_controle(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
