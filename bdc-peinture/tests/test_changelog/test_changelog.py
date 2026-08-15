@@ -105,9 +105,10 @@ def test_version_list_trie_par_date_decroissante(client_cdt, utilisateur_cdt):
 def test_badge_absent_sans_version(client_cdt):
     """Aucun badge n'est affiché tant qu'aucune version n'existe."""
     response = client_cdt.get(reverse("bdc:index"))
-    assert "changelog:version_list" not in response.content.decode() or reverse(
-        "changelog:version_list"
-    ) not in response.content.decode()
+    assert (
+        "changelog:version_list" not in response.content.decode()
+        or reverse("changelog:version_list") not in response.content.decode()
+    )
 
 
 @pytest.mark.django_db
