@@ -4,15 +4,14 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0015_remove_bailleur_masquage_fields'),
-        ('sous_traitants', '0002_soustraitant_adresse_soustraitant_code_postal_and_more'),
+        ("bdc", "0015_remove_bailleur_masquage_fields"),
+        ("sous_traitants", "0002_soustraitant_adresse_soustraitant_code_postal_and_more"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='relevefacturation',
-            unique_together={('sous_traitant', 'numero')},
+            name="relevefacturation",
+            unique_together={("sous_traitant", "numero")},
         ),
     ]

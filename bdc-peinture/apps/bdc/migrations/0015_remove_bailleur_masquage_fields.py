@@ -4,18 +4,17 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0014_prixforfaitaire_bondecommande_mode_attribution_and_more'),
+        ("bdc", "0014_prixforfaitaire_bondecommande_mode_attribution_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='bailleur',
-            name='pages_a_envoyer',
+            model_name="bailleur",
+            name="pages_a_envoyer",
         ),
         migrations.RemoveField(
-            model_name='bailleur',
-            name='zones_masquage',
+            model_name="bailleur",
+            name="zones_masquage",
         ),
     ]

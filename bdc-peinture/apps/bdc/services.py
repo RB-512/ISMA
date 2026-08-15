@@ -383,7 +383,9 @@ def reattribuer_st(
             },
         )
 
-    _notifier_reattribution_si_possible(bdc, ancien_st_telephone, ancien_st_email, commentaire=commentaire, joindre_bdc=joindre_bdc)
+    _notifier_reattribution_si_possible(
+        bdc, ancien_st_telephone, ancien_st_email, commentaire=commentaire, joindre_bdc=joindre_bdc
+    )
 
     return bdc
 

@@ -45,7 +45,12 @@ class TestBDCEditionForm:
 
     def test_notes_not_required(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": "Code 1234", "nouveau_statut": "A_FAIRE"},
+            data={
+                "occupation": "VACANT",
+                "type_acces": "BADGE_CODE",
+                "acces_complement": "Code 1234",
+                "nouveau_statut": "A_FAIRE",
+            },
             instance=bdc_a_traiter,
         )
         assert form.is_valid()
@@ -60,7 +65,12 @@ class TestBDCEditionForm:
 
     def test_vacant_requires_acces_complement(self, bdc_a_traiter):
         form = BDCEditionForm(
-            data={"occupation": "VACANT", "type_acces": "BADGE_CODE", "acces_complement": "", "nouveau_statut": "A_FAIRE"},
+            data={
+                "occupation": "VACANT",
+                "type_acces": "BADGE_CODE",
+                "acces_complement": "",
+                "nouveau_statut": "A_FAIRE",
+            },
             instance=bdc_a_traiter,
         )
         assert not form.is_valid()
@@ -69,7 +79,12 @@ class TestBDCEditionForm:
     def test_pass_chantier_no_complement_required(self, bdc_a_traiter):
         """Pass chantier : acces_complement pas obligatoire."""
         form = BDCEditionForm(
-            data={"occupation": "VACANT", "type_acces": "PASS_CHANTIER", "acces_complement": "", "nouveau_statut": "A_FAIRE"},
+            data={
+                "occupation": "VACANT",
+                "type_acces": "PASS_CHANTIER",
+                "acces_complement": "",
+                "nouveau_statut": "A_FAIRE",
+            },
             instance=bdc_a_traiter,
         )
         assert form.is_valid()

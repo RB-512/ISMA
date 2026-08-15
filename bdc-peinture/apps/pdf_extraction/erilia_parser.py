@@ -145,9 +145,7 @@ class ERILIAParser(PDFParser):
                     }
                 elif ligne_courante is not None:
                     # Ligne de continuation de désignation
-                    ligne_courante["designation"] = self._nettoyer_texte(
-                        ligne_courante["designation"] + " " + line
-                    )
+                    ligne_courante["designation"] = self._nettoyer_texte(ligne_courante["designation"] + " " + line)
 
         if ligne_courante is not None:
             lignes.append(ligne_courante)
@@ -261,7 +259,7 @@ class ERILIAParser(PDFParser):
         # Fallback : calculer depuis les lignes extraites
         lignes = self._extraire_lignes_prestation_texte(texte)
         if lignes:
-            total = sum(l["montant_ht"] for l in lignes)
+            total = sum(ligne["montant_ht"] for ligne in lignes)
             return total.quantize(Decimal("0.01"))
         return None
 
