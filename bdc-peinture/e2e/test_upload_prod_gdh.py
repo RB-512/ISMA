@@ -88,6 +88,7 @@ def extract_section_text(page, section_title):
 
 class FieldCheck:
     """Resultat du controle d'un champ."""
+
     def __init__(self, nom, valeur, present):
         self.nom = nom
         self.valeur = valeur[:80] if valeur else ""
@@ -121,7 +122,7 @@ class PDFResult:
         self.controle_ok = False
         self.statut_final = ""
         self.champs_nouveau = []  # FieldCheck list (page /nouveau/)
-        self.champs_detail = []   # FieldCheck list (page /detail/)
+        self.champs_detail = []  # FieldCheck list (page /detail/)
         self.champs_controle = []  # FieldCheck list (page /controle/)
         self.champs_manquants = []
         self.error = ""
@@ -219,7 +220,6 @@ def step_verify_extraction(page, result):
     checks.append(FieldCheck("Date emission", result.date_emission, bool(result.date_emission)))
 
     # --- Localisation ---
-    loc_text = extract_section_text(page, "Localisation")
 
     # Residence
     result.residence = extract_text_after_label(page, "sidence")
@@ -241,7 +241,6 @@ def step_verify_extraction(page, result):
     checks.append(FieldCheck("Delai", result.delai, bool(result.delai)))
 
     # --- Contacts ---
-    contacts_text = extract_section_text(page, "Contacts")
 
     # Occupant
     occ_section = page.locator("h3:has-text('Occupant')").first
@@ -275,7 +274,7 @@ def step_verify_extraction(page, result):
     checks.append(FieldCheck("Lignes prestation", str(result.nb_lignes), result.nb_lignes > 0))
 
     # Detail de chaque ligne
-    for i, row in enumerate(tbody_rows):
+    for _i, row in enumerate(tbody_rows):
         cells = row.locator("td").all()
         if len(cells) >= 5:
             ligne = {
@@ -355,11 +354,13 @@ def step_verify_detail(page, result):
     detail_rows = page.locator("table tbody tr").all()
     nb_detail = len(detail_rows)
     lignes_match = nb_detail == result.nb_lignes
-    checks.append(FieldCheck(
-        "Lignes prestation (detail)",
-        f"{nb_detail} (attendu {result.nb_lignes})",
-        lignes_match,
-    ))
+    checks.append(
+        FieldCheck(
+            "Lignes prestation (detail)",
+            f"{nb_detail} (attendu {result.nb_lignes})",
+            lignes_match,
+        )
+    )
 
     # PDF original disponible
     pdf_link = page.locator("a:has-text('Voir le PDF')").first
@@ -424,6 +425,7 @@ def step_controle(page, result):
         rdv_input = page.locator("input[name='rdv_date']").first
         if rdv_input.count() and rdv_input.is_visible():
             from datetime import timedelta
+
             rdv_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%dT09:00")
             rdv_input.fill(rdv_date)
             checks.append(FieldCheck("RDV date", rdv_date, True))
@@ -511,7 +513,9 @@ def generate_report(results, total_duration):
     doublon_count = sum(1 for r in results if "doublon" in r.error.lower() or "Upload refuse" in r.error)
 
     out()
-    out(f"  Total: {len(results)} PDFs  |  OK: {ok_count}  |  ECHEC: {fail_count}  |  Doublons: {doublon_count}  |  Duree: {total_duration:.1f}s")
+    out(
+        f"  Total: {len(results)} PDFs  |  OK: {ok_count}  |  ECHEC: {fail_count}  |  Doublons: {doublon_count}  |  Duree: {total_duration:.1f}s"
+    )
     out()
 
     # --- Tableau resume ---
@@ -525,7 +529,9 @@ def generate_report(results, total_duration):
         montant_str = r.montant_ht if r.montant_ht else "-"
         final_str = r.statut_final if r.statut_final else "-"
         duration_str = f"{r.duration_s:.1f}s"
-        out(f"{i:>3}  {name_short:<38}  {r.numero_bdc:<8}  {champs_str:>7}  {r.nb_lignes:>6}  {montant_str:>10}  {final_str:>12}  {duration_str:>6}  {r.status_str:<15}")
+        out(
+            f"{i:>3}  {name_short:<38}  {r.numero_bdc:<8}  {champs_str:>7}  {r.nb_lignes:>6}  {montant_str:>10}  {final_str:>12}  {duration_str:>6}  {r.status_str:<15}"
+        )
         if r.champs_manquants:
             out(f"     -> Manquants: {', '.join(r.champs_manquants)}")
         if r.error:
@@ -557,7 +563,7 @@ def generate_report(results, total_duration):
         if r.lignes_detail:
             out(f"  Lignes de prestation ({len(r.lignes_detail)}) :")
             for j, lg in enumerate(r.lignes_detail, 1):
-                desig = lg['designation'][:50]
+                desig = lg["designation"][:50]
                 out(f"    {j}. {desig:<50}  Qte={lg['qte']}  {lg['unite']}  PU={lg['pu_ht']}  MT={lg['montant_ht']}")
 
         # Champs page detail
@@ -584,6 +590,7 @@ def generate_report(results, total_duration):
 
     # Compter les champs manquants les plus frequents
     from collections import Counter
+
     manquants_counter = Counter()
     for r in results:
         for m in r.champs_manquants:
@@ -652,17 +659,21 @@ def main():
 
             try:
                 step_upload(page, pdf_path, result)
-                print(f"    Upload OK")
+                print("    Upload OK")
 
                 step_verify_extraction(page, result)
                 ok_n = result.nb_champs_ok
                 total_n = result.nb_champs_total
                 manq = f" (manquants: {', '.join(result.champs_manquants)})" if result.champs_manquants else ""
-                print(f"    Extraction: BDC={result.numero_bdc}, {result.nb_lignes} lignes, {ok_n}/{total_n} champs{manq}")
+                print(
+                    f"    Extraction: BDC={result.numero_bdc}, {result.nb_lignes} lignes, {ok_n}/{total_n} champs{manq}"
+                )
 
                 # Afficher les lignes
                 for j, lg in enumerate(result.lignes_detail, 1):
-                    print(f"      L{j}: {lg['designation'][:45]}  Qte={lg['qte']}  {lg['unite']}  PU={lg['pu_ht']}  MT={lg['montant_ht']}")
+                    print(
+                        f"      L{j}: {lg['designation'][:45]}  Qte={lg['qte']}  {lg['unite']}  PU={lg['pu_ht']}  MT={lg['montant_ht']}"
+                    )
                 if result.montant_ht:
                     print(f"      Total HT: {result.montant_ht}")
 

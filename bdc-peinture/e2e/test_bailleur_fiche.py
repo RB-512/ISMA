@@ -5,10 +5,10 @@ Test E2E Playwright — Onglet Bailleurs + Preview fiche chantier.
 import os
 import sys
 
+from playwright.sync_api import sync_playwright
+
 sys.stdout.reconfigure(encoding="utf-8")
 os.makedirs("e2e/screenshots", exist_ok=True)
-
-from playwright.sync_api import sync_playwright
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -82,9 +82,9 @@ def main():
                     popup.screenshot(path="e2e/screenshots/fiche_chantier_result.png")
                     body = popup.content()
                     if "erreur" in body.lower() or "error" in body.lower():
-                        print(f"    ECHEC: Page d'erreur affichee")
+                        print("    ECHEC: Page d'erreur affichee")
                     else:
-                        print(f"    Resultat: page HTML (pas un PDF)")
+                        print("    Resultat: page HTML (pas un PDF)")
 
                 popup.close()
             else:

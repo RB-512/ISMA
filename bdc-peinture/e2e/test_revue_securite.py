@@ -8,10 +8,10 @@ Prerequis : 2 comptes (CDT + Secretaire) crees via la console Django.
 import os
 import sys
 
+from playwright.sync_api import sync_playwright
+
 sys.stdout.reconfigure(encoding="utf-8")
 os.makedirs("e2e/screenshots", exist_ok=True)
-
-from playwright.sync_api import sync_playwright
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -74,8 +74,9 @@ def test_secretaire_403_page_explicite(page):
     """La page 403 affiche un message explicite, pas une page blanche."""
     page.goto(BASE_URL + "/1/attribuer/")
     html = page.content()
-    assert "conducteurs de travaux" in html.lower() or "droits" in html.lower(), \
+    assert "conducteurs de travaux" in html.lower() or "droits" in html.lower(), (
         "La page 403 ne contient pas de message explicite"
+    )
 
 
 # ── Test 3 : Upload — Limite taille ────────────────────────────────────

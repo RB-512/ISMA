@@ -45,11 +45,14 @@ def generer_fiche_chantier(bdc: BonDeCommande, commentaire: str = "") -> bytes |
     try:
         lignes = bdc.lignes_prestation.all()
 
-        html_string = render_to_string("bdc/fiche_chantier_st.html", {
-            "bdc": bdc,
-            "lignes": lignes,
-            "commentaire": commentaire,
-        })
+        html_string = render_to_string(
+            "bdc/fiche_chantier_st.html",
+            {
+                "bdc": bdc,
+                "lignes": lignes,
+                "commentaire": commentaire,
+            },
+        )
 
         try:
             pdf_bytes = _html_to_pdf_weasyprint(html_string)

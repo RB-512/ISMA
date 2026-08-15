@@ -74,11 +74,7 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "", joindre
         corps = config.corps.format_map(safe_variables)
     else:
         sujet = f"BDC {bdc.numero_bdc} — Attribution — {nom_st}"
-        corps = (
-            f"Bonjour,\n\n"
-            f"Le BDC n°{bdc.numero_bdc} vous a été attribué.\n\n"
-            f"Adresse : {bdc.adresse}, {bdc.ville}\n"
-        )
+        corps = f"Bonjour,\n\nLe BDC n°{bdc.numero_bdc} vous a été attribué.\n\nAdresse : {bdc.adresse}, {bdc.ville}\n"
         if bdc.logement_etage or bdc.logement_porte:
             corps += f"Étage / Porte : {bdc.logement_etage or ''} / {bdc.logement_porte or ''}\n"
         corps += f"Travaux : {bdc.objet_travaux or 'Non précisé'}\n"
@@ -113,7 +109,9 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "", joindre
     return True
 
 
-def envoyer_email_reattribution(bdc: BonDeCommande, ancien_st_email: str, commentaire: str = "", joindre_bdc: bool = True) -> bool:
+def envoyer_email_reattribution(
+    bdc: BonDeCommande, ancien_st_email: str, commentaire: str = "", joindre_bdc: bool = True
+) -> bool:
     """
     Envoie un email d'annulation à l'ancien ST et un email d'attribution au nouveau.
 
