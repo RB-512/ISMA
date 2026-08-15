@@ -61,11 +61,11 @@ docker stop nginx-bootstrap && docker rm nginx-bootstrap
 docker compose -f docker-compose.prod.yml up -d nginx
 
 echo "=== 8. Migrations et données initiales ==="
-docker compose -f docker-compose.prod.yml exec web uv run manage.py migrate
-docker compose -f docker-compose.prod.yml exec web uv run manage.py collectstatic --noinput
+docker compose -f docker-compose.prod.yml exec web uv run --no-dev manage.py migrate
+docker compose -f docker-compose.prod.yml exec web uv run --no-dev manage.py collectstatic --noinput
 
 echo "=== 9. Créer le superutilisateur ==="
-docker compose -f docker-compose.prod.yml exec web uv run manage.py createsuperuser
+docker compose -f docker-compose.prod.yml exec web uv run --no-dev manage.py createsuperuser
 
 echo "=== 10. Configurer le renouvellement SSL automatique (cron) ==="
 (crontab -l 2>/dev/null; echo "0 3 * * * cd $APP_DIR/bdc-peinture && docker compose -f docker-compose.prod.yml run --rm certbot renew && docker compose -f docker-compose.prod.yml restart nginx") | crontab -
