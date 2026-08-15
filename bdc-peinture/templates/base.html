@@ -162,6 +162,15 @@
                 </a>
             </div>
 
+            {# Version badge #}
+            {% if derniere_version %}
+            <a href="{% url 'changelog:version_list' %}"
+               x-show="!$store.sidebar.collapsed" x-transition
+               class="block px-4 py-1.5 text-xs font-mono text-white/50 hover:text-white/80 transition-colors whitespace-nowrap">
+                v{{ derniere_version.numero }}
+            </a>
+            {% endif %}
+
             {# Navigation links #}
             <nav class="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
                 {% url 'bdc:index' as url_index %}

@@ -14,6 +14,7 @@ urlpatterns = [
     path("gestion/", include(("apps.accounts.urls_gestion", "gestion"))),
     path("sous-traitants/", include("apps.sous_traitants.urls")),
     path("", include("apps.monitoring.urls")),
+    path("", include("apps.changelog.urls")),
     path("", include("apps.bdc.urls")),
 ]
 

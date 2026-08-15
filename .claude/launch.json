@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "isma-dev",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "manage.py", "runserver"],
+      "port": 8000,
+      "cwd": "bdc-peinture",
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "config.settings.dev_sqlite"
+      }
+    }
+  ]
+}
