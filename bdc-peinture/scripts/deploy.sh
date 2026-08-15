@@ -30,9 +30,9 @@ docker compose -f docker-compose.prod.yml exec web true \
     || { echo "ERREUR: le conteneur web n'a pas démarré correctement"; exit 1; }
 
 echo ">>> 3. Migrations..."
-docker compose -f docker-compose.prod.yml exec web uv run manage.py migrate --noinput
+docker compose -f docker-compose.prod.yml exec web uv run --no-dev manage.py migrate --noinput
 
 echo ">>> 4. Collecte des fichiers statiques..."
-docker compose -f docker-compose.prod.yml exec web uv run manage.py collectstatic --noinput
+docker compose -f docker-compose.prod.yml exec web uv run --no-dev manage.py collectstatic --noinput
 
 echo "$(date): Déploiement terminé !"
