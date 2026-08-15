@@ -5,7 +5,7 @@ Tests du champ type_bon (Simple / Mixte) sur BonDeCommande.
 import pytest
 from django.urls import reverse
 
-from apps.bdc.models import BonDeCommande, StatutChoices, TypeBonChoices
+from apps.bdc.models import TypeBonChoices
 
 
 @pytest.fixture

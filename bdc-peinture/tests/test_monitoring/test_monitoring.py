@@ -12,7 +12,6 @@ from django.utils import timezone
 from apps.monitoring.middleware import ErrorTrackingMiddleware
 from apps.monitoring.models import ErrorReport
 
-
 # ─── Middleware ───────────────────────────────────────────────────────────────
 
 

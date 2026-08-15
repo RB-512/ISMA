@@ -166,14 +166,10 @@ def checklist_liste(request):
             messages.success(request, f"Point de contrôle « {libelle} » ajouté.")
         else:
             messages.error(request, "Le libellé ne peut pas être vide.")
-        return redirect(
-            f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={post_transition}"
-        )
+        return redirect(f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={post_transition}")
 
     # Fallback: redirect vers config avec onglet checklist
-    return redirect(
-        f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={transition}"
-    )
+    return redirect(f"{reverse('gestion:config_bailleurs')}?tab=checklist&transition={transition}")
 
 
 @group_required("CDT", "Secretaire")

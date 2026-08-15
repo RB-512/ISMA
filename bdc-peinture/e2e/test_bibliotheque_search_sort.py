@@ -3,13 +3,12 @@ Tests E2E Playwright - Bibliotheque de prix : recherche et tri par reference.
 """
 
 import os
-import re
 import sys
+
+from playwright.sync_api import sync_playwright
 
 sys.stdout.reconfigure(encoding="utf-8")
 os.makedirs("e2e/screenshots", exist_ok=True)
-
-from playwright.sync_api import sync_playwright
 
 BASE_URL = "http://127.0.0.1:8000"
 USERNAME = "testcdt@test.com"
@@ -42,7 +41,7 @@ def run_test(name, fn, page):
     try:
         fn(page)
         results.append((name, "PASS", ""))
-        print(f"  PASS")
+        print("  PASS")
     except Exception as e:
         results.append((name, "FAIL", str(e)[:120]))
         print(f"  FAIL: {str(e)[:120]}")
@@ -57,9 +56,7 @@ def run_test(name, fn, page):
 
 def t1_no_overlap(page):
     goto_bibliotheque(page)
-    pl = page.evaluate(
-        "parseFloat(window.getComputedStyle(document.getElementById('q-input')).paddingLeft)"
-    )
+    pl = page.evaluate("parseFloat(window.getComputedStyle(document.getElementById('q-input')).paddingLeft)")
     icon_right = page.evaluate(
         """() => {
             const svg = document.querySelector('.relative svg');
@@ -154,13 +151,13 @@ def t7_search_and_sort_combined(page):
 
 if __name__ == "__main__":
     tests = [
-        ("01_no_overlap",            t1_no_overlap),
-        ("02_search_by_ref",         t2_search_by_ref),
+        ("01_no_overlap", t1_no_overlap),
+        ("02_search_by_ref", t2_search_by_ref),
         ("03_search_by_designation", t3_search_by_designation),
-        ("04_clear_search",          t4_clear_search),
-        ("05_sort_asc_to_desc",      t5_sort_asc_to_desc),
-        ("06_sort_desc_to_asc",      t6_sort_desc_to_asc),
-        ("07_search_sort_combined",  t7_search_and_sort_combined),
+        ("04_clear_search", t4_clear_search),
+        ("05_sort_asc_to_desc", t5_sort_asc_to_desc),
+        ("06_sort_desc_to_asc", t6_sort_desc_to_asc),
+        ("07_search_sort_combined", t7_search_and_sort_combined),
     ]
 
     with sync_playwright() as p:

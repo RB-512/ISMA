@@ -5,32 +5,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='ErrorReport',
+            name="ErrorReport",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('fingerprint', models.CharField(max_length=64, unique=True)),
-                ('error_type', models.CharField(max_length=255)),
-                ('message', models.TextField()),
-                ('traceback', models.TextField()),
-                ('url', models.TextField(blank=True)),
-                ('method', models.CharField(blank=True, max_length=10)),
-                ('user_email', models.CharField(blank=True, max_length=255)),
-                ('count', models.PositiveIntegerField(default=1)),
-                ('first_seen', models.DateTimeField(default=django.utils.timezone.now)),
-                ('last_seen', models.DateTimeField(default=django.utils.timezone.now)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("fingerprint", models.CharField(max_length=64, unique=True)),
+                ("error_type", models.CharField(max_length=255)),
+                ("message", models.TextField()),
+                ("traceback", models.TextField()),
+                ("url", models.TextField(blank=True)),
+                ("method", models.CharField(blank=True, max_length=10)),
+                ("user_email", models.CharField(blank=True, max_length=255)),
+                ("count", models.PositiveIntegerField(default=1)),
+                ("first_seen", models.DateTimeField(default=django.utils.timezone.now)),
+                ("last_seen", models.DateTimeField(default=django.utils.timezone.now)),
             ],
             options={
-                'verbose_name': "Rapport d'erreur",
-                'verbose_name_plural': "Rapports d'erreurs",
-                'ordering': ['-last_seen'],
+                "verbose_name": "Rapport d'erreur",
+                "verbose_name_plural": "Rapports d'erreurs",
+                "ordering": ["-last_seen"],
             },
         ),
     ]

@@ -10,10 +10,11 @@ import pytest
 from django.contrib.messages import get_messages
 from django.urls import reverse
 
-from apps.bdc.models import HistoriqueAction, LigneForfaitAttribution, PrixForfaitaire, StatutChoices
+from apps.bdc.models import HistoriqueAction, PrixForfaitaire, StatutChoices
 from apps.bdc.notifications import notifier_st_attribution
 from apps.bdc.services import TransitionInvalide, attribuer_st, reattribuer_st
 from apps.sous_traitants.models import SousTraitant
+
 
 @pytest.fixture
 def prix_t2(db):
@@ -549,13 +550,16 @@ class TestAttribuerForfaitVue:
 
     def test_post_forfait_via_vue(self, client_cdt, bdc_a_faire, sous_traitant, prix_t2):
         url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
-        resp = client_cdt.post(url, {
-            "sous_traitant": sous_traitant.pk,
-            "mode_attribution": "forfait",
-            "ligne_0_prix": prix_t2.pk,
-            "ligne_0_qty": "3",
-            "ligne_0_pu": "800.00",
-        })
+        resp = client_cdt.post(
+            url,
+            {
+                "sous_traitant": sous_traitant.pk,
+                "mode_attribution": "forfait",
+                "ligne_0_prix": prix_t2.pk,
+                "ligne_0_qty": "3",
+                "ligne_0_pu": "800.00",
+            },
+        )
         assert resp.status_code == 302
         bdc_a_faire.refresh_from_db()
         assert bdc_a_faire.mode_attribution == "forfait"
@@ -563,11 +567,14 @@ class TestAttribuerForfaitVue:
 
     def test_post_pourcentage_reste_compatible(self, client_cdt, bdc_a_faire, sous_traitant):
         url = reverse("bdc:attribuer", args=[bdc_a_faire.pk])
-        resp = client_cdt.post(url, {
-            "sous_traitant": sous_traitant.pk,
-            "mode_attribution": "pourcentage",
-            "pourcentage_st": "65",
-        })
+        resp = client_cdt.post(
+            url,
+            {
+                "sous_traitant": sous_traitant.pk,
+                "mode_attribution": "pourcentage",
+                "pourcentage_st": "65",
+            },
+        )
         assert resp.status_code == 302
         bdc_a_faire.refresh_from_db()
         assert bdc_a_faire.mode_attribution == "pourcentage"
