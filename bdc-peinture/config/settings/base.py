@@ -36,6 +36,7 @@ LOCAL_APPS = [
     "apps.pdf_extraction",
     "apps.notifications",
     "apps.monitoring",
+    "apps.changelog",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -65,6 +66,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.changelog.context_processors.derniere_version",
             ],
         },
     },
