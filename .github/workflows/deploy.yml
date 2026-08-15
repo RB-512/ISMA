@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     # Ne déploie que si la CI a réussi
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Nécessite une validation manuelle avant chaque déploiement en prod
+    environment: production
 
     steps:
       - name: Deploy to VPS via SSH
