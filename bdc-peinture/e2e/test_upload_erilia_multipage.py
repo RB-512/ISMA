@@ -172,7 +172,9 @@ def step_verify_extraction(page):
             }
             lignes.append(ligne)
             desig = ligne["designation"][:55]
-            print(f"    {i + 1:>2}. {desig:<55}  Qte={ligne['qte']}  {ligne['unite']}  PU={ligne['pu_ht']}  MT={ligne['montant_ht']}")
+            print(
+                f"    {i + 1:>2}. {desig:<55}  Qte={ligne['qte']}  {ligne['unite']}  PU={ligne['pu_ht']}  MT={ligne['montant_ht']}"
+            )
 
     results["lignes"] = lignes
 
@@ -191,16 +193,16 @@ def step_verify_extraction(page):
     # Le BDC BT 2026 30624 a 11 prestations sur 2 pages.
     # Si on n'extrait que la page 1, on aura ~4 lignes.
     # Si le fix multi-pages fonctionne, on doit avoir 11 lignes.
-    MIN_EXPECTED_LINES = 7  # au moins 7 pour prouver le multi-pages
-    if nb_lignes < MIN_EXPECTED_LINES:
+    min_expected_lignes = 7  # au moins 7 pour prouver le multi-pages
+    if nb_lignes < min_expected_lignes:
         errors.append(
             f"MULTI-PAGES ECHOUE: seulement {nb_lignes} lignes extraites "
-            f"(attendu >= {MIN_EXPECTED_LINES}). "
+            f"(attendu >= {min_expected_lignes}). "
             f"Le parser n'extrait probablement que la page 1."
         )
-        print(f"\n  [FAIL] MULTI-PAGES: {nb_lignes} lignes < {MIN_EXPECTED_LINES} attendues")
+        print(f"\n  [FAIL] MULTI-PAGES: {nb_lignes} lignes < {min_expected_lignes} attendues")
     else:
-        print(f"\n  [OK] MULTI-PAGES: {nb_lignes} lignes extraites (>= {MIN_EXPECTED_LINES})")
+        print(f"\n  [OK] MULTI-PAGES: {nb_lignes} lignes extraites (>= {min_expected_lignes})")
 
     return results, errors
 
@@ -225,7 +227,7 @@ def step_verify_detail(page, pk, expected_lignes):
     p_sub = page.locator("h1 + p").first
     sub_text = p_sub.inner_text() if p_sub.count() else ""
     if "traiter" in sub_text.lower():
-        print(f"  Statut: A traiter [OK]")
+        print("  Statut: A traiter [OK]")
     else:
         errors.append(f"Statut inattendu: {sub_text[:40]}")
 
@@ -241,7 +243,7 @@ def step_verify_detail(page, pk, expected_lignes):
     # PDF original
     pdf_link = page.locator("a:has-text('Voir le PDF')").first
     if pdf_link.count():
-        print(f"  PDF original: present [OK]")
+        print("  PDF original: present [OK]")
     else:
         errors.append("Lien PDF original absent")
 
@@ -260,7 +262,7 @@ def main():
         print(f"[ERREUR] PDF introuvable: {PDF_PATH}")
         sys.exit(1)
 
-    print(f"[INFO] Test upload ERILIA multi-pages")
+    print("[INFO] Test upload ERILIA multi-pages")
     print(f"[INFO] PDF: {PDF_PATH.name}")
     print()
 
@@ -320,7 +322,7 @@ def main():
         print()
         sys.exit(1)
     else:
-        print(f"\n  SUCCES: Toutes les verifications passent.")
+        print("\n  SUCCES: Toutes les verifications passent.")
         print(f"  - {results['nb_lignes']} lignes de prestation extraites (multi-pages OK)")
         print(f"  - Montant HT: {results.get('montant_ht', 'N/A')}")
         print()

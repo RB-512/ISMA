@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bdc', '0016_alter_relevefacturation_unique_together'),
+        ("bdc", "0016_alter_relevefacturation_unique_together"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='bondecommande',
-            name='type_bon',
-            field=models.CharField(choices=[('SIMPLE', 'Simple'), ('MIXTE', 'Mixte')], default='SIMPLE', max_length=10, verbose_name='Type de bon'),
+            model_name="bondecommande",
+            name="type_bon",
+            field=models.CharField(
+                choices=[("SIMPLE", "Simple"), ("MIXTE", "Mixte")],
+                default="SIMPLE",
+                max_length=10,
+                verbose_name="Type de bon",
+            ),
         ),
     ]

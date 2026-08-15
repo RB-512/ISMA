@@ -10,8 +10,6 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
-
-logger = logging.getLogger(__name__)
 from django.contrib.auth.decorators import login_required
 from django.core.files import File
 from django.core.files.base import ContentFile
@@ -53,6 +51,8 @@ from .services import (
     valider_realisation,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _parse_lignes_forfait(post_data):
     """Parse les lignes forfait du POST (format: ligne_N_prix, ligne_N_qty, ligne_N_pu)."""
@@ -64,11 +64,13 @@ def _parse_lignes_forfait(post_data):
         pu = post_data.get(f"ligne_{i}_pu")
         if prix_id and qty and pu:
             try:
-                lignes.append({
-                    "prix_id": int(prix_id),
-                    "quantite": Decimal(qty),
-                    "prix_unitaire": Decimal(pu),
-                })
+                lignes.append(
+                    {
+                        "prix_id": int(prix_id),
+                        "quantite": Decimal(qty),
+                        "prix_unitaire": Decimal(pu),
+                    }
+                )
             except (ValueError, ArithmeticError):
                 logger.warning("Ligne forfait %d invalide: prix=%s qty=%s pu=%s", i, prix_id, qty, pu)
         i += 1
@@ -191,9 +193,11 @@ def liste_bdc(request):
     alerte = request.GET.get("alerte", "").strip()
     if alerte == "retard":
         from apps.notifications.alertes import get_bdc_en_retard
+
         queryset = queryset.filter(pk__in=get_bdc_en_retard().values_list("pk", flat=True))
     elif alerte == "proche":
         from apps.notifications.alertes import get_bdc_delai_proche
+
         queryset = queryset.filter(pk__in=get_bdc_delai_proche().values_list("pk", flat=True))
 
     # Filtres django-filter
@@ -1337,7 +1341,7 @@ def controle_bdc(request, pk: int):
             messages.success(
                 request,
                 format_html(
-                    'BDC n°{} — informations enregistrées. '
+                    "BDC n°{} — informations enregistrées. "
                     '<a href="{}" class="underline font-medium">Retour au dashboard →</a>',
                     bdc.numero_bdc,
                     reverse("bdc:index"),

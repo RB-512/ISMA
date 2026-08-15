@@ -195,7 +195,6 @@ class TestVueExportFiltres:
 
     def test_filtre_a_traiter(self, client, utilisateur_cdt, bdc_a_facturer):
         """Un BDC A_TRAITER est exportable via le filtre statut."""
-        from apps.bdc.models import BonDeCommande
         bdc_a_facturer.statut = StatutChoices.A_TRAITER
         bdc_a_facturer.save()
         client.force_login(utilisateur_cdt)
