@@ -55,6 +55,29 @@ def envoyer_sms_attribution(bdc: BonDeCommande) -> bool:
     return backend.send(telephone, message)
 
 
+def envoyer_sms_annulation(bdc: BonDeCommande, telephone: str, reattribue: bool = False) -> bool:
+    """
+    Prévient un sous-traitant que le BDC ne lui est plus attribué.
+
+    Le téléphone est passé en argument plutôt que lu sur le BDC : au moment de
+    l'envoi, le sous-traitant a déjà été détaché du bon.
+
+    Args:
+        reattribue: True si le BDC part chez un autre ST, False s'il repart
+            simplement en attente d'attribution.
+
+    Returns:
+        True si le SMS a été envoyé (ou s'il n'y avait pas de numéro).
+    """
+    if not telephone:
+        logger.warning("SMS annulation : pas de téléphone pour BDC %s", bdc.numero_bdc)
+        return True
+
+    suite = " Ce BDC a été réattribué." if reattribue else ""
+    message = f"BDC {bdc.numero_bdc} — Attribution annulée.{suite}"
+    return get_sms_backend().send(telephone, message)
+
+
 def envoyer_sms_reattribution(bdc: BonDeCommande, ancien_st_telephone: str) -> bool:
     """
     Notifie l'ancien ST de l'annulation et le nouveau de l'attribution.
@@ -62,14 +85,7 @@ def envoyer_sms_reattribution(bdc: BonDeCommande, ancien_st_telephone: str) -> b
     Returns:
         True si tous les SMS ont été envoyés avec succès.
     """
-    backend = get_sms_backend()
-    succes = True
-
-    # SMS d'annulation à l'ancien ST
-    if ancien_st_telephone:
-        msg_annulation = f"BDC {bdc.numero_bdc} — Attribution annulée. Ce BDC a été réattribué."
-        if not backend.send(ancien_st_telephone, msg_annulation):
-            succes = False
+    succes = envoyer_sms_annulation(bdc, ancien_st_telephone, reattribue=True)
 
     # SMS d'attribution au nouveau ST
     if not envoyer_sms_attribution(bdc):

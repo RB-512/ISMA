@@ -109,6 +109,49 @@ def envoyer_email_attribution(bdc: BonDeCommande, commentaire: str = "", joindre
     return True
 
 
+def envoyer_email_annulation(bdc: BonDeCommande, email: str, reattribue: bool = False) -> bool:
+    """
+    Prévient un sous-traitant que le BDC ne lui est plus attribué.
+
+    L'adresse est passée en argument plutôt que lue sur le BDC : au moment de
+    l'envoi, le sous-traitant a déjà été détaché du bon.
+
+    Args:
+        reattribue: True si le BDC part chez un autre ST, False s'il repart
+            simplement en attente d'attribution.
+
+    Returns:
+        True si l'email a été envoyé (ou s'il n'y avait pas d'adresse).
+    """
+    if not email:
+        logger.warning("Email annulation : pas d'adresse pour BDC %s", bdc.numero_bdc)
+        return True
+
+    motif = (
+        "Ce BDC a été réattribué à un autre sous-traitant."
+        if reattribue
+        else "Ce BDC ne vous est plus attribué. Merci de ne pas intervenir sur ce chantier."
+    )
+    message = EmailMessage(
+        subject=f"BDC {bdc.numero_bdc} — Attribution annulée",
+        body=(
+            f"Bonjour,\n\n"
+            f"L'attribution du BDC n°{bdc.numero_bdc} a été annulée.\n"
+            f"{motif}\n\n"
+            f"Adresse : {bdc.adresse}, {bdc.ville}\n\n"
+            f"Cordialement,\nBDC Peinture"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[email],
+    )
+    try:
+        message.send(fail_silently=False)
+    except Exception:
+        logger.warning("Échec email annulation pour BDC %s", bdc.numero_bdc, exc_info=True)
+        return False
+    return True
+
+
 def envoyer_email_reattribution(
     bdc: BonDeCommande, ancien_st_email: str, commentaire: str = "", joindre_bdc: bool = True
 ) -> bool:
@@ -121,26 +164,7 @@ def envoyer_email_reattribution(
     Returns:
         True si tous les emails ont été envoyés avec succès.
     """
-    succes = True
-
-    # Email d'annulation à l'ancien ST
-    if ancien_st_email:
-        email_annulation = EmailMessage(
-            subject=f"BDC {bdc.numero_bdc} — Attribution annulée",
-            body=(
-                f"Bonjour,\n\n"
-                f"L'attribution du BDC n°{bdc.numero_bdc} a été annulée.\n"
-                f"Ce BDC a été réattribué à un autre sous-traitant.\n\n"
-                f"Cordialement,\nBDC Peinture"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[ancien_st_email],
-        )
-        try:
-            email_annulation.send(fail_silently=False)
-        except Exception:
-            logger.warning("Échec email annulation pour BDC %s", bdc.numero_bdc, exc_info=True)
-            succes = False
+    succes = envoyer_email_annulation(bdc, ancien_st_email, reattribue=True)
 
     # Email d'attribution au nouveau ST
     if not envoyer_email_attribution(bdc, commentaire=commentaire, joindre_bdc=joindre_bdc):

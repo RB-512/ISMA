@@ -426,6 +426,9 @@ def annuler_attribution(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
 
     ancien_st = str(bdc.sous_traitant) if bdc.sous_traitant else ""
     ancien_montant = str(bdc.montant_st) if bdc.montant_st is not None else None
+    # Capture avant detachement : apres la transaction, bdc.sous_traitant est None.
+    ancien_telephone = bdc.sous_traitant.telephone if bdc.sous_traitant else ""
+    ancien_email = bdc.sous_traitant.email if bdc.sous_traitant else ""
 
     with transaction.atomic():
         bdc.lignes_forfait.all().delete()
@@ -455,6 +458,8 @@ def annuler_attribution(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
                 "ancien_montant_st": ancien_montant,
             },
         )
+
+    _notifier_annulation_si_possible(bdc, ancien_telephone, ancien_email)
 
     return bdc
 
@@ -504,6 +509,23 @@ def _notifier_st_si_possible(bdc: BonDeCommande, commentaire: str = "", joindre_
         envoyer_email_attribution(bdc, commentaire=commentaire, joindre_bdc=joindre_bdc)
     except Exception:
         logger.warning("Échec email attribution BDC %s", bdc.numero_bdc, exc_info=True)
+
+
+def _notifier_annulation_si_possible(bdc: BonDeCommande, telephone: str, email: str) -> None:
+    """Prévient le sous-traitant que le BDC lui est retiré, non-bloquant."""
+    try:
+        from apps.notifications.sms import envoyer_sms_annulation
+
+        envoyer_sms_annulation(bdc, telephone)
+    except Exception:
+        logger.warning("Échec SMS annulation BDC %s", bdc.numero_bdc, exc_info=True)
+
+    try:
+        from apps.notifications.email import envoyer_email_annulation
+
+        envoyer_email_annulation(bdc, email)
+    except Exception:
+        logger.warning("Échec email annulation BDC %s", bdc.numero_bdc, exc_info=True)
 
 
 def _notifier_reattribution_si_possible(
