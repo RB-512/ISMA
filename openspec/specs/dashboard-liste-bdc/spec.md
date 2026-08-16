@@ -1,4 +1,16 @@
-## MODIFIED Requirements
+## Purpose
+
+Offrir l'écran d'entrée de l'application : l'inventaire complet des bons de commande,
+paginé et trié du plus récent au plus ancien, surmonté des compteurs par statut qui
+donnent en un coup d'œil la charge en cours.
+
+La capability couvre le rendu de cette liste, ses compteurs et son état vide, ainsi que la
+règle d'accès (tout utilisateur authentifié, secrétaire comme CDT). Elle ne couvre pas le
+filtrage interactif, porté par `filtres-htmx`, ni l'encart d'alertes de délai
+(`alertes-delais`), ni ce que l'on voit après avoir cliqué sur une ligne
+(`fiche-detail-bdc`).
+
+## Requirements
 
 ### Requirement: Le dashboard affiche la liste paginée des BDC
 Le système SHALL afficher tous les `BonDeCommande` dans un tableau paginé (25 par page) trié par date de création décroissante. Chaque ligne SHALL afficher : numéro BDC (font mono), bailleur, adresse, ville, statut (badge coloré design system), date de création. La ligne SHALL être cliquable vers la fiche détail avec un effet hover. Le tableau SHALL utiliser le style du design system Isma (fond surface-card, bordures subtiles, alternance de lignes en dark mode).

@@ -1,3 +1,17 @@
+## Purpose
+
+Rendre visible le dépassement de `delai_execution` avant que le bailleur ne le signale.
+Un BDC attribué dont la date est passée ne se manifeste nulle part dans la liste : cette
+capability le fait remonter, dans le dashboard du CDT et en ligne de commande pour un
+usage planifié.
+
+Le périmètre s'arrête à la détection et à l'affichage. Aucune alerte n'est envoyée au
+sous-traitant ni au bailleur — les canaux sortants sont `notifications-sms` et
+`notifications-email` — et aucun statut n'est modifié : le CDT reste seul juge de la
+suite à donner.
+
+## Requirements
+
 ### Requirement: Le système identifie les BDC dont le délai d'exécution est dépassé ou proche
 Le système SHALL fournir une management command `check_delais` qui identifie les BDC en statut EN_COURS ou A_FAIRE dont le `delai_execution` est dépassé ou dans les 2 jours à venir.
 

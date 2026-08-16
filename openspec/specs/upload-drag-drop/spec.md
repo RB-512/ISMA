@@ -1,4 +1,15 @@
-## ADDED Requirements
+## Purpose
+
+Rendre le dépôt du PDF naturel pour quelqu'un qui traite des bons de commande à la chaîne :
+glisser le fichier depuis l'explorateur plutôt que de traverser un sélecteur, voir ce qui a
+été sélectionné, pouvoir se corriger.
+
+La capability est strictement une amélioration d'interaction sur la page d'upload, en
+progressive enhancement : sans JavaScript, l'input fichier standard reste visible et
+fonctionnel. Elle ne valide rien et n'extrait rien — dès qu'un fichier est retenu, tout
+passe à `upload-pdf`.
+
+## Requirements
 
 ### Requirement: La page upload propose une zone de drag-and-drop
 Le système SHALL afficher une zone de drop visuelle sur la page upload PDF. L'utilisateur SHALL pouvoir glisser-déposer un fichier PDF ou cliquer pour ouvrir le sélecteur de fichiers. La zone SHALL afficher un état visuel distinct (bordure colorée, icône) pendant le survol d'un fichier.

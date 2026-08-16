@@ -1,4 +1,16 @@
-## MODIFIED Requirements
+## Purpose
+
+Fournir le squelette de page dont tous les écrans héritent : la structure sidebar +
+contenu, la navigation vers les grandes destinations de l'outil, le chargement des
+dépendances frontend (Tailwind, HTMX, Alpine), et les pages qui existent hors de tout
+écran métier — connexion, 404, 500.
+
+Le partage avec `design-system-isma` est net : celui-ci définit le vocabulaire visuel
+(couleurs, typographie, badges, dark mode), celui-ci l'assemble en une mise en page et le
+câble dans le HTML. Le contenu de chaque écran, lui, appartient à la capability qui le
+porte — la base n'expose que les blocs `{% block %}` où il vient se loger.
+
+## Requirements
 
 ### Requirement: Template base.html avec layout principal
 Le système SHALL fournir un template `templates/base.html` avec un layout sidebar + contenu principal. La sidebar SHALL contenir : le logo "ISMA" en texte stylisé, les liens de navigation (Tableau de bord, Upload PDF, Sous-traitants, Recoupement, Export facturation — ces deux derniers CDT uniquement), un toggle dark/light mode, le nom de l'utilisateur connecté avec son groupe, et un bouton de déconnexion. La sidebar SHALL être collapsible (icônes seulement) via un bouton, l'état persisté en localStorage. Le contenu principal SHALL inclure une barre supérieure avec un champ de recherche globale. Les blocs `{% block title %}`, `{% block content %}`, `{% block extra_head %}`, `{% block extra_scripts %}` SHALL rester disponibles.
@@ -24,7 +36,7 @@ Le système SHALL fournir un template `templates/base.html` avec un layout sideb
 - **THEN** la sidebar affiche son nom, son groupe (badge), et un lien de déconnexion
 
 ### Requirement: Sidebar sans scrollbar visible
-La scrollbar de la sidebar DOIT être masquée visuellement tout en gardant le scroll fonctionnel.
+La scrollbar de la sidebar SHALL être masquée visuellement tout en gardant le scroll fonctionnel.
 
 #### Scenario: Écran court
 - **WHEN** la hauteur du viewport est insuffisante

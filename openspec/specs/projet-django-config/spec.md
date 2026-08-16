@@ -1,4 +1,17 @@
-## ADDED Requirements
+## Purpose
+
+Rendre le projet executable, reproductible et testable par n'importe qui le clone : la
+structure d'apps, la separation des settings entre developpement et production, la base de
+donnees locale conteneurisee, la gestion des dependances verrouillee, le linter et le
+lanceur de tests.
+
+Cette capability ne porte aucune regle metier. Elle decrit ce qui doit etre vrai de
+l'ossature — que `runserver` demarre, que `migrate` passe, que `pytest` et `ruff` soient
+configures, que la production desactive DEBUG et force HTTPS. Le comportement des erreurs
+de production que cette configuration rend possible est specifie par
+`error-logging-prod`.
+
+## Requirements
 
 ### Requirement: Projet Django initialise avec structure multi-apps
 

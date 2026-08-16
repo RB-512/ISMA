@@ -1,4 +1,17 @@
-## ADDED Requirements
+## Purpose
+
+Etablir qui entre dans l'application et ce qu'il a le droit d'y faire. Le metier ne connait
+que deux profils — la secretaire qui saisit, le CDT qui decide — et cette distinction porte
+l'essentiel du controle d'acces : la secretaire prepare les dossiers, elle n'attribue pas
+et ne facture pas.
+
+La capability fournit le socle : login par email via django-allauth, groupes crees par
+migration de donnees pour exister sur tout environnement, et les outils
+(`@group_required`, `GroupRequiredMixin`) avec lesquels chaque vue se protege. Elle ne
+gere pas le cycle de vie des comptes, qui appartient a `admin-utilisateurs`, et ne dit pas
+quelle vue exige quel groupe : cette decision reste dans chaque capability metier.
+
+## Requirements
 
 ### Requirement: Authentification par login/mot de passe
 

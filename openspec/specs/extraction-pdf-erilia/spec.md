@@ -1,4 +1,17 @@
-## ADDED Requirements
+## Purpose
+
+Traduire un bon de commande ERILIA en données exploitables par l'application. Le format
+ERILIA a ses propres conventions — labels en majuscules, date d'édition en page 2, montants
+à la française, prix présents sur tout le document — et cette capability les encapsule
+dans un parser dédié, plus les règles de détection qui permettent de le choisir face à un
+PDF inconnu.
+
+Le parser rend un dictionnaire normalisé, identique en forme à celui de
+`extraction-pdf-gdh`, et rien d'autre : il ne persiste pas, ne valide pas de règle métier
+et ne lève jamais d'exception sur un champ absent — un champ introuvable vaut `""` ou
+`None`, à charge de l'utilisatrice de le compléter dans le formulaire.
+
+## Requirements
 
 ### Requirement: ERILIAParser extrait les données structurées d'un PDF ERILIA
 `ERILIAParser.extraire()` SHALL retourner le même dict normalisé que `GDHParser`. Les champs non trouvés SHALL être `None` ou `""`. Le format ERILIA est un PDF 2 pages contenant l'ensemble des données y compris les prix. Les patterns regex SHALL être calibrés sur le format réel du texte pdfplumber (labels en majuscules, date sur page 2).

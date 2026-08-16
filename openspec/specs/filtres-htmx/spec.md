@@ -1,4 +1,15 @@
-## ADDED Requirements
+## Purpose
+
+Rendre le dashboard filtrable sans le rechargement complet qui fait perdre sa place. Le
+filtrage est l'usage le plus répété de l'écran principal ; en faire une navigation
+classique le rendrait pénible.
+
+La capability couvre le mécanisme : le rendu partiel côté vue (détection de `HX-Request`,
+renvoi du seul fragment), l'indicateur de chargement, et la mise à jour de l'URL pour que
+la vue filtrée reste partageable et le retour arrière fonctionnel. Ce que contiennent le
+tableau et les compteurs ainsi rafraîchis est défini par `dashboard-liste-bdc`.
+
+## Requirements
 
 ### Requirement: Les filtres du dashboard appliquent le filtrage sans rechargement de page
 Le formulaire de filtres sur le dashboard SHALL utiliser HTMX pour envoyer les requêtes de filtrage en arrière-plan et remplacer uniquement le contenu du tableau et des compteurs sans recharger la page entière.

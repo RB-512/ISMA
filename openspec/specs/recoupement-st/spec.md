@@ -1,3 +1,17 @@
+## Purpose
+
+Répondre à la question de contrôle du CDT : pour chaque sous-traitant, où en est-on ? Un
+tableau des ST ayant des BDC, comptés par statut, et le détail à un clic. C'est une lecture
+de vérification — on recoupe ce que l'on croit avoir confié avec ce que la base enregistre,
+typiquement avant de facturer ou face à une réclamation.
+
+La capability est en lecture seule et réservée au CDT. Elle mène à l'export
+(`export-facturation`) et aux fiches individuelles (`fiche-detail-bdc`) sans rien modifier
+elle-même. Sa nature est rétrospective et comptable : elle regarde tous les statuts, y
+compris les BDC déjà facturés.
+
+## Requirements
+
 ### Requirement: Le CDT dispose d'un écran de recoupement par sous-traitant
 Le système SHALL fournir un écran listant tous les sous-traitants actifs avec le nombre de BDC par statut (en cours, à facturer, facturé). Le CDT SHALL pouvoir cliquer sur un ST pour voir le détail de ses BDC. Un bouton "Exporter" SHALL être affiché, pointant vers `/bdc/export/`.
 

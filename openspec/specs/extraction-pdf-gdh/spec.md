@@ -1,4 +1,17 @@
-## ADDED Requirements
+## Purpose
+
+Traduire un bon de commande GDH en données exploitables par l'application. Le format GDH
+tient en deux pages dont l'en-tête est multi-lignes et sans libellés préfixés, ce qui rend
+les motifs d'extraction spécifiques : cette capability les concentre dans un parser dédié,
+calibré sur le PDF modèle de référence et vérifié par un test d'intégration sur ce fichier
+réel.
+
+Le parser rend un dictionnaire normalisé, de même forme que celui d'`extraction-pdf-erilia`,
+et s'arrête là : aucune persistance, aucune règle métier, aucune exception sur un champ
+manquant. La page 2 sans prix, propre au format GDH, est exploitée ailleurs — par
+`generation-bdc-terrain` — mais l'extraction n'en fait rien.
+
+## Requirements
 
 ### Requirement: GDHParser extrait les données structurées d'un PDF GDH
 `GDHParser.extraire()` SHALL retourner un dict normalisé avec les champs du modèle `BonDeCommande`. Les champs non trouvés SHALL être `None` ou `""` (jamais une exception). Le parser SHALL utiliser pdfplumber comme extracteur principal. Les patterns regex SHALL être calibrés sur le format réel du texte pdfplumber (en-tête multi-lignes, pas de préfixes "Adresse :" ou "Objet :").

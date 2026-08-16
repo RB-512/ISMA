@@ -1,4 +1,18 @@
-## ADDED Requirements
+## Purpose
+
+Ouvrir la chaîne de traitement : la secrétaire dépose le PDF reçu du bailleur, le système
+reconnaît de quel bailleur il vient et amorce la création du bon de commande avec ce qu'il
+a su lire.
+
+La capability couvre la réception et son filtrage — type de fichier, taille, accès réservé
+à la secrétaire — la détection du format, et le passage de relais vers le formulaire de
+création. Elle définit surtout comment l'échec se présente : un PDF illisible, un bailleur
+non reconnu ou un fichier du mauvais type produisent un message explicite et gardent
+l'utilisatrice sur la page, jamais une erreur technique. L'extraction champ à champ
+appartient à `extraction-pdf-gdh` et `extraction-pdf-erilia`, l'enregistrement à
+`formulaire-creation-bdc`, l'ergonomie de la zone de dépôt à `upload-drag-drop`.
+
+## Requirements
 
 ### Requirement: La secrétaire peut uploader un PDF bailleur
 Le système SHALL afficher un formulaire d'upload accessible uniquement aux utilisateurs du groupe Secrétaire. Le formulaire SHALL accepter uniquement les fichiers PDF (`.pdf`). La taille maximale SHALL être de 10 Mo.
