@@ -238,6 +238,58 @@ def _calculer_montant_st(bdc: BonDeCommande, pourcentage: Decimal) -> Decimal | 
     return (bdc.montant_ht * pourcentage / Decimal("100")).quantize(Decimal("0.01"))
 
 
+def _appliquer_montant_st(
+    bdc: BonDeCommande,
+    pourcentage: Decimal | None,
+    mode: str,
+    lignes_forfait: list[dict] | None,
+) -> None:
+    """
+    Calcule et applique le montant ST sur le BDC selon le mode d'attribution.
+
+    Un BDC ne peut jamais être attribué sans montant : sans cette garantie, le BDC
+    compte dans les effectifs mais pèse zéro dans les totaux (Sum ignore les NULL),
+    ce qui creuse un écart silencieux entre attribution et relevés.
+
+    Raises:
+        BDCIncomplet: Si aucun montant ne peut être déterminé.
+    """
+    if mode == "forfait":
+        if not lignes_forfait:
+            raise BDCIncomplet(
+                "Attribution en forfait impossible : aucune ligne de prestation valide. "
+                "Renseignez au moins une ligne avec une référence, une quantité et un prix unitaire."
+            )
+
+        bdc.lignes_forfait.all().delete()
+        total = Decimal("0")
+        for ligne in lignes_forfait:
+            montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
+            LigneForfaitAttribution.objects.create(
+                bdc=bdc,
+                prix_forfaitaire_id=ligne["prix_id"],
+                quantite=ligne["quantite"],
+                prix_unitaire=ligne["prix_unitaire"],
+                montant=montant_ligne,
+            )
+            total += montant_ligne
+
+        bdc.montant_st = total
+        if bdc.montant_ht and bdc.montant_ht > 0:
+            bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
+        else:
+            bdc.pourcentage_st = None
+        return
+
+    if pourcentage is None:
+        raise BDCIncomplet("Attribution impossible : le pourcentage ST est obligatoire en mode pourcentage.")
+
+    # Note : si le BDC n'a pas de montant HT, montant_st reste None. Comportement
+    # délibéré et couvert par test_montant_st_none_si_pas_montant_ht.
+    bdc.pourcentage_st = pourcentage
+    bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+
+
 def attribuer_st(
     bdc: BonDeCommande,
     sous_traitant: SousTraitant,
@@ -263,27 +315,7 @@ def attribuer_st(
         bdc.sous_traitant = sous_traitant
         bdc.mode_attribution = mode
 
-        if mode == "forfait" and lignes_forfait:
-            bdc.lignes_forfait.all().delete()
-            total = Decimal("0")
-            for ligne in lignes_forfait:
-                montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
-                LigneForfaitAttribution.objects.create(
-                    bdc=bdc,
-                    prix_forfaitaire_id=ligne["prix_id"],
-                    quantite=ligne["quantite"],
-                    prix_unitaire=ligne["prix_unitaire"],
-                    montant=montant_ligne,
-                )
-                total += montant_ligne
-            bdc.montant_st = total
-            if bdc.montant_ht and bdc.montant_ht > 0:
-                bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
-            else:
-                bdc.pourcentage_st = None
-        else:
-            bdc.pourcentage_st = pourcentage
-            bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+        _appliquer_montant_st(bdc, pourcentage, mode, lignes_forfait)
 
         bdc.statut = StatutChoices.EN_COURS
         bdc.save(
@@ -340,27 +372,7 @@ def reattribuer_st(
         bdc.sous_traitant = nouveau_st
         bdc.mode_attribution = mode
 
-        if mode == "forfait" and lignes_forfait:
-            bdc.lignes_forfait.all().delete()
-            total = Decimal("0")
-            for ligne in lignes_forfait:
-                montant_ligne = (ligne["quantite"] * ligne["prix_unitaire"]).quantize(Decimal("0.01"))
-                LigneForfaitAttribution.objects.create(
-                    bdc=bdc,
-                    prix_forfaitaire_id=ligne["prix_id"],
-                    quantite=ligne["quantite"],
-                    prix_unitaire=ligne["prix_unitaire"],
-                    montant=montant_ligne,
-                )
-                total += montant_ligne
-            bdc.montant_st = total
-            if bdc.montant_ht and bdc.montant_ht > 0:
-                bdc.pourcentage_st = (total / bdc.montant_ht * Decimal("100")).quantize(Decimal("0.01"))
-            else:
-                bdc.pourcentage_st = None
-        else:
-            bdc.pourcentage_st = pourcentage
-            bdc.montant_st = _calculer_montant_st(bdc, pourcentage)
+        _appliquer_montant_st(bdc, pourcentage, mode, lignes_forfait)
 
         bdc.save(
             update_fields=[
@@ -388,6 +400,93 @@ def reattribuer_st(
     )
 
     return bdc
+
+
+def annuler_attribution(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
+    """
+    Annule l'attribution d'un BDC en cours : retour en 'À attribuer' et remise à zéro
+    complète des champs d'attribution.
+
+    Un simple changement de statut ne suffit pas : il laisserait le BDC porter son
+    ancien sous-traitant et son ancien montant. C'est aussi le passage obligé pour
+    rendre un BDC attribué de nouveau supprimable.
+
+    Raises:
+        TransitionInvalide: Si le BDC n'est pas en cours, ou s'il figure dans un relevé.
+    """
+    if bdc.statut != StatutChoices.EN_COURS:
+        raise TransitionInvalide(
+            f"Annulation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'En cours'."
+        )
+
+    if bdc.releves_facturation.exists():
+        raise TransitionInvalide(
+            "Annulation impossible : ce BDC figure dans un relevé de facturation. Retirez-le d'abord du relevé."
+        )
+
+    ancien_st = str(bdc.sous_traitant) if bdc.sous_traitant else ""
+    ancien_montant = str(bdc.montant_st) if bdc.montant_st is not None else None
+
+    with transaction.atomic():
+        bdc.lignes_forfait.all().delete()
+
+        bdc.sous_traitant = None
+        bdc.montant_st = None
+        bdc.pourcentage_st = None
+        bdc.mode_attribution = ""
+        bdc.statut = StatutChoices.A_FAIRE
+        bdc.save(
+            update_fields=[
+                "sous_traitant",
+                "montant_st",
+                "pourcentage_st",
+                "mode_attribution",
+                "statut",
+                "updated_at",
+            ]
+        )
+
+        HistoriqueAction.objects.create(
+            bdc=bdc,
+            utilisateur=utilisateur,
+            action=ActionChoices.ANNULATION,
+            details={
+                "ancien_st": ancien_st,
+                "ancien_montant_st": ancien_montant,
+            },
+        )
+
+    return bdc
+
+
+def supprimer_bdc(bdc: BonDeCommande, utilisateur: User) -> str:
+    """
+    Supprime définitivement un BDC. Réservé aux statuts 'À contrôler' et 'À attribuer'.
+
+    Cas d'usage : le bailleur renvoie un bon corrigé. La suppression libère le
+    numéro de BDC, ce qui permet de réimporter le bon corrigé par le circuit
+    d'upload habituel.
+
+    Au-delà de 'À attribuer', il faut d'abord annuler l'attribution : cette
+    restriction garantit qu'aucun BDC présent dans un relevé ne puisse disparaître.
+
+    Returns:
+        Le numéro du BDC supprimé.
+
+    Raises:
+        TransitionInvalide: Si le statut n'autorise pas la suppression.
+    """
+    if bdc.statut not in (StatutChoices.A_TRAITER, StatutChoices.A_FAIRE):
+        raise TransitionInvalide(
+            f"Suppression impossible : le BDC est en '{bdc.get_statut_display()}'. "
+            "Seuls les BDC 'À contrôler' et 'À attribuer' peuvent être supprimés. "
+            "Annulez d'abord l'attribution."
+        )
+
+    numero = bdc.numero_bdc
+    logger.info("Suppression du BDC %s par %s", numero, utilisateur)
+    bdc.delete()
+    return numero
 
 
 def _notifier_st_si_possible(bdc: BonDeCommande, commentaire: str = "", joindre_bdc: bool = True) -> None:
