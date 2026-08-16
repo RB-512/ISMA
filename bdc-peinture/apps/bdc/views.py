@@ -8,6 +8,7 @@ import tempfile
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
+from urllib.parse import urlparse
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -21,6 +22,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.accounts.decorators import group_required
 from apps.pdf_extraction.detector import PDFTypeInconnu, detecter_parser
@@ -42,11 +44,13 @@ from .notifications import notifier_st_attribution
 from .services import (
     BDCIncomplet,
     TransitionInvalide,
+    annuler_attribution,
     attribuer_st,
     changer_statut,
     enregistrer_action,
     reattribuer_st,
     renvoyer_controle,
+    supprimer_bdc,
     valider_facturation,
     valider_realisation,
 )
@@ -534,6 +538,9 @@ def detail_sidebar(request, pk: int):
             "checklist_transitions": checklist_transitions,
             "is_cdt": is_cdt,
             "is_secretaire": is_secretaire,
+            # HTMX transmet l'URL affichee par le navigateur : permet de revenir sur
+            # l'onglet filtre courant apres une suppression, plutot que sur "Tous".
+            "retour_url": request.headers.get("HX-Current-URL", ""),
         },
     )
 
@@ -563,6 +570,7 @@ def detail_bdc(request, pk: int):
             "transitions": transitions,
             "is_cdt": is_cdt,
             "is_secretaire": is_secretaire,
+            "retour_url": request.META.get("HTTP_REFERER", ""),
         },
     )
 
@@ -817,6 +825,76 @@ def reattribuer_bdc(request, pk: int):
     notifier_st_attribution(bdc)
     messages.success(request, _msg_attribution(bdc, reattribution=True))
     return redirect("bdc:detail", pk=pk)
+
+
+@group_required("CDT")
+def annuler_attribution_bdc(request, pk: int):
+    """Annule l'attribution d'un BDC en cours : retour en « À attribuer », champs vidés."""
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    destination = _destination_sure(request, defaut=reverse("bdc:detail", args=[pk]))
+
+    try:
+        annuler_attribution(bdc, request.user)
+    except TransitionInvalide as e:
+        messages.error(request, str(e))
+        return redirect("bdc:detail", pk=pk)
+
+    messages.success(
+        request,
+        f"BDC n°{bdc.numero_bdc} : attribution annulée, le bon est de nouveau à attribuer.",
+    )
+    return redirect(destination)
+
+
+def _destination_sure(request, defaut: str, interdits: tuple[str, ...] = ()) -> str:
+    """
+    Résout où renvoyer l'utilisateur après une action : la page d'où il vient, pour
+    qu'il reste sur son onglet filtré plutôt que d'être ramené sur « Tous ».
+
+    Retombe sur `defaut` si la destination est absente, pointe hors du site (garde-fou
+    contre la redirection ouverte) ou figure dans `interdits`.
+    """
+    destination = request.POST.get("next", "")
+    if not destination or not url_has_allowed_host_and_scheme(
+        destination,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return defaut
+
+    if urlparse(destination).path.rstrip("/") in interdits:
+        return defaut
+
+    return destination
+
+
+@group_required("CDT", "Secretaire")
+def supprimer_bdc_view(request, pk: int):
+    """Supprime définitivement un BDC. Réservé aux statuts « À contrôler » et « À attribuer »."""
+    bdc = get_object_or_404(BonDeCommande, pk=pk)
+
+    if request.method != "POST":
+        return redirect("bdc:detail", pk=pk)
+
+    # La fiche du BDC est exclue : elle n'existera plus apres la suppression.
+    destination = _destination_sure(
+        request,
+        defaut=reverse("bdc:index"),
+        interdits=(reverse("bdc:detail", args=[pk]).rstrip("/"),),
+    )
+
+    try:
+        numero = supprimer_bdc(bdc, request.user)
+    except TransitionInvalide as e:
+        messages.error(request, str(e))
+        return redirect("bdc:detail", pk=pk)
+
+    messages.success(request, f"BDC n°{numero} supprimé. Le bon corrigé peut être réimporté.")
+    return redirect(destination)
 
 
 # ─── Attribution inline (HTMX partial) ──────────────────────────────────────

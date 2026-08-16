@@ -4,8 +4,10 @@ from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.accounts.decorators import group_required
 from apps.sous_traitants.forms import SousTraitantForm
 from apps.sous_traitants.models import SousTraitant
+from apps.sous_traitants.services import FusionError, detecter_doublons, fusionner_sous_traitants
 
 
 @login_required
@@ -84,6 +86,40 @@ def reactiver_sous_traitant(request, pk):
         sous_traitant.save()
         messages.success(request, f"Sous-traitant « {sous_traitant.nom} » réactivé.")
     return redirect("sous_traitants:list")
+
+
+@group_required("CDT")
+def fusionner_sous_traitant(request):
+    """
+    Fusionne deux fiches sous-traitant en double.
+
+    Après fusion, l'utilisateur choisit lui-même de supprimer le doublon devenu vide
+    ou de le conserver inactif.
+    """
+    if request.method == "POST":
+        garde = get_object_or_404(SousTraitant, pk=request.POST.get("garde"))
+        doublon = get_object_or_404(SousTraitant, pk=request.POST.get("doublon"))
+
+        try:
+            resultat = fusionner_sous_traitants(garde, doublon)
+        except FusionError as e:
+            messages.error(request, str(e))
+            return redirect("sous_traitants:fusionner")
+
+        return render(
+            request,
+            "sous_traitants/fusion_resultat.html",
+            {"garde": garde, "doublon": doublon, "resultat": resultat},
+        )
+
+    return render(
+        request,
+        "sous_traitants/fusion.html",
+        {
+            "doublons": detecter_doublons(),
+            "sous_traitants": SousTraitant.objects.all().order_by("nom"),
+        },
+    )
 
 
 @login_required

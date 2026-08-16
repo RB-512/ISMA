@@ -28,7 +28,8 @@
         </div>
 
         {# Action buttons #}
-        <div class="flex items-center gap-2 flex-wrap">
+        {# md:shrink-0 : le titre se comprime plutot que les actions ne se replient #}
+        <div class="flex items-center gap-2 flex-wrap md:shrink-0">
             {% if transitions %}
                 {% for statut_val, statut_label in transitions %}
                 <form method="POST" action="{% url 'bdc:changer_statut' bdc.pk %}">
@@ -73,6 +74,24 @@
                class="px-4 py-2 bg-warning hover:bg-warning-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                 Réattribuer
             </a>
+            <div x-data="{ confirmAnnul: false }" class="flex items-center gap-2">
+                <button type="button" x-show="!confirmAnnul" @click="confirmAnnul = true"
+                        class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-sm font-medium rounded-lg whitespace-nowrap hover:bg-warning/10 transition-colors">
+                    Annuler l'attribution
+                </button>
+                <form x-show="confirmAnnul" x-transition method="POST" action="{% url 'bdc:annuler_attribution' bdc.pk %}" class="flex items-center gap-2">
+                    {% csrf_token %}
+                    <span class="text-xs text-[var(--color-text-muted)] italic">Le bon repassera « À attribuer », sous-traitant et montant effacés.</span>
+                    <button type="submit"
+                            class="px-3 py-2 bg-warning hover:bg-warning-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-colors">
+                        Confirmer
+                    </button>
+                    <button type="button" @click="confirmAnnul = false"
+                            class="px-3 py-2 text-sm text-[var(--color-text-muted)] hover:underline">
+                        Annuler
+                    </button>
+                </form>
+            </div>
             <form method="POST" action="{% url 'bdc:valider_realisation' bdc.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
@@ -125,6 +144,29 @@
                class="px-4 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium rounded-lg whitespace-nowrap hover:bg-accent/10 transition-colors">
                 Voir le PDF
             </a>
+            {% endif %}
+            {% if bdc.statut == "A_TRAITER" or bdc.statut == "A_FAIRE" %}
+            {# Suppression : reservee aux stades ou aucun sous-traitant n'est engage, #}
+            {# pour reimporter un bon corrige renvoye par le bailleur. #}
+            <div x-data="{ confirmSuppr: false }" class="flex items-center gap-2">
+                <button type="button" x-show="!confirmSuppr" @click="confirmSuppr = true"
+                        class="px-4 py-2 bg-transparent border border-danger/40 text-danger text-sm font-medium rounded-lg whitespace-nowrap hover:bg-danger/10 transition-colors">
+                    Supprimer
+                </button>
+                <form x-show="confirmSuppr" x-transition method="POST" action="{% url 'bdc:supprimer' bdc.pk %}" class="flex items-center gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ retour_url }}">
+                    <span class="text-xs text-danger italic">Suppression d&eacute;finitive du BDC n&deg;{{ bdc.numero_bdc }} ?</span>
+                    <button type="submit"
+                            class="px-3 py-2 bg-danger hover:bg-danger-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-colors">
+                        Confirmer
+                    </button>
+                    <button type="button" @click="confirmSuppr = false"
+                            class="px-3 py-2 text-sm text-[var(--color-text-muted)] hover:underline">
+                        Annuler
+                    </button>
+                </form>
+            </div>
             {% endif %}
         </div>
     </div>

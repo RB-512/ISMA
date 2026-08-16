@@ -1,0 +1,22 @@
+{# Bouton de suppression d'un BDC, format compact pour la sidebar. #}
+{# Reserve aux statuts sans sous-traitant engage : voir services.supprimer_bdc(). #}
+<span x-data="{ confirmSuppr: false }" class="inline-flex items-center gap-2">
+    <button type="button" x-show="!confirmSuppr" @click="confirmSuppr = true"
+            class="inline-block px-3 py-1.5 text-xs font-medium rounded-lg border border-danger/40 text-danger hover:bg-danger/10 transition-colors">
+        Supprimer
+    </button>
+    <form x-show="confirmSuppr" x-transition method="POST" action="{% url 'bdc:supprimer' pk=bdc.pk %}"
+          class="inline-flex items-center gap-1.5">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ retour_url }}">
+        <span class="text-xs text-danger italic">Supprimer d&eacute;finitivement ?</span>
+        <button type="submit"
+                class="inline-block px-2.5 py-1.5 text-xs font-medium rounded-lg bg-danger hover:bg-danger-dark text-white transition-colors">
+            Oui
+        </button>
+        <button type="button" @click="confirmSuppr = false"
+                class="px-2 py-1.5 text-xs text-[var(--color-text-muted)] hover:underline">
+            Non
+        </button>
+    </form>
+</span>

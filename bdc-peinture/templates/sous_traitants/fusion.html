@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Fusionner des sous-traitants — ISMA{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    {# ── En-tete ── #}
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-[var(--color-text)]">Fusionner des sous-traitants</h1>
+            <p class="text-sm text-[var(--color-text-muted)] mt-1">
+                Regrouper deux fiches cr&eacute;&eacute;es pour le m&ecirc;me sous-traitant, sans perdre d&rsquo;information
+            </p>
+        </div>
+        <a href="{% url 'sous_traitants:list' %}"
+           class="px-4 py-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium hover:bg-accent/10 transition-colors">
+            Retour
+        </a>
+    </div>
+
+    {# ── Doublons detectes ── #}
+    {% if doublons %}
+    <div class="bg-warning/10 border border-warning/30 rounded-xl p-5">
+        <h2 class="text-base font-semibold text-[var(--color-text)] mb-1">Doublons probables d&eacute;tect&eacute;s</h2>
+        <p class="text-sm text-[var(--color-text-muted)] mb-4">
+            Ces fiches portent le m&ecirc;me nom &agrave; l&rsquo;orthographe pr&egrave;s.
+        </p>
+        <ul class="space-y-2">
+            {% for groupe in doublons %}
+            <li class="flex flex-wrap items-center gap-2 text-sm">
+                {% for st in groupe %}
+                <span class="px-2.5 py-1 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-text)]">
+                    {{ st.nom }}{% if not st.actif %} <span class="text-[var(--color-text-muted)] italic">(inactif)</span>{% endif %}
+                </span>
+                {% if not forloop.last %}<span class="text-[var(--color-text-muted)]">&harr;</span>{% endif %}
+                {% endfor %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <div class="bg-success/10 border border-success/30 rounded-xl p-5">
+        <p class="text-sm text-[var(--color-text)]">Aucun doublon d&rsquo;orthographe d&eacute;tect&eacute; automatiquement.</p>
+    </div>
+    {% endif %}
+
+    {# ── Formulaire de fusion ── #}
+    <form method="POST" action="{% url 'sous_traitants:fusionner' %}"
+          class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6 space-y-4">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="garde" class="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                    Fiche &agrave; conserver
+                </label>
+                <select name="garde" id="garde" required
+                        class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm focus:ring-2 focus:ring-accent focus:border-accent">
+                    <option value="">&mdash; Choisir &mdash;</option>
+                    {% for st in sous_traitants %}
+                    <option value="{{ st.pk }}">{{ st.nom }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-[var(--color-text-muted)] mt-1">Ses coordonn&eacute;es seront conserv&eacute;es.</p>
+            </div>
+
+            <div>
+                <label for="doublon" class="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                    Fiche en double &agrave; absorber
+                </label>
+                <select name="doublon" id="doublon" required
+                        class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] text-sm focus:ring-2 focus:ring-accent focus:border-accent">
+                    <option value="">&mdash; Choisir &mdash;</option>
+                    {% for st in sous_traitants %}
+                    <option value="{{ st.pk }}">{{ st.nom }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-[var(--color-text-muted)] mt-1">Ses BDC et relev&eacute;s seront transf&eacute;r&eacute;s.</p>
+            </div>
+        </div>
+
+        <div class="text-sm text-[var(--color-text-muted)] bg-[var(--color-surface)] rounded-lg p-3 border border-[var(--color-border)]">
+            Tous les bons de commande et relev&eacute;s de la fiche en double sont r&eacute;affect&eacute;s &agrave; la fiche
+            conserv&eacute;e, puis la fiche en double est d&eacute;sactiv&eacute;e. Rien n&rsquo;est supprim&eacute; :
+            vous choisirez ensuite de la supprimer d&eacute;finitivement ou de la garder.
+        </div>
+
+        <button type="submit"
+                class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg transition-colors">
+            Fusionner
+        </button>
+    </form>
+
+</div>
+{% endblock %}
