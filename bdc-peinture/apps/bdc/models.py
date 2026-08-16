@@ -430,6 +430,7 @@ class ActionChoices(models.TextChoices):
     STATUT_CHANGE = "STATUT_CHANGE", "Changement de statut"
     ATTRIBUTION = "ATTRIBUTION", "Attribution"
     REATTRIBUTION = "REATTRIBUTION", "Réattribution"
+    ANNULATION = "ANNULATION", "Annulation d'attribution"
     NOTIFICATION_SMS = "NOTIFICATION_SMS", "SMS envoyé"
     VALIDATION = "VALIDATION", "Validation réalisation"
     FACTURATION = "FACTURATION", "Passage en facturation"

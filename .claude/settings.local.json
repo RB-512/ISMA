@@ -208,7 +208,14 @@
       "Bash(npm uninstall:*)",
       "Bash(npm install:*)",
       "Bash(gh run:*)",
-      "Bash(ssh-copy-id:*)"
+      "Bash(ssh-copy-id:*)",
+      "Bash(rtk gh *)",
+      "PowerShell($c = Get-Command gh -ErrorAction SilentlyContinue; if \\($c\\) { $c.Source; gh --version | Select-Object -First 1; gh auth status 2>&1 | Select-Object -First 4 } else { \"gh introuvable\" })",
+      "PowerShell($c = Get-Command gh -ErrorAction SilentlyContinue; if \\($c\\) { \"TROUVE: \" + $c.Source } else { \"gh toujours introuvable\" }; \"---\"; $p = \"$env:LOCALAPPDATA\\\\Programs\\\\GitHub CLI\\\\gh.exe\",\"$env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\"; foreach \\($x in $p\\) { if \\(Test-Path $x\\) { \"present: $x\" } })",
+      "PowerShell($gh = \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; & $gh --version | Select-Object -First 1; \"--- AUTH ---\"; & $gh auth status 2>&1 | Select-Object -First 6)",
+      "PowerShell($gh = \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; & $gh pr list --head fix/attribution-montant-annulation-suppression --state all 2>&1)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Rédouane\\\\Desktop\\\\Lab_python\\\\00_CLAUDE_CODE\\\\ISMA\"; $gh = \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; & $gh pr create --base main --head fix/attribution-montant-annulation-suppression --title \"Fiabiliser l'attribution : montant obligatoire, annulation et suppression de BDC\" --body-file \"C:\\\\Users\\\\RDOUAN~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-R-douane-Desktop-Lab-python-00-CLAUDE-CODE-ISMA\\\\a639aca6-9582-4393-a5d1-1a1b732d06d2\\\\scratchpad\\\\pr_body.md\" 2>&1)",
+      "PowerShell($gh = \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; & $gh pr view 8 --repo RB-512/ISMA --json number,title,state,isDraft,baseRefName,headRefName,commits,additions,deletions,changedFiles 2>&1)"
     ]
   }
 }

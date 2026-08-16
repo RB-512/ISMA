@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Fusion effectu&eacute;e — ISMA{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl space-y-6">
+
+    <div class="bg-success/10 border border-success/30 rounded-xl p-6">
+        <h1 class="text-xl font-bold text-[var(--color-text)] mb-2">Fusion effectu&eacute;e</h1>
+        <p class="text-sm text-[var(--color-text)]">
+            Tout le contenu de <strong>{{ doublon.nom }}</strong> a &eacute;t&eacute; transf&eacute;r&eacute; vers
+            <strong>{{ garde.nom }}</strong>.
+        </p>
+        <ul class="mt-3 space-y-1 text-sm text-[var(--color-text-muted)]">
+            <li>{{ resultat.bdc }} bon{{ resultat.bdc|pluralize }} de commande r&eacute;affect&eacute;{{ resultat.bdc|pluralize }}</li>
+            <li>{{ resultat.releves }} relev&eacute;{{ resultat.releves|pluralize }} de facturation r&eacute;affect&eacute;{{ resultat.releves|pluralize }}</li>
+        </ul>
+    </div>
+
+    <div class="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-6">
+        <h2 class="text-base font-semibold text-[var(--color-text)] mb-2">
+            Que faire de la fiche &laquo;&nbsp;{{ doublon.nom }}&nbsp;&raquo; ?
+        </h2>
+        <p class="text-sm text-[var(--color-text-muted)] mb-4">
+            Elle est d&eacute;sormais d&eacute;sactiv&eacute;e et ne contient plus aucun bon de commande ni relev&eacute;.
+            Vous pouvez la supprimer d&eacute;finitivement ou la conserver &agrave; titre d&rsquo;historique.
+        </p>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <form method="POST" action="{% url 'sous_traitants:supprimer' doublon.pk %}">
+                {% csrf_token %}
+                <button type="submit"
+                        class="px-4 py-2 bg-danger hover:bg-danger-dark text-white text-sm font-medium rounded-lg transition-colors">
+                    Supprimer d&eacute;finitivement
+                </button>
+            </form>
+
+            <a href="{% url 'sous_traitants:list' %}"
+               class="px-4 py-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium hover:bg-accent/10 transition-colors">
+                Conserver la fiche inactive
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

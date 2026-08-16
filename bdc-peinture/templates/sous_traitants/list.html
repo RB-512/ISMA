@@ -11,16 +11,27 @@
             <h1 class="text-2xl font-bold text-[var(--color-text)]">Sous-traitants</h1>
             <p class="text-sm text-[var(--color-text-muted)] mt-1">Gerer les artisans et entreprises sous-traitantes</p>
         </div>
-        <button
-            x-data
-            @click="$dispatch('toggle-form')"
-            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors"
-        >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Ajouter un sous-traitant
-        </button>
+        <div class="flex items-center gap-2">
+            {% for group in user.groups.all %}{% if group.name == 'CDT' %}
+            <a href="{% url 'sous_traitants:fusionner' %}"
+               class="flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium hover:bg-accent/10 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m0 0l-3-3m3 3l-3 3M16 17H8m0 0l3 3m-3-3l3-3"/>
+                </svg>
+                Fusionner
+            </a>
+            {% endif %}{% endfor %}
+            <button
+                x-data
+                @click="$dispatch('toggle-form')"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dark transition-colors"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Ajouter un sous-traitant
+            </button>
+        </div>
     </div>
 
     {# ── Formulaire de creation (collapsible Alpine) ── #}
