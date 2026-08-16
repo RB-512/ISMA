@@ -1,3 +1,17 @@
+## Purpose
+
+Prévenir le sous-traitant sur son téléphone, là où il travaille, avec le strict nécessaire
+pour se rendre sur place : l'adresse, si le logement est occupé, comment y entrer, ce qu'il
+y a à faire, pour quand. C'est le canal le plus court et le plus immédiat de la chaîne.
+
+Deux contraintes fortes le définissent. Un SMS d'attribution ne contient jamais de prix —
+ni montant bailleur, ni montant ST, ni pourcentage. Et l'envoi ne conditionne jamais
+l'attribution : un échec réseau ou un ST sans téléphone est journalisé, l'attribution
+reste acquise. Le backend est configurable pour que le développement ne consomme pas de
+crédits. Le document détaillé, lui, part par `notifications-email`.
+
+## Requirements
+
 ### Requirement: Le système envoie un SMS au ST lors de l'attribution d'un BDC
 Le système SHALL envoyer un SMS au sous-traitant attribué contenant : adresse du logement, occupation (vacant/occupé), modalité d'accès, objet des travaux, délai d'exécution. Le SMS ne SHALL JAMAIS contenir de prix (montant HT, montant ST, pourcentage).
 

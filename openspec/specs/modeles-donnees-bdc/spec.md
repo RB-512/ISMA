@@ -1,4 +1,16 @@
-## ADDED Requirements
+## Purpose
+
+Poser le socle de donnees sur lequel toute l'application s'appuie : le bon de commande et
+ses lignes de prestation, les deux referentiels qui l'encadrent (bailleur, sous-traitant),
+la trace de ce qui lui est arrive, et le graphe des statuts qui decrit son cycle de vie.
+
+La capability definit la forme des donnees et les regles qui les gardent coherentes :
+unicite du numero de BDC pour detecter les doublons a la saisie, suppression en cascade des
+lignes, transitions de statut autorisees et etat terminal. Elle ne dit pas qui a le droit
+de declencher une transition — c'est `authentification-roles` — ni a quel moment elle
+survient : chaque capability metier porte cette decision.
+
+## Requirements
 
 ### Requirement: Modele Bailleur
 

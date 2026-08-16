@@ -1,3 +1,19 @@
+## Purpose
+
+Produire le document que l'on peut mettre entre les mains d'un sous-traitant : les mêmes
+travaux à réaliser, la même adresse, le même délai — mais aucun prix. C'est une exigence
+commerciale ferme du métier, et elle justifie à elle seule un document distinct du PDF
+bailleur.
+
+Chaque bailleur impose sa stratégie : chez GDH la page 2 est nativement sans prix et il
+suffit de l'extraire ; chez ERILIA les prix sont partout et le document doit être
+reconstruit depuis les données. La capability couvre ce choix, la génération, le stockage
+et la mise à disposition du fichier. Son déclenchement à l'attribution appartient à
+`attribution-bdc`, et son envoi au sous-traitant à `notifications-email` — un échec de
+génération ne doit jamais empêcher l'attribution d'aboutir.
+
+## Requirements
+
 ### Requirement: Le système génère un PDF terrain sans prix pour les BDC GDH
 Pour les BDC du bailleur GDH, le système SHALL extraire la page 2 du PDF original (bon d'intervention sans prix) et la stocker comme PDF terrain. Si le PDF original n'a pas de page 2, le système SHALL lever une erreur explicite.
 
@@ -89,7 +105,7 @@ Une vue `telecharger_terrain` SHALL servir le fichier PDF terrain en télécharg
 - **THEN** un bouton "BDC terrain" est affiché sur la fiche détail
 
 ### Requirement: Localisation sur fiche chantier sous-traitant
-La fiche chantier ST DOIT afficher étage et porte en plus du numéro de logement.
+La fiche chantier ST SHALL afficher étage et porte en plus du numéro de logement.
 
 #### Scenario: Logement avec étage et porte
 - **WHEN** `logement_etage` et `logement_porte` sont renseignés

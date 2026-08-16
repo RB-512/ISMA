@@ -1,3 +1,17 @@
+## Purpose
+
+Porter vers le sous-traitant ce que le SMS ne peut pas transporter : le bon de commande
+terrain en pièce jointe, accompagné d'un résumé du chantier. C'est le canal du document ;
+le SMS est celui de l'alerte.
+
+Comme tout ce qui sort vers un sous-traitant, ces emails ne contiennent jamais de prix. La
+capability couvre leur contenu et leur déclenchement à l'attribution et à la réattribution,
+ainsi que la dégradation prévue lorsqu'une pièce jointe manque ou qu'un ST n'a pas
+d'adresse — un envoi qui échoue est journalisé, jamais bloquant pour l'attribution. Les
+emails techniques adressés à l'exploitant relèvent d'`error-logging-prod`.
+
+## Requirements
+
 ### Requirement: Le système envoie un email avec le BDC terrain au ST lors de l'attribution
 Le système SHALL envoyer un email au sous-traitant contenant un résumé du BDC et le PDF terrain en pièce jointe. L'email ne SHALL JAMAIS contenir de prix.
 

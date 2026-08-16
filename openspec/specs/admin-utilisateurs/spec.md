@@ -1,4 +1,16 @@
-## ADDED Requirements
+## Purpose
+
+Donner au CDT la main sur le cycle de vie des comptes depuis l'application elle-meme,
+sans passer par l'admin Django : creer une secretaire ou un collegue CDT, corriger un
+profil, redonner un acces perdu, fermer un compte qui n'a plus lieu d'etre.
+
+Cette capability s'arrete a l'administration des comptes. Ce que signifie chaque role et
+comment une identite est prouvee relevent de `authentification-roles`. Il n'y a pas
+d'inscription publique : tout compte nait ici. Il n'y a pas non plus de suppression
+physique — un compte se desactive et se reactive, pour que l'historique des BDC continue
+de designer quelqu'un.
+
+## Requirements
 
 ### Requirement: Creation d'utilisateur avec email obligatoire
 

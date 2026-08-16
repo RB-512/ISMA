@@ -1,4 +1,17 @@
-## MODIFIED Requirements
+## Purpose
+
+Donner la vue de référence d'un bon de commande : toutes ses données regroupées par nature
+(localisation, travaux, contacts, prestations), son historique, et l'endroit où la
+secrétaire complète les champs qu'aucun PDF ne fournit.
+
+La fiche est un point de consultation et d'édition, pas un poste de commande : les actions
+qui font avancer le BDC — attribuer, valider la réalisation, facturer — appartiennent à
+`attribution-bdc` et `suivi-realisation`, même si la fiche en est le point de départ
+naturel. Une règle d'affichage y est explicite : un bloc dont l'information n'a pas été
+renseignée ne s'affiche pas, plutôt que de montrer des données partielles héritées du
+PDF.
+
+## Requirements
 
 ### Requirement: La fiche détail utilise le design system Isma
 La fiche détail BDC SHALL utiliser les cards, couleurs, typographie et espacements du design system Isma. Les sections (Localisation, Travaux, Contacts, Prestations, Historique) SHALL être des cards avec le style surface-card. Les boutons d'action SHALL utiliser les couleurs du design system. Les numéros BDC et montants SHALL utiliser la font mono. Le tout SHALL supporter le dark mode.
@@ -23,7 +36,7 @@ La fiche détail SHALL afficher un formulaire d'édition pour les champs manuels
 - **THEN** les champs manuels sont affichés en lecture seule, sans formulaire d'édition
 
 ### Requirement: Affichage contacts occupant
-Le système NE DOIT PAS afficher le bloc contact "Occupant" lorsque le champ Occupation est vide.
+Le système NE SHALL PAS afficher le bloc contact "Occupant" lorsque le champ Occupation est vide.
 
 #### Scenario: Occupation non renseignée avec données occupant
 - **WHEN** `occupation` est vide mais `occupant_nom` contient une valeur

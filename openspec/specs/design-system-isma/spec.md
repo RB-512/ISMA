@@ -1,4 +1,15 @@
-## ADDED Requirements
+## Purpose
+
+Fixer le vocabulaire visuel de l'application pour que les écrans, écrits à des moments
+différents, se ressemblent : la palette exposée en CSS variables, les deux familles
+typographiques et leur usage (mono pour tout ce qui est chiffré), le dark mode persistant,
+les couleurs de statut, et le style commun des widgets Django.
+
+Cette capability définit les jetons et leur comportement. Elle ne construit aucune page :
+la mise en page qui les consomme est `base-template-ui`, et chaque écran métier reste
+responsable de la façon dont il les emploie.
+
+## Requirements
 
 ### Requirement: Le design system Isma définit la palette de couleurs via CSS variables
 Le système SHALL définir un jeu de CSS custom properties sur `:root` pour le thème light et sur `.dark` pour le thème dark. Les couleurs principales SHALL être : primary (#1B2B3A bleu pétrole), accent (#E8853D ambre), success (#2D9F6F), warning (#D4842A), danger (#C4423C), surface (#F7F5F2 beige chaud en light, #131A22 bleu nuit en dark).

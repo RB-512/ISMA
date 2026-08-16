@@ -1,3 +1,18 @@
+## Purpose
+
+Faire passer un bon de commande du périmètre interne à celui d'un sous-traitant : choisir
+à qui le chantier revient, fixer la part qui lui est due, et basculer le BDC en
+`EN_COURS`. C'est le pivot du workflow — avant l'attribution le BDC est un dossier
+administratif, après il est un chantier confié à quelqu'un.
+
+La capability couvre l'acte d'attribution et de réattribution, son contrôle d'accès (CDT
+uniquement), le calcul du montant ST et la traçabilité de qui a reçu quoi. Elle délègue
+tout le reste : la fabrication du document sans prix à `generation-bdc-terrain`, son
+acheminement à `notifications-sms` et `notifications-email`, et la synthèse par
+sous-traitant à `recoupement-st`.
+
+## Requirements
+
 ### Requirement: Le CDT peut attribuer un BDC à un sous-traitant
 Le système SHALL permettre au CDT d'attribuer un BDC en statut `A_FAIRE` à un sous-traitant actif. L'attribution SHALL enregistrer le sous-traitant, le pourcentage ST, et le montant ST calculé. Le BDC SHALL passer automatiquement en statut `EN_COURS` après attribution.
 

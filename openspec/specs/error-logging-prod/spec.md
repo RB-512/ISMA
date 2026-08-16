@@ -1,4 +1,16 @@
-## ADDED Requirements
+## Purpose
+
+Savoir qu'une erreur 500 s'est produite en production sans dépendre d'un utilisateur qui
+signale le problème. Deux canaux complémentaires : un email immédiat avec le traceback
+pour réagir, et un fichier de log rotatif et persistant pour reconstituer après coup ce
+qui s'est passé.
+
+Le périmètre est la remontée et la conservation des erreurs applicatives. Les valeurs de
+configuration qui les rendent possibles (`ADMINS`, `LOGGING` dans `prod.py`) sont
+décrites par `projet-django-config`, et le canal email utilisé est le backend SMTP déjà en
+place — aucun service de supervision externe n'est introduit ici.
+
+## Requirements
 
 ### Requirement: Les erreurs 500 sont notifiées par email
 Le système SHALL envoyer un email à `bybondecommande@gmail.com` à chaque erreur 500 non catchée en production. L'email SHALL contenir le stack trace complet, l'URL de la requête, et l'utilisateur concerné. L'envoi SHALL utiliser le backend SMTP déjà configuré.

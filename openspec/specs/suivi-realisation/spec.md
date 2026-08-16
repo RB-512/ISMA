@@ -1,3 +1,17 @@
+## Purpose
+
+Fermer le cycle de vie d'un bon de commande : constater que les travaux sont faits, puis
+qu'ils sont facturés. Deux transitions, `EN_COURS` → `A_FACTURER` → `FACTURE`, réservées au
+CDT, chacune tracée dans l'historique.
+
+La capability porte aussi la donnée qui rend la facturation possible : `date_realisation`,
+remplie à la validation et remise à null si le CDT revient en arrière — parce qu'une
+validation prononcée trop tôt doit pouvoir être annulée sans laisser de date fantôme. Ce
+qui précède ces transitions relève d'`attribution-bdc` ; le fichier remis à la
+comptabilité, d'`export-facturation`.
+
+## Requirements
+
 ### Requirement: Le CDT peut valider la réalisation d'un BDC
 Le système SHALL permettre au CDT de marquer un BDC EN_COURS comme réalisé via `valider_realisation(bdc, utilisateur)`. Le statut SHALL passer à A_FACTURER. La `date_realisation` SHALL être remplie automatiquement avec la date du jour. L'action VALIDATION SHALL être tracée dans l'historique.
 
@@ -65,7 +79,7 @@ La vue `valider_facturation_bdc` SHALL être une vue POST-only accessible unique
 - **THEN** l'accès est refusé (403)
 
 ### Requirement: Passage en facturation
-Le système DOIT gérer proprement le passage en facturation même lorsque la date de prestation est antérieure à la date actuelle. Le système NE DOIT PAS produire une erreur 500.
+Le système SHALL gérer proprement le passage en facturation même lorsque la date de prestation est antérieure à la date actuelle. Le système NE SHALL PAS produire une erreur 500.
 
 #### Scenario: Erreur technique lors de la facturation
 - **WHEN** une erreur inattendue survient lors du passage en facturation

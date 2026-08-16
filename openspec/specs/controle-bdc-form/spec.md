@@ -1,4 +1,17 @@
-## ADDED Requirements
+## Purpose
+
+Encadrer l'écran où la secrétaire complète ce que le PDF du bailleur ne dit pas —
+logement occupé ou vacant, rendez-vous pris, modalité d'accès — avant de faire avancer le
+BDC. Ces informations sont indispensables au sous-traitant : les laisser passer
+incomplètes revient à envoyer quelqu'un devant une porte fermée.
+
+D'où la règle centrale de cette capability : la validation du formulaire et la transition
+de statut sont solidaires. Un formulaire invalide ne fait pas changer le statut, et les
+erreurs sont montrées champ par champ plutôt que perdues dans un rechargement. Le
+périmètre s'arrête là : le graphe des transitions lui-même est défini par
+`modeles-donnees-bdc`, et la saisie initiale du BDC par `formulaire-creation-bdc`.
+
+## Requirements
 
 ### Requirement: Formulaire de contrôle bloque la transition si invalide
 Lors du POST sur la vue de contrôle, si le formulaire d'édition n'est pas valide (`form.is_valid()` retourne False), la transition de statut ne SHALL PAS être tentée. Le formulaire lié (avec ses erreurs) SHALL être conservé pour re-rendu.

@@ -1,3 +1,15 @@
+## Purpose
+
+Tenir le referentiel des entreprises a qui les chantiers sont confies : leur identite, les
+coordonnees par lesquelles on les joint, le SIRET pour la facturation, et le fait qu'on
+travaille ou non avec elles en ce moment.
+
+La capability couvre ce referentiel et rien de plus : ce qu'on attribue a un sous-traitant
+releve d'`attribution-bdc`, la synthese de son activite de `recoupement-st`. Un choix
+structurant y est fixe : la suppression physique n'existe pas. Un sous-traitant se
+desactive — il disparait des attributions futures mais reste attache aux BDC passes, qui
+seraient sinon orphelins.
+
 ## Requirements
 
 ### Requirement: Modèle SousTraitant enrichi avec SIRET et adresse

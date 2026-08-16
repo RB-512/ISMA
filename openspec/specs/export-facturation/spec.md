@@ -1,3 +1,16 @@
+## Purpose
+
+Sortir de l'application les BDC arrivés au bout du chantier, sous une forme exploitable
+pour facturer : un fichier Excel filtrable par statut, par période de réalisation et par
+sous-traitant, avec les montants bailleur et sous-traitant côte à côte.
+
+La capability couvre la constitution du fichier, ses filtres et l'aperçu qui évite de
+télécharger un export vide. Elle ne décide de rien : le montant ST vient de
+`attribution-bdc`, le passage en `A_FACTURER` puis `FACTURE` de `suivi-realisation`, et la
+vue de contrôle par sous-traitant est `recoupement-st`.
+
+## Requirements
+
 ### Requirement: Le CDT peut exporter les BDC en facturation au format Excel
 Le système SHALL fournir une vue accessible au CDT permettant de télécharger un fichier Excel (.xlsx) contenant les BDC filtrés. Le fichier SHALL contenir les colonnes : N° BDC, Bailleur, Adresse, Ville, Sous-traitant, % ST, Montant HT (€), Montant ST (€), Date réalisation, Statut.
 
@@ -62,7 +75,7 @@ Le fichier exporté SHALL avoir un nom au format `export_facturation_YYYY-MM-DD.
 - **THEN** le fichier se nomme `export_facturation_2026-02-28.xlsx`
 
 ### Requirement: Colonne adresse du relevé de facturation
-Le relevé de facturation DOIT afficher la ville dans l'export PDF, en plus de l'adresse.
+Le relevé de facturation SHALL afficher la ville dans l'export PDF, en plus de l'adresse.
 
 #### Scenario: Export PDF avec ville
 - **WHEN** un utilisateur exporte le relevé en PDF
