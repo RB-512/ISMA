@@ -10,6 +10,7 @@ via le mode forfait, ce qui creusait un écart silencieux entre attribution et r
 from decimal import Decimal
 
 import pytest
+from django.core import mail
 from django.urls import reverse
 
 from apps.bdc.models import (
@@ -27,6 +28,7 @@ from apps.bdc.services import (
     attribuer_st,
     supprimer_bdc,
 )
+from apps.sous_traitants.models import SousTraitant
 
 
 @pytest.fixture
@@ -255,6 +257,54 @@ class TestVuesAnnulationSuppression:
         bdc_en_cours.refresh_from_db()
         assert bdc_en_cours.statut == StatutChoices.A_FAIRE
         assert bdc_en_cours.sous_traitant is None
+
+
+class TestNotificationAnnulation:
+    """Le ST doit être prévenu qu'on lui retire le chantier, comme il l'est de l'attribution."""
+
+    def test_email_envoye_au_sous_traitant(self, bdc_en_cours, sous_traitant, utilisateur_cdt):
+        mail.outbox.clear()
+
+        annuler_attribution(bdc_en_cours, utilisateur_cdt)
+
+        envoyes = [m for m in mail.outbox if sous_traitant.email in m.to]
+        assert len(envoyes) == 1
+        assert bdc_en_cours.numero_bdc in envoyes[0].subject
+        assert "annulée" in envoyes[0].subject
+
+    def test_message_precise_de_ne_pas_intervenir(self, bdc_en_cours, sous_traitant, utilisateur_cdt):
+        """Sans réattribution, le ST doit comprendre qu'il ne doit pas se déplacer."""
+        mail.outbox.clear()
+
+        annuler_attribution(bdc_en_cours, utilisateur_cdt)
+
+        corps = mail.outbox[0].body
+        assert "ne vous est plus attribué" in corps
+        assert "réattribué" not in corps
+
+    def test_coordonnees_capturees_avant_detachement(self, bdc_en_cours, sous_traitant, utilisateur_cdt):
+        """
+        Le service vide bdc.sous_traitant : si les coordonnées étaient lues après,
+        plus aucune notification ne partirait.
+        """
+        mail.outbox.clear()
+
+        annuler_attribution(bdc_en_cours, utilisateur_cdt)
+
+        assert bdc_en_cours.sous_traitant is None
+        assert mail.outbox, "aucun email envoyé : coordonnées perdues au détachement"
+        assert sous_traitant.email in mail.outbox[0].to
+
+    def test_sans_email_ne_casse_pas_l_annulation(self, bdc_a_faire, utilisateur_cdt, db):
+        st_sans_contact = SousTraitant.objects.create(nom="Sans Contact", telephone="")
+        bdc_a_faire.montant_ht = Decimal("1000.00")
+        bdc_a_faire.save(update_fields=["montant_ht"])
+        bdc = attribuer_st(bdc_a_faire, st_sans_contact, Decimal("50"), utilisateur_cdt)
+
+        annuler_attribution(bdc, utilisateur_cdt)
+
+        assert bdc.statut == StatutChoices.A_FAIRE
+        assert bdc.sous_traitant is None
 
 
 class TestRetourApresSuppression:

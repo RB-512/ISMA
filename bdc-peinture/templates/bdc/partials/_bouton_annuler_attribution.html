@@ -2,16 +2,16 @@
 {# Passage oblige pour rendre un bon attribue de nouveau modifiable ou supprimable. #}
 <span x-data="{ confirmAnnul: false }" class="inline-flex items-center gap-2">
     <button type="button" x-show="!confirmAnnul" @click="confirmAnnul = true"
-            class="inline-block px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-warning/10 transition-colors">
-        Annuler l&rsquo;attribution
+            class="inline-block px-3 py-1.5 text-xs font-medium rounded-lg border border-danger/40 text-danger hover:bg-danger/10 transition-colors">
+        Annuler
     </button>
     <form x-show="confirmAnnul" x-transition method="POST" action="{% url 'bdc:annuler_attribution' pk=bdc.pk %}"
           class="inline-flex items-center gap-1.5">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ retour_url }}">
-        <span class="text-xs text-[var(--color-text-muted)] italic">Sous-traitant et montant effac&eacute;s ?</span>
+        <span class="text-xs text-danger italic">Annuler l&rsquo;attribution ?</span>
         <button type="submit"
-                class="inline-block px-2.5 py-1.5 text-xs font-medium rounded-lg bg-warning hover:bg-warning-dark text-white transition-colors">
+                class="inline-block px-2.5 py-1.5 text-xs font-medium rounded-lg bg-danger hover:bg-danger-dark text-white transition-colors">
             Oui
         </button>
         <button type="button" @click="confirmAnnul = false"
