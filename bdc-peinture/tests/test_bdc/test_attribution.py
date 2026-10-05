@@ -454,7 +454,7 @@ class TestSidebarValidation:
 
     def test_valider_realisation_htmx_retourne_sidebar(self, client_cdt, bdc_en_cours):
         url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
-        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        resp = client_cdt.post(url, {"date_intervention": "2026-02-18"}, HTTP_HX_REQUEST="true")
         assert resp.status_code == 200
         content = resp.content.decode()
         assert bdc_en_cours.numero_bdc in content
@@ -462,35 +462,39 @@ class TestSidebarValidation:
 
     def test_valider_realisation_htmx_change_statut(self, client_cdt, bdc_en_cours):
         url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
-        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        resp = client_cdt.post(url, {"date_intervention": "2026-02-18"}, HTTP_HX_REQUEST="true")
         assert resp.status_code == 200
         bdc_en_cours.refresh_from_db()
         assert bdc_en_cours.statut == StatutChoices.A_FACTURER
 
     def test_valider_realisation_htmx_affiche_succes(self, client_cdt, bdc_en_cours):
         url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
-        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        resp = client_cdt.post(url, {"date_intervention": "2026-02-18"}, HTTP_HX_REQUEST="true")
         content = resp.content.decode()
         assert "réalisation validée" in content.lower() or "alisation valid" in content
 
     def test_valider_realisation_htmx_affiche_nouveau_statut(self, client_cdt, bdc_en_cours):
         url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
-        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        resp = client_cdt.post(url, {"date_intervention": "2026-02-18"}, HTTP_HX_REQUEST="true")
         content = resp.content.decode()
         assert "facturer" in content.lower()
 
     def test_valider_realisation_non_htmx_redirige(self, client_cdt, bdc_en_cours):
         url = reverse("bdc:valider_realisation", args=[bdc_en_cours.pk])
-        resp = client_cdt.post(url)
+        resp = client_cdt.post(url, {"date_intervention": "2026-02-18"})
         assert resp.status_code == 302
 
     def test_valider_facturation_htmx(self, client_cdt, bdc_en_cours, utilisateur_cdt):
+        from datetime import date
+
         from apps.bdc.services import valider_realisation as _valider
 
-        _valider(bdc_en_cours, utilisateur_cdt)
+        _valider(bdc_en_cours, utilisateur_cdt, date(2026, 2, 18))
 
         url = reverse("bdc:valider_facturation", args=[bdc_en_cours.pk])
-        resp = client_cdt.post(url, HTTP_HX_REQUEST="true")
+        resp = client_cdt.post(
+            url, {"numero_facture": "FA-1", "date_facturation": "2026-03-02"}, HTTP_HX_REQUEST="true"
+        )
         assert resp.status_code == 200
         bdc_en_cours.refresh_from_db()
         assert bdc_en_cours.statut == StatutChoices.FACTURE
