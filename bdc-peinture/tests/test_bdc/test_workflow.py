@@ -3,6 +3,8 @@ Tests du workflow de statuts BDC.
 Vérifie les transitions autorisées, invalides, et les règles métier.
 """
 
+from datetime import date
+
 import pytest
 
 from apps.bdc.models import StatutChoices
@@ -37,6 +39,7 @@ class TestTransitionsValides:
             objet_travaux="Test",
             occupation="VACANT",
             statut=StatutChoices.EN_COURS,
+            date_intervention=date(2026, 1, 15),
             cree_par=utilisateur_cdt,
         )
         bdc = changer_statut(bdc, StatutChoices.A_FACTURER, utilisateur_cdt)
@@ -52,6 +55,8 @@ class TestTransitionsValides:
             objet_travaux="Test",
             occupation="VACANT",
             statut=StatutChoices.A_FACTURER,
+            numero_facture="F-001",
+            date_facturation=date(2026, 1, 31),
             cree_par=utilisateur_cdt,
         )
         bdc = changer_statut(bdc, StatutChoices.FACTURE, utilisateur_cdt)

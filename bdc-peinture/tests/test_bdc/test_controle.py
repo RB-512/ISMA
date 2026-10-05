@@ -2,6 +2,7 @@
 Tests de la page de contrôle BDC (split-screen PDF + checklist).
 """
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -570,7 +571,7 @@ class TestChecklistTransitionGenerique:
     ):
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
         with pytest.raises(BDCIncomplet, match="points de contrôle"):
-            valider_realisation(bdc, utilisateur_cdt)
+            valider_realisation(bdc, utilisateur_cdt, date_intervention=date(2026, 1, 15))
 
     def test_realisation_ok_si_checklist_complete(
         self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_realisation
@@ -578,25 +579,27 @@ class TestChecklistTransitionGenerique:
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
         for item in checklist_items_realisation:
             ChecklistResultat.objects.create(bdc=bdc, item=item, coche=True)
-        bdc = valider_realisation(bdc, utilisateur_cdt)
+        bdc = valider_realisation(bdc, utilisateur_cdt, date_intervention=date(2026, 1, 15))
         assert bdc.statut == StatutChoices.A_FACTURER
 
     def test_facturation_bloquee_si_checklist_incomplete(
         self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_facturation
     ):
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
-        bdc = valider_realisation(bdc, utilisateur_cdt)
+        bdc = valider_realisation(bdc, utilisateur_cdt, date_intervention=date(2026, 1, 15))
         with pytest.raises(BDCIncomplet, match="points de contrôle"):
-            valider_facturation(bdc, utilisateur_cdt)
+            valider_facturation(bdc, utilisateur_cdt, numero_facture="F-2026-001", date_facturation=date(2026, 1, 31))
 
     def test_facturation_ok_si_checklist_complete(
         self, bdc_a_faire, sous_traitant, utilisateur_cdt, checklist_items_facturation
     ):
         bdc = attribuer_st(bdc_a_faire, sous_traitant, Decimal("65"), utilisateur_cdt)
-        bdc = valider_realisation(bdc, utilisateur_cdt)
+        bdc = valider_realisation(bdc, utilisateur_cdt, date_intervention=date(2026, 1, 15))
         for item in checklist_items_facturation:
             ChecklistResultat.objects.create(bdc=bdc, item=item, coche=True)
-        bdc = valider_facturation(bdc, utilisateur_cdt)
+        bdc = valider_facturation(
+            bdc, utilisateur_cdt, numero_facture="F-2026-001", date_facturation=date(2026, 1, 31)
+        )
         assert bdc.statut == StatutChoices.FACTURE
 
     def test_checklist_controle_filtre_par_transition(
@@ -624,7 +627,7 @@ class TestSidebarChecklistTransition:
 
     @pytest.fixture
     def bdc_a_facturer(self, bdc_en_cours, utilisateur_cdt):
-        return valider_realisation(bdc_en_cours, utilisateur_cdt)
+        return valider_realisation(bdc_en_cours, utilisateur_cdt, date_intervention=date(2026, 1, 15))
 
     def test_get_checklist_realisation(self, client_cdt, bdc_en_cours, checklist_items_realisation):
         url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})
@@ -644,7 +647,7 @@ class TestSidebarChecklistTransition:
 
     def test_post_checklist_complete_valide_transition(self, client_cdt, bdc_en_cours, checklist_items_realisation):
         url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})
-        data = {"transition": "EN_COURS__A_FACTURER"}
+        data = {"transition": "EN_COURS__A_FACTURER", "date_intervention": "2026-01-15"}
         for item in checklist_items_realisation:
             data[f"check_{item.pk}"] = "on"
         resp = client_cdt.post(url, data, HTTP_HX_REQUEST="true")
@@ -654,7 +657,7 @@ class TestSidebarChecklistTransition:
 
     def test_post_checklist_incomplete_bloque(self, client_cdt, bdc_en_cours, checklist_items_realisation):
         url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_en_cours.pk})
-        data = {"transition": "EN_COURS__A_FACTURER"}
+        data = {"transition": "EN_COURS__A_FACTURER", "date_intervention": "2026-01-15"}
         # Ne pas cocher → bloque
         resp = client_cdt.post(url, data, HTTP_HX_REQUEST="true")
         assert resp.status_code == 200
@@ -664,7 +667,7 @@ class TestSidebarChecklistTransition:
 
     def test_post_checklist_facturation(self, client_cdt, bdc_a_facturer, checklist_items_facturation):
         url = reverse("bdc:sidebar_checklist", kwargs={"pk": bdc_a_facturer.pk})
-        data = {"transition": "A_FACTURER__FACTURE"}
+        data = {"transition": "A_FACTURER__FACTURE", "numero_facture": "F-001", "date_facturation": "2026-01-31"}
         for item in checklist_items_facturation:
             data[f"check_{item.pk}"] = "on"
         resp = client_cdt.post(url, data, HTTP_HX_REQUEST="true")

@@ -102,14 +102,21 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             )
         _verifier_checklist_transition(bdc, ancien_statut, nouveau_statut)
 
+    # Règles métier : informations d'intervention / facturation obligatoires
+    if nouveau_statut == StatutChoices.A_FACTURER:
+        _verifier_date_intervention(bdc.date_intervention)
+    if nouveau_statut == StatutChoices.FACTURE:
+        _verifier_infos_facturation(bdc.numero_facture, bdc.date_facturation)
+
     with transaction.atomic():
-        # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation à null
+        # Règle métier : retour A_FACTURER → EN_COURS remet date_realisation et date_intervention à null
         if ancien_statut == StatutChoices.A_FACTURER and nouveau_statut == StatutChoices.EN_COURS:
             bdc.date_realisation = None
+            bdc.date_intervention = None
 
         # Application du changement
         bdc.statut = nouveau_statut
-        bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
+        bdc.save(update_fields=["statut", "date_realisation", "date_intervention", "updated_at"])
 
         # Traçabilité
         HistoriqueAction.objects.create(
@@ -154,53 +161,86 @@ def enregistrer_action(
 # ─── Validation réalisation / Facturation ────────────────────────────────────
 
 
-def valider_realisation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
+def _verifier_date_intervention(date_intervention):
+    """La date d'intervention est obligatoire et ne peut pas être dans le futur."""
+    if not date_intervention:
+        raise BDCIncomplet("La date d'intervention est obligatoire avant passage en 'À facturer'.")
+    if date_intervention > date.today():
+        raise BDCIncomplet("La date d'intervention ne peut pas être dans le futur.")
+
+
+def _verifier_infos_facturation(numero_facture, date_facturation):
+    """Le N° de facture et la date de facturation sont obligatoires."""
+    if not (numero_facture or "").strip():
+        raise BDCIncomplet("Le N° de facture est obligatoire avant passage en 'Facturé'.")
+    if not date_facturation:
+        raise BDCIncomplet("La date de facturation est obligatoire avant passage en 'Facturé'.")
+
+
+def valider_realisation(bdc: BonDeCommande, utilisateur: User, date_intervention: date | None = None) -> BonDeCommande:
     """
     Marque un BDC EN_COURS comme réalisé → A_FACTURER.
-    Remplit date_realisation et trace l'action VALIDATION.
+    Exige la date d'intervention, remplit date_realisation et trace l'action VALIDATION.
     """
     if bdc.statut != StatutChoices.EN_COURS:
         raise TransitionInvalide(
             f"Validation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'En cours'."
         )
 
+    _verifier_date_intervention(date_intervention)
     _verifier_checklist_transition(bdc, StatutChoices.EN_COURS, StatutChoices.A_FACTURER)
 
     with transaction.atomic():
         bdc.statut = StatutChoices.A_FACTURER
         bdc.date_realisation = date.today()
-        bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
+        bdc.date_intervention = date_intervention
+        bdc.save(update_fields=["statut", "date_realisation", "date_intervention", "updated_at"])
 
         HistoriqueAction.objects.create(
             bdc=bdc,
             utilisateur=utilisateur,
             action=ActionChoices.VALIDATION,
-            details={"date_realisation": str(bdc.date_realisation)},
+            details={
+                "date_realisation": str(bdc.date_realisation),
+                "date_intervention": str(bdc.date_intervention),
+            },
         )
 
     return bdc
 
 
-def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
+def valider_facturation(
+    bdc: BonDeCommande,
+    utilisateur: User,
+    numero_facture: str = "",
+    date_facturation: date | None = None,
+) -> BonDeCommande:
     """
     Passe un BDC A_FACTURER au statut FACTURE.
-    Trace l'action FACTURATION.
+    Exige le N° de facture et la date de facturation, trace l'action FACTURATION.
     """
     if bdc.statut != StatutChoices.A_FACTURER:
         raise TransitionInvalide(
             f"Facturation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'À facturer'."
         )
 
+    _verifier_infos_facturation(numero_facture, date_facturation)
     _verifier_checklist_transition(bdc, StatutChoices.A_FACTURER, StatutChoices.FACTURE)
 
     with transaction.atomic():
         bdc.statut = StatutChoices.FACTURE
-        bdc.save(update_fields=["statut", "updated_at"])
+        bdc.numero_facture = numero_facture.strip()
+        bdc.date_facturation = date_facturation
+        bdc.save(update_fields=["statut", "numero_facture", "date_facturation", "updated_at"])
 
         HistoriqueAction.objects.create(
             bdc=bdc,
             utilisateur=utilisateur,
             action=ActionChoices.FACTURATION,
+            details={
+                "numero_facture": bdc.numero_facture,
+                "date_facturation": str(bdc.date_facturation),
+            },
         )
 
     return bdc

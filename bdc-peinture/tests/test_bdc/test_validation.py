@@ -12,6 +12,9 @@ from django.urls import reverse
 from apps.bdc.models import BonDeCommande, HistoriqueAction, StatutChoices
 from apps.bdc.services import TransitionInvalide, changer_statut, valider_facturation, valider_realisation
 
+DONNEES_REALISATION = {"date_intervention": "2026-01-15"}
+DONNEES_FACTURATION = {"numero_facture": "F-2026-001", "date_facturation": "2026-01-31"}
+
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
 
@@ -51,26 +54,26 @@ def bdc_a_facturer(db, bailleur_gdh, utilisateur_cdt, sous_traitant):
 
 class TestValiderRealisation:
     def test_transition_ok(self, bdc_en_cours, utilisateur_cdt):
-        bdc = valider_realisation(bdc_en_cours, utilisateur_cdt)
+        bdc = valider_realisation(bdc_en_cours, utilisateur_cdt, date_intervention=date(2026, 1, 15))
         assert bdc.statut == StatutChoices.A_FACTURER
 
     def test_date_realisation_remplie(self, bdc_en_cours, utilisateur_cdt):
-        bdc = valider_realisation(bdc_en_cours, utilisateur_cdt)
+        bdc = valider_realisation(bdc_en_cours, utilisateur_cdt, date_intervention=date(2026, 1, 15))
         assert bdc.date_realisation == date.today()
 
     def test_historique_validation_cree(self, bdc_en_cours, utilisateur_cdt):
-        valider_realisation(bdc_en_cours, utilisateur_cdt)
+        valider_realisation(bdc_en_cours, utilisateur_cdt, date_intervention=date(2026, 1, 15))
         action = HistoriqueAction.objects.filter(bdc=bdc_en_cours, action="VALIDATION").first()
         assert action is not None
         assert action.details["date_realisation"] == str(date.today())
 
     def test_refus_si_pas_en_cours(self, bdc_a_facturer, utilisateur_cdt):
         with pytest.raises(TransitionInvalide, match="En cours"):
-            valider_realisation(bdc_a_facturer, utilisateur_cdt)
+            valider_realisation(bdc_a_facturer, utilisateur_cdt, date_intervention=date(2026, 1, 15))
 
     def test_refus_si_a_traiter(self, bdc_a_traiter, utilisateur_cdt):
         with pytest.raises(TransitionInvalide):
-            valider_realisation(bdc_a_traiter, utilisateur_cdt)
+            valider_realisation(bdc_a_traiter, utilisateur_cdt, date_intervention=date(2026, 1, 15))
 
 
 # ─── 6.2 Tests valider_facturation ──────────────────────────────────────────
@@ -78,17 +81,23 @@ class TestValiderRealisation:
 
 class TestValiderFacturation:
     def test_transition_ok(self, bdc_a_facturer, utilisateur_cdt):
-        bdc = valider_facturation(bdc_a_facturer, utilisateur_cdt)
+        bdc = valider_facturation(
+            bdc_a_facturer, utilisateur_cdt, numero_facture="F-2026-001", date_facturation=date(2026, 1, 31)
+        )
         assert bdc.statut == StatutChoices.FACTURE
 
     def test_historique_facturation_cree(self, bdc_a_facturer, utilisateur_cdt):
-        valider_facturation(bdc_a_facturer, utilisateur_cdt)
+        valider_facturation(
+            bdc_a_facturer, utilisateur_cdt, numero_facture="F-2026-001", date_facturation=date(2026, 1, 31)
+        )
         action = HistoriqueAction.objects.filter(bdc=bdc_a_facturer, action="FACTURATION").first()
         assert action is not None
 
     def test_refus_si_pas_a_facturer(self, bdc_en_cours, utilisateur_cdt):
         with pytest.raises(TransitionInvalide, match="À facturer"):
-            valider_facturation(bdc_en_cours, utilisateur_cdt)
+            valider_facturation(
+                bdc_en_cours, utilisateur_cdt, numero_facture="F-2026-001", date_facturation=date(2026, 1, 31)
+            )
 
 
 # ─── 6.3 Tests retour A_FACTURER → EN_COURS ────────────────────────────────
@@ -113,7 +122,7 @@ class TestRetourAFacturerEnCours:
 class TestVueValiderRealisation:
     def test_post_cdt_ok(self, client, utilisateur_cdt, bdc_en_cours):
         client.force_login(utilisateur_cdt)
-        response = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
+        response = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}), DONNEES_REALISATION)
         assert response.status_code == 302
         bdc_en_cours.refresh_from_db()
         assert bdc_en_cours.statut == StatutChoices.A_FACTURER
@@ -125,7 +134,7 @@ class TestVueValiderRealisation:
 
     def test_secretaire_can_access(self, client, utilisateur_secretaire, bdc_en_cours):
         client.force_login(utilisateur_secretaire)
-        response = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
+        response = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}), DONNEES_REALISATION)
         assert response.status_code == 302
         bdc_en_cours.refresh_from_db()
         assert bdc_en_cours.statut == StatutChoices.A_FACTURER
@@ -134,7 +143,9 @@ class TestVueValiderRealisation:
 class TestVueValiderFacturation:
     def test_post_cdt_ok(self, client, utilisateur_cdt, bdc_a_facturer):
         client.force_login(utilisateur_cdt)
-        response = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
+        response = client.post(
+            reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}), DONNEES_FACTURATION
+        )
         assert response.status_code == 302
         bdc_a_facturer.refresh_from_db()
         assert bdc_a_facturer.statut == StatutChoices.FACTURE
@@ -146,7 +157,9 @@ class TestVueValiderFacturation:
 
     def test_secretaire_can_access(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
-        response = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
+        response = client.post(
+            reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}), DONNEES_FACTURATION
+        )
         assert response.status_code == 302
         bdc_a_facturer.refresh_from_db()
         assert bdc_a_facturer.statut == StatutChoices.FACTURE
@@ -254,14 +267,14 @@ class TestRBACSecretaireBloquee:
 
     def test_secretaire_peut_valider_realisation(self, client, utilisateur_secretaire, bdc_en_cours):
         client.force_login(utilisateur_secretaire)
-        resp = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
+        resp = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}), DONNEES_REALISATION)
         assert resp.status_code == 302
         bdc_en_cours.refresh_from_db()
         assert bdc_en_cours.statut == StatutChoices.A_FACTURER
 
     def test_secretaire_peut_valider_facturation(self, client, utilisateur_secretaire, bdc_a_facturer):
         client.force_login(utilisateur_secretaire)
-        resp = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
+        resp = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}), DONNEES_FACTURATION)
         assert resp.status_code == 302
         bdc_a_facturer.refresh_from_db()
         assert bdc_a_facturer.statut == StatutChoices.FACTURE
@@ -282,10 +295,10 @@ class TestRBACSecretaireBloquee:
 
     def test_cdt_can_access_valider_realisation(self, client, utilisateur_cdt, bdc_en_cours):
         client.force_login(utilisateur_cdt)
-        resp = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}))
+        resp = client.post(reverse("bdc:valider_realisation", kwargs={"pk": bdc_en_cours.pk}), DONNEES_REALISATION)
         assert resp.status_code == 302
 
     def test_cdt_can_access_valider_facturation(self, client, utilisateur_cdt, bdc_a_facturer):
         client.force_login(utilisateur_cdt)
-        resp = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}))
+        resp = client.post(reverse("bdc:valider_facturation", kwargs={"pk": bdc_a_facturer.pk}), DONNEES_FACTURATION)
         assert resp.status_code == 302

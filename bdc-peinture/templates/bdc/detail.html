@@ -92,8 +92,11 @@
                     </button>
                 </form>
             </div>
-            <form method="POST" action="{% url 'bdc:valider_realisation' bdc.pk %}">
+            <form method="POST" action="{% url 'bdc:valider_realisation' bdc.pk %}" class="flex items-center gap-2">
                 {% csrf_token %}
+                <label for="date_intervention" class="text-xs text-[var(--color-text-muted)] whitespace-nowrap">Date d'intervention *</label>
+                <input type="date" id="date_intervention" name="date_intervention" required max="{% now 'Y-m-d' %}"
+                       class="rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
                 <button type="submit" class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                     Valider réalisation
                 </button>
@@ -108,8 +111,12 @@
             {% endif %}
             {% if bdc.statut == "A_FACTURER" %}
             {% if is_cdt %}
-            <form method="POST" action="{% url 'bdc:valider_facturation' bdc.pk %}">
+            <form method="POST" action="{% url 'bdc:valider_facturation' bdc.pk %}" class="flex items-center gap-2">
                 {% csrf_token %}
+                <input type="text" name="numero_facture" required maxlength="50" placeholder="N° de facture *"
+                       aria-label="N° de facture" class="w-36 rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+                <input type="date" name="date_facturation" required value="{% now 'Y-m-d' %}"
+                       aria-label="Date de facturation" title="Date de facturation" class="rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
                 <button type="submit" class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                     Passer en facturation
                 </button>
@@ -210,6 +217,12 @@
                 {% endif %}
                 {% if bdc.sous_traitant %}
                 <div><dt class="inline text-[var(--color-text-muted)]">Sous-traitant :</dt> <dd class="inline text-[var(--color-text)] font-medium">{{ bdc.sous_traitant }}</dd></div>
+                {% endif %}
+                {% if bdc.date_intervention %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Date d'intervention :</dt> <dd class="inline text-[var(--color-text)] font-mono">{{ bdc.date_intervention|date:"d/m/Y" }}</dd></div>
+                {% endif %}
+                {% if bdc.numero_facture %}
+                <div><dt class="inline text-[var(--color-text-muted)]">Facture :</dt> <dd class="inline text-[var(--color-text)]">n° <span class="font-mono">{{ bdc.numero_facture }}</span>{% if bdc.date_facturation %} du <span class="font-mono">{{ bdc.date_facturation|date:"d/m/Y" }}</span>{% endif %}</dd></div>
                 {% endif %}
                 {% if bdc.type_acces %}
                 <div><dt class="inline text-[var(--color-text-muted)]">Type d'accès :</dt> <dd class="inline text-[var(--color-text)]">{{ bdc.get_type_acces_display }}</dd></div>

@@ -265,6 +265,24 @@ class BonDeCommande(models.Model):
         verbose_name="Date de réalisation",
         help_text="Date à laquelle les travaux ont été déclarés terminés",
     )
+    date_intervention = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date d'intervention",
+        help_text="Date réelle de l'intervention, saisie au passage 'En cours' → 'À facturer'",
+    )
+    numero_facture = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="N° de facture",
+        help_text="Saisi au passage 'À facturer' → 'Facturé'",
+    )
+    date_facturation = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date de facturation",
+        help_text="Saisie au passage 'À facturer' → 'Facturé'",
+    )
 
     # ── Fichiers ─────────────────────────────────────────────────────────────
     pdf_original = models.FileField(

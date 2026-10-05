@@ -57,23 +57,13 @@
         {% if is_cdt or is_secretaire %}
         <div class="mt-3 flex items-center gap-2">
             {# Les trois actions partagent px-3 py-1.5 text-xs pour un gabarit identique. #}
-            {% if checklist_transitions.EN_COURS__A_FACTURER %}
+            {# Toujours via le panneau : la date d'intervention doit être saisie #}
             <button type="button"
                     hx-get="{% url 'bdc:sidebar_checklist' pk=bdc.pk %}?transition=EN_COURS__A_FACTURER"
                     hx-target="#sidebar-content" hx-swap="innerHTML"
                     class="inline-block px-3 py-1.5 text-xs font-medium rounded-lg border border-transparent bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
                 Valider
             </button>
-            {% else %}
-            <form hx-post="{% url 'bdc:valider_realisation' pk=bdc.pk %}"
-                  hx-target="#sidebar-content" hx-swap="innerHTML">
-                {% csrf_token %}
-                <button type="submit"
-                        class="inline-block px-3 py-1.5 text-xs font-medium rounded-lg border border-transparent bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
-                    Valider
-                </button>
-            </form>
-            {% endif %}
             {% if is_cdt %}
             <a href="{% url 'bdc:attribution_split' pk=bdc.pk %}"
                class="inline-block px-3 py-1.5 text-xs font-medium rounded-lg border border-transparent bg-amber-500 hover:bg-amber-600 text-white transition-colors">
@@ -95,7 +85,7 @@
         {% elif bdc.statut == 'A_FACTURER' %}
         {% if is_cdt or is_secretaire %}
         <div class="mt-3">
-            {% if checklist_transitions.A_FACTURER__FACTURE %}
+            {# Toujours via le panneau : N° et date de facture doivent être saisis #}
             <button type="button"
                     hx-get="{% url 'bdc:sidebar_checklist' pk=bdc.pk %}?transition=A_FACTURER__FACTURE"
                     hx-target="#sidebar-content" hx-swap="innerHTML"
@@ -103,17 +93,6 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 Passer en facturation
             </button>
-            {% else %}
-            <form hx-post="{% url 'bdc:valider_facturation' pk=bdc.pk %}"
-                  hx-target="#sidebar-content" hx-swap="innerHTML">
-                {% csrf_token %}
-                <button type="submit"
-                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Passer en facturation
-                </button>
-            </form>
-            {% endif %}
         </div>
         {% else %}
         <div class="mt-3">
@@ -157,6 +136,19 @@
             <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Sous-traitant</h3>
             <p class="text-sm text-[var(--color-text)]">{{ bdc.sous_traitant.nom }}</p>
             {% if bdc.sous_traitant.telephone %}<p class="text-sm font-mono text-[var(--color-text-muted)]">{{ bdc.sous_traitant.telephone }}</p>{% endif %}
+        </div>
+        {% endif %}
+
+        {# Intervention / Facturation #}
+        {% if bdc.date_intervention or bdc.numero_facture %}
+        <div>
+            <h3 class="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Intervention / Facturation</h3>
+            {% if bdc.date_intervention %}
+            <p class="text-sm text-[var(--color-text)]">Intervention le <span class="font-mono">{{ bdc.date_intervention|date:"d/m/Y" }}</span></p>
+            {% endif %}
+            {% if bdc.numero_facture %}
+            <p class="text-sm text-[var(--color-text)]">Facture n&deg; <span class="font-mono">{{ bdc.numero_facture }}</span>{% if bdc.date_facturation %} du <span class="font-mono">{{ bdc.date_facturation|date:"d/m/Y" }}</span>{% endif %}</p>
+            {% endif %}
         </div>
         {% endif %}
 
