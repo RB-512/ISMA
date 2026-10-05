@@ -467,17 +467,6 @@ def _render_sidebar(request, bdc, error_message=None, success_message=None):
     transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
     form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
-    # Déterminer si des checklists existent pour les transitions du statut courant
-    checklist_transitions = {}
-    if bdc.statut == StatutChoices.EN_COURS:
-        checklist_transitions["EN_COURS__A_FACTURER"] = ChecklistItem.objects.filter(
-            actif=True, transition=TransitionChoices.REALISATION
-        ).exists()
-    elif bdc.statut == StatutChoices.A_FACTURER:
-        checklist_transitions["A_FACTURER__FACTURE"] = ChecklistItem.objects.filter(
-            actif=True, transition=TransitionChoices.FACTURATION
-        ).exists()
-
     is_cdt = request.user.groups.filter(name="CDT").exists()
     is_secretaire = request.user.groups.filter(name="Secretaire").exists()
 
@@ -492,7 +481,6 @@ def _render_sidebar(request, bdc, error_message=None, success_message=None):
             "form_edition": form_edition,
             "error_message": error_message,
             "success_message": success_message,
-            "checklist_transitions": checklist_transitions,
             "is_cdt": is_cdt,
             "is_secretaire": is_secretaire,
         },
@@ -512,17 +500,6 @@ def detail_sidebar(request, pk: int):
     transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
     form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
-    # Déterminer si des checklists existent pour les transitions du statut courant
-    checklist_transitions = {}
-    if bdc.statut == StatutChoices.EN_COURS:
-        checklist_transitions["EN_COURS__A_FACTURER"] = ChecklistItem.objects.filter(
-            actif=True, transition=TransitionChoices.REALISATION
-        ).exists()
-    elif bdc.statut == StatutChoices.A_FACTURER:
-        checklist_transitions["A_FACTURER__FACTURE"] = ChecklistItem.objects.filter(
-            actif=True, transition=TransitionChoices.FACTURATION
-        ).exists()
-
     is_cdt = request.user.groups.filter(name="CDT").exists()
     is_secretaire = request.user.groups.filter(name="Secretaire").exists()
 
@@ -535,7 +512,6 @@ def detail_sidebar(request, pk: int):
             "historique": historique,
             "transitions": transitions,
             "form_edition": form_edition,
-            "checklist_transitions": checklist_transitions,
             "is_cdt": is_cdt,
             "is_secretaire": is_secretaire,
             # HTMX transmet l'URL affichee par le navigateur : permet de revenir sur
@@ -630,17 +606,6 @@ def sidebar_save_and_transition(request, pk: int):
     transitions = [(statut, StatutChoices(statut).label) for statut in SIDEBAR_TRANSITIONS.get(bdc.statut, [])]
     form_edition = BDCEditionForm(instance=bdc) if bdc.statut == StatutChoices.A_TRAITER else None
 
-    # Déterminer si des checklists existent pour les transitions du statut courant
-    checklist_transitions = {}
-    if bdc.statut == StatutChoices.EN_COURS:
-        checklist_transitions["EN_COURS__A_FACTURER"] = ChecklistItem.objects.filter(
-            actif=True, transition=TransitionChoices.REALISATION
-        ).exists()
-    elif bdc.statut == StatutChoices.A_FACTURER:
-        checklist_transitions["A_FACTURER__FACTURE"] = ChecklistItem.objects.filter(
-            actif=True, transition=TransitionChoices.FACTURATION
-        ).exists()
-
     is_cdt = request.user.groups.filter(name="CDT").exists()
     is_secretaire = request.user.groups.filter(name="Secretaire").exists()
 
@@ -654,7 +619,6 @@ def sidebar_save_and_transition(request, pk: int):
             "transitions": transitions,
             "form_edition": form_edition,
             "error_message": error_message,
-            "checklist_transitions": checklist_transitions,
             "is_cdt": is_cdt,
             "is_secretaire": is_secretaire,
         },
@@ -1112,69 +1076,107 @@ def attribution_partial(request, pk: int):
 # ─── Validation réalisation / Facturation ────────────────────────────────────
 
 
-@group_required("CDT", "Secretaire")
-def valider_realisation_bdc(request, pk: int):
-    """POST-only : le CDT ou la Secrétaire valide la réalisation (EN_COURS → A_FACTURER)."""
+# Transitions qui exigent une saisie → libellé du message de succès
+_TRANSITION_LIBELLES = {
+    "EN_COURS__A_FACTURER": "réalisation validée",
+    "A_FACTURER__FACTURE": "passé en facturation",
+}
+
+
+def _parse_date(valeur):
+    """Date ISO (input type=date) → date, ou None si vide / invalide."""
+    try:
+        return date.fromisoformat((valeur or "").strip())
+    except ValueError:
+        return None
+
+
+def _valeurs_saisie(transition_key, data):
+    """Valeurs brutes saisies pour la transition (réaffichées en cas d'erreur)."""
+    if transition_key == "EN_COURS__A_FACTURER":
+        return {"date_intervention": data.get("date_intervention", "")}
+    if transition_key == "A_FACTURER__FACTURE":
+        return {
+            "numero_facture": data.get("numero_facture", ""),
+            "date_facturation": data.get("date_facturation", ""),
+        }
+    return {}
+
+
+def _executer_transition(transition_key, bdc, utilisateur, valeurs):
+    """Appelle le service de la transition avec les valeurs saisies."""
+    if transition_key == "EN_COURS__A_FACTURER":
+        return valider_realisation(bdc, utilisateur, _parse_date(valeurs["date_intervention"]))
+    return valider_facturation(bdc, utilisateur, valeurs["numero_facture"], _parse_date(valeurs["date_facturation"]))
+
+
+def _render_panneau_transition(request, bdc, transition_key, items, valeurs=None, error_message=None):
+    """Panneau sidebar de confirmation : champs de saisie + checklist éventuelle."""
+    items_deja_coches = set(
+        bdc.checklist_resultats.filter(item__transition=transition_key, coche=True).values_list("item_id", flat=True)
+    )
+    return render(
+        request,
+        "bdc/partials/_checklist_transition.html",
+        {
+            "bdc": bdc,
+            "checklist_items": items,
+            "transition_key": transition_key,
+            "items_deja_coches": items_deja_coches,
+            "valeurs": valeurs or {},
+            "error_message": error_message,
+        },
+    )
+
+
+def _valider_transition_bdc(request, pk: int, transition_key: str):
+    """POST-only commun aux vues de validation réalisation / facturation."""
     if request.method != "POST":
         return redirect("bdc:detail", pk=pk)
 
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
+    valeurs = _valeurs_saisie(transition_key, request.POST)
+    libelle = _TRANSITION_LIBELLES[transition_key]
+    is_htmx = request.headers.get("HX-Request")
 
     try:
-        valider_realisation(bdc, request.user)
-    except TransitionInvalide as e:
-        if request.headers.get("HX-Request"):
-            return _render_sidebar(request, bdc, error_message=str(e))
-        messages.error(request, str(e))
-        return redirect("bdc:detail", pk=pk)
-
-    if request.headers.get("HX-Request"):
-        return _render_sidebar(request, bdc, success_message=f"BDC n°{bdc.numero_bdc} : réalisation validée.")
-
-    messages.success(request, f"BDC n°{bdc.numero_bdc} : réalisation validée.")
-    return redirect("bdc:detail", pk=pk)
-
-
-@group_required("CDT", "Secretaire")
-def valider_facturation_bdc(request, pk: int):
-    """POST-only : le CDT ou la Secrétaire passe le BDC en facturation (A_FACTURER → FACTURE)."""
-    if request.method != "POST":
-        return redirect("bdc:detail", pk=pk)
-
-    bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
-
-    try:
-        valider_facturation(bdc, request.user)
+        _executer_transition(transition_key, bdc, request.user, valeurs)
     except (TransitionInvalide, BDCIncomplet) as e:
-        if request.headers.get("HX-Request"):
-            return _render_sidebar(request, bdc, error_message=str(e))
+        if is_htmx:
+            items = list(ChecklistItem.objects.filter(actif=True, transition=transition_key))
+            return _render_panneau_transition(request, bdc, transition_key, items, valeurs, error_message=str(e))
         messages.error(request, str(e))
         return redirect("bdc:detail", pk=pk)
     except Exception:
-        logger.exception("Erreur inattendue lors de la facturation du BDC n°%s", bdc.numero_bdc)
-        msg = f"Erreur lors du passage en facturation du BDC n°{bdc.numero_bdc}. Veuillez réessayer."
-        if request.headers.get("HX-Request"):
+        logger.exception("Erreur inattendue (%s) sur le BDC n°%s", transition_key, bdc.numero_bdc)
+        msg = f"Erreur lors du changement de statut du BDC n°{bdc.numero_bdc}. Veuillez réessayer."
+        if is_htmx:
             return _render_sidebar(request, bdc, error_message=msg)
         messages.error(request, msg)
         return redirect("bdc:detail", pk=pk)
 
-    if request.headers.get("HX-Request"):
-        return _render_sidebar(request, bdc, success_message=f"BDC n°{bdc.numero_bdc} : passé en facturation.")
+    if is_htmx:
+        return _render_sidebar(request, bdc, success_message=f"BDC n°{bdc.numero_bdc} : {libelle}.")
 
-    messages.success(request, f"BDC n°{bdc.numero_bdc} : passé en facturation.")
+    messages.success(request, f"BDC n°{bdc.numero_bdc} : {libelle}.")
     return redirect("bdc:detail", pk=pk)
 
 
-# Map transition_key → (service_function, success_message)
-_TRANSITION_ACTIONS = {
-    "EN_COURS__A_FACTURER": (valider_realisation, "réalisation validée"),
-    "A_FACTURER__FACTURE": (valider_facturation, "passé en facturation"),
-}
+@group_required("CDT", "Secretaire")
+def valider_realisation_bdc(request, pk: int):
+    """POST-only : valide la réalisation (EN_COURS → A_FACTURER) avec la date d'intervention saisie."""
+    return _valider_transition_bdc(request, pk, "EN_COURS__A_FACTURER")
+
+
+@group_required("CDT", "Secretaire")
+def valider_facturation_bdc(request, pk: int):
+    """POST-only : passe le BDC en facturation (A_FACTURER → FACTURE) avec le n° et la date de facture."""
+    return _valider_transition_bdc(request, pk, "A_FACTURER__FACTURE")
 
 
 @group_required("CDT", "Secretaire")
 def sidebar_checklist(request, pk: int):
-    """GET: affiche la checklist pour une transition. POST: sauvegarde + tente la transition."""
+    """GET: panneau de saisie + checklist pour une transition. POST: sauvegarde + tente la transition."""
     bdc = get_object_or_404(BonDeCommande.objects.select_related("bailleur", "sous_traitant"), pk=pk)
     transition_key = request.GET.get("transition") or request.POST.get("transition", "")
 
@@ -1191,50 +1193,23 @@ def sidebar_checklist(request, pk: int):
             )
 
         # Tenter la transition
-        action_info = _TRANSITION_ACTIONS.get(transition_key)
-        if action_info:
+        libelle = _TRANSITION_LIBELLES.get(transition_key)
+        if libelle:
+            valeurs = _valeurs_saisie(transition_key, request.POST)
             try:
-                action_info[0](bdc, request.user)
+                _executer_transition(transition_key, bdc, request.user, valeurs)
                 return _render_sidebar(
                     request,
                     bdc,
-                    success_message=f"BDC n°{bdc.numero_bdc} : {action_info[1]}.",
+                    success_message=f"BDC n°{bdc.numero_bdc} : {libelle}.",
                 )
             except (TransitionInvalide, BDCIncomplet) as e:
-                items_deja_coches = set(
-                    bdc.checklist_resultats.filter(item__transition=transition_key, coche=True).values_list(
-                        "item_id", flat=True
-                    )
-                )
-                return render(
-                    request,
-                    "bdc/partials/_checklist_transition.html",
-                    {
-                        "bdc": bdc,
-                        "checklist_items": items,
-                        "transition_key": transition_key,
-                        "items_deja_coches": items_deja_coches,
-                        "error_message": str(e),
-                    },
-                )
+                return _render_panneau_transition(request, bdc, transition_key, items, valeurs, error_message=str(e))
 
         return _render_sidebar(request, bdc)
 
-    # GET: si pas d'items, afficher un formulaire de confirmation POST
-    if not items:
-        action_info = _TRANSITION_ACTIONS.get(transition_key)
-        if action_info:
-            return render(
-                request,
-                "bdc/partials/_checklist_transition.html",
-                {
-                    "bdc": bdc,
-                    "checklist_items": [],
-                    "transition_key": transition_key,
-                    "items_deja_coches": set(),
-                    "confirm_only": True,
-                },
-            )
+    if transition_key in _TRANSITION_LIBELLES:
+        return _render_panneau_transition(request, bdc, transition_key, items)
 
     items_deja_coches = set(
         bdc.checklist_resultats.filter(item__transition=transition_key, coche=True).values_list("item_id", flat=True)

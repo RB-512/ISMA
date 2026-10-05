@@ -92,12 +92,21 @@
                     </button>
                 </form>
             </div>
-            <form method="POST" action="{% url 'bdc:valider_realisation' bdc.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
+            <div x-data="{ ouvert: false }" class="relative" @keydown.escape="ouvert = false">
+                <button type="button" @click="ouvert = !ouvert"
+                        class="px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                     Valider réalisation
                 </button>
-            </form>
+                <form x-show="ouvert" x-transition @click.outside="ouvert = false" style="display: none"
+                      method="POST" action="{% url 'bdc:valider_realisation' bdc.pk %}"
+                      class="absolute right-0 mt-2 w-72 z-20 p-4 space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)] shadow-xl">
+                    {% csrf_token %}
+                    {% include "bdc/partials/_champs_transition.html" with transition_key="EN_COURS__A_FACTURER" %}
+                    <button type="submit" class="w-full px-4 py-2 bg-success hover:bg-success-dark text-white text-sm font-medium rounded-lg transition-colors">
+                        Confirmer
+                    </button>
+                </form>
+            </div>
             {% else %}
             <div class="flex items-center gap-2">
                 <span class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-sm font-medium rounded-lg whitespace-nowrap cursor-not-allowed" title="Action reservee au conducteur de travaux">Réattribuer</span>
@@ -108,12 +117,21 @@
             {% endif %}
             {% if bdc.statut == "A_FACTURER" %}
             {% if is_cdt %}
-            <form method="POST" action="{% url 'bdc:valider_facturation' bdc.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
+            <div x-data="{ ouvert: false }" class="relative" @keydown.escape="ouvert = false">
+                <button type="button" @click="ouvert = !ouvert"
+                        class="px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 shadow-sm hover:shadow-md">
                     Passer en facturation
                 </button>
-            </form>
+                <form x-show="ouvert" x-transition @click.outside="ouvert = false" style="display: none"
+                      method="POST" action="{% url 'bdc:valider_facturation' bdc.pk %}"
+                      class="absolute right-0 mt-2 w-72 z-20 p-4 space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-card)] shadow-xl">
+                    {% csrf_token %}
+                    {% include "bdc/partials/_champs_transition.html" with transition_key="A_FACTURER__FACTURE" %}
+                    <button type="submit" class="w-full px-4 py-2 bg-accent hover:bg-accent-dark text-white text-sm font-medium rounded-lg transition-colors">
+                        Confirmer
+                    </button>
+                </form>
+            </div>
             <form method="POST" action="{% url 'bdc:changer_statut' bdc.pk %}">
                 {% csrf_token %}
                 <input type="hidden" name="nouveau_statut" value="EN_COURS">

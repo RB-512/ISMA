@@ -1,8 +1,12 @@
-{# Checklist de transition inline dans la sidebar #}
+{# Panneau de confirmation de transition dans la sidebar : saisie obligatoire + checklist éventuelle #}
 <div class="h-full flex flex-col">
     <div class="p-5 border-b border-[var(--color-border)]">
         <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-[var(--color-text)]">Points de contr&ocirc;le</h3>
+            <h3 class="text-sm font-semibold text-[var(--color-text)]">
+                {% if transition_key == "EN_COURS__A_FACTURER" %}Valider la r&eacute;alisation
+                {% elif transition_key == "A_FACTURER__FACTURE" %}Passer en facturation
+                {% else %}Points de contr&ocirc;le{% endif %}
+            </h3>
             <button type="button"
                     hx-get="{% url 'bdc:detail_sidebar' pk=bdc.pk %}"
                     hx-target="#sidebar-content" hx-swap="innerHTML"
@@ -23,6 +27,14 @@
               hx-target="#sidebar-content" hx-swap="innerHTML">
             {% csrf_token %}
             <input type="hidden" name="transition" value="{{ transition_key }}">
+
+            <div class="mb-4">
+                {% include "bdc/partials/_champs_transition.html" %}
+            </div>
+
+            {% if checklist_items %}
+            <p class="text-xs font-medium text-[var(--color-text-muted)] mb-2">Points de contr&ocirc;le</p>
+            {% endif %}
 
             <div class="space-y-2">
                 {% for item in checklist_items %}

@@ -26,8 +26,8 @@ class TestTransitionsValides:
         bdc = changer_statut(bdc_a_faire, StatutChoices.A_TRAITER, utilisateur_secretaire)
         assert bdc.statut == StatutChoices.A_TRAITER
 
-    def test_en_cours_vers_a_facturer(self, db, bailleur_gdh, utilisateur_cdt):
-
+    def test_en_cours_vers_a_facturer_exige_la_saisie(self, db, bailleur_gdh, utilisateur_cdt):
+        """La transition existe mais passe obligatoirement par valider_realisation (date d'intervention)."""
         from apps.bdc.models import BonDeCommande
 
         bdc = BonDeCommande.objects.create(
@@ -39,10 +39,11 @@ class TestTransitionsValides:
             statut=StatutChoices.EN_COURS,
             cree_par=utilisateur_cdt,
         )
-        bdc = changer_statut(bdc, StatutChoices.A_FACTURER, utilisateur_cdt)
-        assert bdc.statut == StatutChoices.A_FACTURER
+        with pytest.raises(BDCIncomplet):
+            changer_statut(bdc, StatutChoices.A_FACTURER, utilisateur_cdt)
 
-    def test_a_facturer_vers_facture(self, db, bailleur_gdh, utilisateur_cdt):
+    def test_a_facturer_vers_facture_exige_la_saisie(self, db, bailleur_gdh, utilisateur_cdt):
+        """La transition existe mais passe obligatoirement par valider_facturation (n° + date de facture)."""
         from apps.bdc.models import BonDeCommande
 
         bdc = BonDeCommande.objects.create(
@@ -54,8 +55,8 @@ class TestTransitionsValides:
             statut=StatutChoices.A_FACTURER,
             cree_par=utilisateur_cdt,
         )
-        bdc = changer_statut(bdc, StatutChoices.FACTURE, utilisateur_cdt)
-        assert bdc.statut == StatutChoices.FACTURE
+        with pytest.raises(BDCIncomplet):
+            changer_statut(bdc, StatutChoices.FACTURE, utilisateur_cdt)
 
 
 class TestTransitionsInvalides:

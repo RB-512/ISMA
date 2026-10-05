@@ -9,7 +9,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from apps.sous_traitants.models import SousTraitant
 
@@ -90,6 +90,14 @@ def changer_statut(bdc: BonDeCommande, nouveau_statut: str, utilisateur: User) -
             f"Transitions possibles depuis '{ancien_statut}' : {transitions_possibles or ['aucune (état terminal)']}"
         )
 
+    # Ces transitions exigent une saisie : elles passent par valider_realisation / valider_facturation
+    if nouveau_statut == StatutChoices.A_FACTURER:
+        raise BDCIncomplet("La date d'intervention est obligatoire : utilisez l'action « Valider ».")
+    if nouveau_statut == StatutChoices.FACTURE:
+        raise BDCIncomplet(
+            "Le n° et la date de facture sont obligatoires : utilisez l'action « Passer en facturation »."
+        )
+
     # Règles métier : champs obligatoires avant passage en À_FAIRE (À attribuer)
     if nouveau_statut == StatutChoices.A_FAIRE:
         if not bdc.occupation:
@@ -154,21 +162,26 @@ def enregistrer_action(
 # ─── Validation réalisation / Facturation ────────────────────────────────────
 
 
-def valider_realisation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
+def valider_realisation(bdc: BonDeCommande, utilisateur: User, date_intervention: date | None) -> BonDeCommande:
     """
     Marque un BDC EN_COURS comme réalisé → A_FACTURER.
-    Remplit date_realisation et trace l'action VALIDATION.
+    La date d'intervention saisie est obligatoire, ne peut pas être future,
+    et est enregistrée dans date_realisation. Trace l'action VALIDATION.
     """
     if bdc.statut != StatutChoices.EN_COURS:
         raise TransitionInvalide(
             f"Validation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'En cours'."
         )
+    if not date_intervention:
+        raise BDCIncomplet("La date d'intervention est obligatoire.")
+    if date_intervention > date.today():
+        raise BDCIncomplet("La date d'intervention ne peut pas être dans le futur.")
 
     _verifier_checklist_transition(bdc, StatutChoices.EN_COURS, StatutChoices.A_FACTURER)
 
     with transaction.atomic():
         bdc.statut = StatutChoices.A_FACTURER
-        bdc.date_realisation = date.today()
+        bdc.date_realisation = date_intervention
         bdc.save(update_fields=["statut", "date_realisation", "updated_at"])
 
         HistoriqueAction.objects.create(
@@ -181,9 +194,13 @@ def valider_realisation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
     return bdc
 
 
-def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
+def valider_facturation(
+    bdc: BonDeCommande, utilisateur: User, numero_facture: str, date_facturation: date | None
+) -> BonDeCommande:
     """
     Passe un BDC A_FACTURER au statut FACTURE.
+    Le n° de facture (unique) et la date de facturation sont obligatoires ;
+    la date ne peut être ni future ni antérieure à la date d'intervention.
     Trace l'action FACTURATION.
     """
     if bdc.statut != StatutChoices.A_FACTURER:
@@ -191,17 +208,41 @@ def valider_facturation(bdc: BonDeCommande, utilisateur: User) -> BonDeCommande:
             f"Facturation impossible : le BDC est en '{bdc.get_statut_display()}', il doit être en 'À facturer'."
         )
 
+    numero_facture = (numero_facture or "").strip()
+    if not numero_facture:
+        raise BDCIncomplet("Le n° de facture est obligatoire.")
+    if not date_facturation:
+        raise BDCIncomplet("La date de facturation est obligatoire.")
+    if date_facturation > date.today():
+        raise BDCIncomplet("La date de facturation ne peut pas être dans le futur.")
+    if bdc.date_realisation and date_facturation < bdc.date_realisation:
+        raise BDCIncomplet(
+            f"La date de facturation ne peut pas précéder la date d'intervention "
+            f"({bdc.date_realisation.strftime('%d/%m/%Y')})."
+        )
+    doublon = BonDeCommande.objects.filter(numero_facture=numero_facture).exclude(pk=bdc.pk).first()
+    if doublon:
+        raise BDCIncomplet(f"Le n° de facture {numero_facture} est déjà utilisé par le BDC n°{doublon.numero_bdc}.")
+
     _verifier_checklist_transition(bdc, StatutChoices.A_FACTURER, StatutChoices.FACTURE)
 
-    with transaction.atomic():
-        bdc.statut = StatutChoices.FACTURE
-        bdc.save(update_fields=["statut", "updated_at"])
+    try:
+        with transaction.atomic():
+            bdc.statut = StatutChoices.FACTURE
+            bdc.numero_facture = numero_facture
+            bdc.date_facturation = date_facturation
+            bdc.save(update_fields=["statut", "numero_facture", "date_facturation", "updated_at"])
 
-        HistoriqueAction.objects.create(
-            bdc=bdc,
-            utilisateur=utilisateur,
-            action=ActionChoices.FACTURATION,
-        )
+            HistoriqueAction.objects.create(
+                bdc=bdc,
+                utilisateur=utilisateur,
+                action=ActionChoices.FACTURATION,
+                details={"numero_facture": numero_facture, "date_facturation": str(date_facturation)},
+            )
+    except IntegrityError as e:
+        # Saisie concurrente du même n° : la contrainte en base tranche
+        bdc.refresh_from_db()
+        raise BDCIncomplet(f"Le n° de facture {numero_facture} est déjà utilisé par un autre BDC.") from e
 
     return bdc
 

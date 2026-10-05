@@ -262,9 +262,17 @@ class BonDeCommande(models.Model):
     date_realisation = models.DateField(
         null=True,
         blank=True,
-        verbose_name="Date de réalisation",
-        help_text="Date à laquelle les travaux ont été déclarés terminés",
+        verbose_name="Date d'intervention",
+        help_text="Date à laquelle les travaux ont été réalisés, saisie au passage en 'À facturer'",
     )
+    numero_facture = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name="N° de facture",
+        help_text="Saisi au passage en 'Facturé'",
+    )
+    date_facturation = models.DateField(null=True, blank=True, verbose_name="Date de facturation")
 
     # ── Fichiers ─────────────────────────────────────────────────────────────
     pdf_original = models.FileField(
@@ -287,6 +295,13 @@ class BonDeCommande(models.Model):
         verbose_name = "Bon de commande"
         verbose_name_plural = "Bons de commande"
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["numero_facture"],
+                condition=~models.Q(numero_facture=""),
+                name="bdc_numero_facture_unique",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"BDC {self.numero_bdc} — {self.bailleur.code} — {self.get_statut_display()}"

@@ -1,0 +1,29 @@
+{# Champs obligatoires d'une transition (sidebar et fiche détail). Contexte : bdc, transition_key, valeurs (optionnel) #}
+{% now "Y-m-d" as aujourdhui %}
+{% if transition_key == "EN_COURS__A_FACTURER" %}
+<div>
+    <label for="id_date_intervention_{{ bdc.pk }}" class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Date d'intervention <span class="text-danger">*</span></label>
+    <input type="date" name="date_intervention" id="id_date_intervention_{{ bdc.pk }}" required
+           value="{{ valeurs.date_intervention|default:aujourdhui }}" max="{{ aujourdhui }}"
+           class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+</div>
+{% elif transition_key == "A_FACTURER__FACTURE" %}
+<div class="space-y-3">
+    <div>
+        <label for="id_numero_facture_{{ bdc.pk }}" class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">N&deg; de facture <span class="text-danger">*</span></label>
+        <input type="text" name="numero_facture" id="id_numero_facture_{{ bdc.pk }}" required maxlength="50"
+               value="{{ valeurs.numero_facture|default:'' }}" autocomplete="off"
+               class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+    </div>
+    <div>
+        <label for="id_date_facturation_{{ bdc.pk }}" class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Date de facturation <span class="text-danger">*</span></label>
+        <input type="date" name="date_facturation" id="id_date_facturation_{{ bdc.pk }}" required
+               value="{{ valeurs.date_facturation|default:aujourdhui }}" max="{{ aujourdhui }}"
+               {% if bdc.date_realisation %}min="{{ bdc.date_realisation|date:'Y-m-d' }}"{% endif %}
+               class="w-full rounded-lg border px-3 py-2 text-sm border-[var(--color-border)] bg-[var(--color-surface-card)] text-[var(--color-text)]">
+        {% if bdc.date_realisation %}
+        <p class="text-xs text-[var(--color-text-muted)] mt-1">Intervention le {{ bdc.date_realisation|date:"d/m/Y" }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
